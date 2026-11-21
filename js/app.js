@@ -311,7 +311,7 @@ function renderToday(){
       <div class="card stat streak"><div class="n">${s.current}🔥</div><div class="l">day streak</div></div>
       <div class="card stat"><div class="n">${s.longest}</div><div class="l">longest streak</div></div>
       <div class="card stat"><div class="n">${s.total}</div><div class="l">check-ins</div></div>
-      <div class="card stat"><div class="n">${Object.keys(earned).length}🏅</div><div class="l">${Object.keys(earned).length===1?"badge":"badges"} earned</div></div>
+      <button class="card stat stat-link" id="toBadges" aria-label="See your badges"><div class="n">${Object.keys(earned).length}🏅</div><div class="l">${Object.keys(earned).length===1?"badge":"badges"} earned <span class="go-arrow">→</span></div></button>
     </div>
     ${holidayBannerHTML(earned)}
     ${visitNudgeHTML()}
@@ -331,6 +331,7 @@ function renderToday(){
   $app.querySelectorAll("[data-open]:not([disabled])").forEach(b=>b.onclick=()=>openForm(b.dataset.open,t));
   scheduleWindowFlip();
   $app.querySelectorAll(".book[data-d]").forEach(b=>b.onclick=()=>dayPicker(b.dataset.d));
+  document.getElementById("toBadges").onclick=()=>setView("badges");
   const ae=document.getElementById("affEntry"); if(ae) ae.onclick=()=>openAffSheet(false);
   if(S.prefs.affMode==="embedded") bindAffirm();
   const qb=document.getElementById("quickBackup"); if(qb) qb.onclick=downloadBackup;
