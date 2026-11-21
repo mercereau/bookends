@@ -435,6 +435,7 @@ function affirmCardHTML(){
   return `<section class="card aff ${a.type==="suggestion"?"sugg":""}" id="aff">
       <div class="aff-label">${a.type==="suggestion"?"🌱 Wellness suggestion":"🌤️ Today's affirmation"}${D?` <span class="aff-area" style="--dc:${D.color}">${D.icon} ${D.label}</span>`:""}</div>
       <blockquote class="aff-text">${esc(a.text)}</blockquote>
+      ${a.source?.url&&/^https:\/\//.test(a.source.url)?`<a class="aff-src" href="${esc(a.source.url)}" target="_blank" rel="noopener noreferrer">Inspired by ${esc(a.source.name||"source")} ↗</a>`:""}
       ${more}${foot}</section>`;
 }
 const AFF_META_KEY="meta_affirmations";

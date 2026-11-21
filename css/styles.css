@@ -202,3 +202,5 @@ body.noscroll{overflow:hidden}
 .aff-in .aff-text,.aff-in .aff-break{animation:fade .5s}
 .note.nudge{margin:14px 0 0;background:var(--accent-soft);color:var(--ink)}
 .note.holiday{margin:14px 0 0;background:var(--morning-soft);color:var(--ink)}
+.aff-src{display:inline-block;margin:-6px 0 14px;font-size:.75rem;color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--line)}
+.aff-src:hover{color:var(--accent);border-bottom-color:var(--accent)}

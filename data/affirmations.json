@@ -2,85 +2,2581 @@
   "settings": {
     "dailyLimit": 3,
     "visitNudgeAfter": 5,
-    "_notes": "dailyLimit = how many affirmations a visitor can reveal per day. visitNudgeAfter = after this many visits in one day, show a gentle take-a-break banner. Everyone sees the same first affirmation each day. type is 'affirmation' or 'suggestion'; area matches a wellness area (optional)."
+    "_notes": "dailyLimit = affirmations a visitor can reveal per day. visitNudgeAfter = visits in one day before a take-a-break banner. type is 'affirmation' or 'suggestion'; area matches a wellness area (optional). Wording is original, written in a personal voice; source links point to the guidance that inspired each one."
   },
   "affirmations": [
-    { "id": "a001", "type": "affirmation", "area": "emotional", "text": "My feelings are information, not instructions. I can notice them and still choose my next step." },
-    { "id": "a002", "type": "affirmation", "area": "emotional", "text": "I don't have to earn rest. I'm allowed to slow down today." },
-    { "id": "a003", "type": "affirmation", "area": "emotional", "text": "Progress isn't a straight line, and that's okay. I'm still moving." },
-    { "id": "a004", "type": "affirmation", "area": "emotional", "text": "I can hold a hard moment without letting it define my whole day." },
-    { "id": "a005", "type": "affirmation", "area": "emotional", "text": "Being gentle with myself is a strength, not a weakness." },
-    { "id": "a006", "type": "affirmation", "area": "emotional", "text": "I am more than my worst day." },
-    { "id": "a007", "type": "affirmation", "area": "emotional", "text": "It's okay to ask for help. Reaching out is part of taking care of myself." },
-    { "id": "a008", "type": "affirmation", "area": "emotional", "text": "Today I'll meet myself with the patience I'd give a good friend." },
-    { "id": "s001", "type": "suggestion", "area": "emotional", "text": "Try box breathing: in for 4, hold for 4, out for 4, hold for 4. Repeat four times." },
-    { "id": "s002", "type": "suggestion", "area": "emotional", "text": "Name three things you can see, two you can hear, and one you can feel right now." },
-
-    { "id": "a009", "type": "affirmation", "area": "physical", "text": "My body has carried me through every hard day so far. I'll treat it kindly today." },
-    { "id": "a010", "type": "affirmation", "area": "physical", "text": "Small movements count. A short walk is still a walk." },
-    { "id": "s003", "type": "suggestion", "area": "physical", "text": "Drink a full glass of water before your next screen session." },
-    { "id": "s004", "type": "suggestion", "area": "physical", "text": "Stand up, roll your shoulders back five times, and unclench your jaw." },
-    { "id": "s005", "type": "suggestion", "area": "physical", "text": "Step outside for five minutes and let daylight hit your face." },
-    { "id": "s006", "type": "suggestion", "area": "physical", "text": "Pick a bedtime tonight and set a gentle alarm 30 minutes before it to start winding down." },
-    { "id": "s007", "type": "suggestion", "area": "physical", "text": "Eat one meal today away from any screen. Notice the taste." },
-
-    { "id": "a011", "type": "affirmation", "area": "spiritual", "text": "I can return to what I value, no matter how far I've drifted." },
-    { "id": "a012", "type": "affirmation", "area": "spiritual", "text": "There is meaning in ordinary moments, and I'm allowed to notice it." },
-    { "id": "a013", "type": "affirmation", "area": "spiritual", "text": "I am part of something larger than today's worries." },
-    { "id": "s008", "type": "suggestion", "area": "spiritual", "text": "Write down one thing you're grateful for that you usually take for granted." },
-    { "id": "s009", "type": "suggestion", "area": "spiritual", "text": "Spend two quiet minutes doing nothing at all. Just breathe and notice." },
-    { "id": "s010", "type": "suggestion", "area": "spiritual", "text": "Watch the sky for a few minutes today: sunrise, clouds, or stars." },
-
-    { "id": "a014", "type": "affirmation", "area": "social", "text": "My boundaries protect my relationships. Saying no can be an act of care." },
-    { "id": "a015", "type": "affirmation", "area": "social", "text": "I deserve connection, and I have something to offer others." },
-    { "id": "a016", "type": "affirmation", "area": "social", "text": "I can let people in a little at a time." },
-    { "id": "s011", "type": "suggestion", "area": "social", "text": "Send a short message to someone you've been meaning to check on." },
-    { "id": "s012", "type": "suggestion", "area": "social", "text": "In your next conversation, listen for one thing you didn't know about the other person." },
-    { "id": "s013", "type": "suggestion", "area": "social", "text": "Call someone instead of texting. Hearing a voice matters." },
-
-    { "id": "a017", "type": "affirmation", "area": "intellectual", "text": "Curiosity is welcome here. I'm allowed to be a beginner." },
-    { "id": "a018", "type": "affirmation", "area": "intellectual", "text": "My mind can learn new patterns. Every day is practice." },
-    { "id": "s014", "type": "suggestion", "area": "intellectual", "text": "Read ten pages of a physical book today." },
-    { "id": "s015", "type": "suggestion", "area": "intellectual", "text": "Learn one new word, fact, or skill and tell someone about it." },
-    { "id": "s016", "type": "suggestion", "area": "intellectual", "text": "Notice a thought that keeps repeating. Write it down and ask: is this fully true?" },
-
-    { "id": "a019", "type": "affirmation", "area": "occupational", "text": "I don't need to do everything today. I need to do the next right thing." },
-    { "id": "a020", "type": "affirmation", "area": "occupational", "text": "My worth is not measured by my productivity." },
-    { "id": "a021", "type": "affirmation", "area": "occupational", "text": "Done is better than perfect. I can start small." },
-    { "id": "s017", "type": "suggestion", "area": "occupational", "text": "Pick the one task that would make today feel successful, and do it first." },
-    { "id": "s018", "type": "suggestion", "area": "occupational", "text": "Work for 25 minutes, then take a 5-minute break away from the screen." },
-
-    { "id": "a022", "type": "affirmation", "area": "environmental", "text": "I can make my space a little kinder to me, one small change at a time." },
-    { "id": "s019", "type": "suggestion", "area": "environmental", "text": "Clear one surface: a nightstand, a desk corner, a kitchen counter." },
-    { "id": "s020", "type": "suggestion", "area": "environmental", "text": "Open a window for ten minutes and let fresh air in." },
-    { "id": "s021", "type": "suggestion", "area": "environmental", "text": "Put your phone in another room for the first hour after you wake up tomorrow." },
-    { "id": "s022", "type": "suggestion", "area": "environmental", "text": "Make your bed. It's a small win you can see all day." },
-
-    { "id": "a023", "type": "affirmation", "area": "financial", "text": "I can look at my finances with curiosity instead of fear." },
-    { "id": "a024", "type": "affirmation", "area": "financial", "text": "Small, steady choices add up. I don't have to fix everything at once." },
-    { "id": "s023", "type": "suggestion", "area": "financial", "text": "Before buying something non-essential today, wait 24 hours and see if you still want it." },
-    { "id": "s024", "type": "suggestion", "area": "financial", "text": "Check one account balance calmly, just to know where you stand." },
-
-    { "id": "a025", "type": "affirmation", "area": "community", "text": "Small kindnesses ripple further than I can see." },
-    { "id": "s025", "type": "suggestion", "area": "community", "text": "Do one kind thing for a stranger today, without needing them to notice." },
-    { "id": "s026", "type": "suggestion", "area": "community", "text": "Thank someone whose work usually goes unnoticed." },
-
-    { "id": "a026", "type": "affirmation", "text": "Showing up for myself today, in any small way, is enough." },
-    { "id": "a027", "type": "affirmation", "text": "I am allowed to begin again, as many times as I need." },
-    { "id": "a028", "type": "affirmation", "text": "Rest is part of the work, not a break from it." },
-    { "id": "a029", "type": "affirmation", "text": "I can do hard things, and I don't have to do them alone." },
-    { "id": "a030", "type": "affirmation", "text": "Today doesn't have to be perfect to be good." }
+    {
+      "id": "a001",
+      "type": "affirmation",
+      "text": "I'm allowed to feel this. It just doesn't get to drive.",
+      "area": "emotional",
+      "source": {
+        "name": "McLean Hospital: Practical DBT Strategies",
+        "url": "https://home.mcleanhospital.org/dbt-strategies"
+      }
+    },
+    {
+      "id": "a002",
+      "type": "affirmation",
+      "text": "Feelings come and go. This one will too.",
+      "area": "emotional",
+      "source": {
+        "name": "Calm: Distress Tolerance Skills",
+        "url": "https://www.calm.com/blog/distress-tolerance-skills"
+      }
+    },
+    {
+      "id": "a003",
+      "type": "affirmation",
+      "text": "I can name what I'm feeling and still choose what I do next.",
+      "area": "emotional",
+      "source": {
+        "name": "Self-Compassion (Kristin Neff, via UNC)",
+        "url": "https://selfcompassion.web.unc.edu/what-is-self-compassion/the-three-components-of-self-compassion/"
+      }
+    },
+    {
+      "id": "a004",
+      "type": "affirmation",
+      "text": "Not every thought I have is true. I get to check the facts.",
+      "area": "emotional",
+      "source": {
+        "name": "Mayo Clinic: Positive Self-Talk",
+        "url": "https://mayoclinic.org/connected-care/use-positive-self-talk-to-protect-your-health/vid-20508725"
+      }
+    },
+    {
+      "id": "a005",
+      "type": "affirmation",
+      "text": "I wouldn't talk to a friend the way my worst thoughts talk to me. So I won't.",
+      "area": "emotional",
+      "source": {
+        "name": "Mayo Clinic: Positive Thinking",
+        "url": "https://www.mayoclinic.org/healthy-lifestyle/stress-management/in-depth/positive-thinking/art-20043950"
+      }
+    },
+    {
+      "id": "a006",
+      "type": "affirmation",
+      "text": "Hard day? Still counts. I'm still here and still trying.",
+      "area": "emotional",
+      "source": {
+        "name": "American Psychological Association: Building Resilience",
+        "url": "https://www.apa.org/topics/resilience/building-your-resilience"
+      }
+    },
+    {
+      "id": "a007",
+      "type": "affirmation",
+      "text": "I don't have to be perfect. I just have to keep showing up.",
+      "area": "emotional",
+      "source": {
+        "name": "Mayo Clinic: Positive Thinking",
+        "url": "https://www.mayoclinic.org/healthy-lifestyle/stress-management/in-depth/positive-thinking/art-20043950"
+      }
+    },
+    {
+      "id": "a008",
+      "type": "affirmation",
+      "text": "Everybody struggles sometimes. I'm not the only one, and I'm not broken.",
+      "area": "emotional",
+      "source": {
+        "name": "Self-Compassion (Kristin Neff, via UNC)",
+        "url": "https://selfcompassion.web.unc.edu/what-is-self-compassion/the-three-components-of-self-compassion/"
+      }
+    },
+    {
+      "id": "a009",
+      "type": "affirmation",
+      "text": "Asking for help is a strength. I'm getting better at it.",
+      "area": "emotional",
+      "source": {
+        "name": "NIH: Emotional Wellness Toolkit",
+        "url": "https://www.nih.gov/health-information/emotional-wellness-toolkit"
+      }
+    },
+    {
+      "id": "a010",
+      "type": "affirmation",
+      "text": "I've gotten through hard stuff before. I can get through this.",
+      "area": "emotional",
+      "source": {
+        "name": "American Psychological Association: Building Resilience",
+        "url": "https://www.apa.org/topics/resilience/building-your-resilience"
+      }
+    },
+    {
+      "id": "a011",
+      "type": "affirmation",
+      "text": "Being kind to myself isn't letting myself off the hook. It's how I keep going.",
+      "area": "emotional",
+      "source": {
+        "name": "Mindful.org: Mindful Self-Compassion",
+        "url": "https://www.mindful.org/the-transformative-effects-of-mindful-self-compassion/"
+      }
+    },
+    {
+      "id": "a012",
+      "type": "affirmation",
+      "text": "I can slow down. Nothing has to be figured out this second.",
+      "area": "emotional",
+      "source": {
+        "name": "Calm: Distress Tolerance Skills",
+        "url": "https://www.calm.com/blog/distress-tolerance-skills"
+      }
+    },
+    {
+      "id": "a013",
+      "type": "affirmation",
+      "text": "One rough moment doesn't make it a rough day.",
+      "area": "emotional",
+      "source": {
+        "name": "Mayo Clinic: Positive Thinking",
+        "url": "https://www.mayoclinic.org/healthy-lifestyle/stress-management/in-depth/positive-thinking/art-20043950"
+      }
+    },
+    {
+      "id": "a014",
+      "type": "affirmation",
+      "text": "I can sit with something uncomfortable for a minute without fixing it.",
+      "area": "emotional",
+      "source": {
+        "name": "McLean Hospital: Practical DBT Strategies",
+        "url": "https://home.mcleanhospital.org/dbt-strategies"
+      }
+    },
+    {
+      "id": "a015",
+      "type": "affirmation",
+      "text": "I'm learning my patterns, and that's a big deal.",
+      "area": "emotional",
+      "source": {
+        "name": "Mental Health America: Tools 2 Thrive",
+        "url": "https://mhanational.org/tools-2-thrive"
+      }
+    },
+    {
+      "id": "a016",
+      "type": "affirmation",
+      "text": "Calm is a skill. I'm practicing it.",
+      "area": "emotional",
+      "source": {
+        "name": "NIH: Emotional Wellness Toolkit",
+        "url": "https://www.nih.gov/health-information/emotional-wellness-toolkit"
+      }
+    },
+    {
+      "id": "a017",
+      "type": "affirmation",
+      "text": "I can feel two things at once. Sad and hopeful can share a room.",
+      "area": "emotional",
+      "source": {
+        "name": "Mental Health America: Tools 2 Thrive",
+        "url": "https://mhanational.org/tools-2-thrive"
+      }
+    },
+    {
+      "id": "a018",
+      "type": "affirmation",
+      "text": "I'm proud of how far I've come, even if nobody else sees it.",
+      "area": "emotional",
+      "source": {
+        "name": "American Psychological Association: Building Resilience",
+        "url": "https://www.apa.org/topics/resilience/building-your-resilience"
+      }
+    },
+    {
+      "id": "a019",
+      "type": "affirmation",
+      "text": "Fulfilled, proud, and keepin' on. That's the plan today.",
+      "area": "emotional",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "a020",
+      "type": "affirmation",
+      "text": "My worth isn't up for debate today.",
+      "area": "emotional",
+      "source": {
+        "name": "University of Illinois Extension: Self-Compassion",
+        "url": "https://extension.illinois.edu/everyones-mental-health-matters/self-compassion"
+      }
+    },
+    {
+      "id": "a021",
+      "type": "affirmation",
+      "text": "When I mess up, I own it, learn from it, and move on.",
+      "area": "emotional",
+      "source": {
+        "name": "Self-Compassion (Kristin Neff, via UNC)",
+        "url": "https://selfcompassion.web.unc.edu/what-is-self-compassion/the-three-components-of-self-compassion/"
+      }
+    },
+    {
+      "id": "a022",
+      "type": "affirmation",
+      "text": "I can restart my day any time. Even at 3 PM.",
+      "area": "emotional",
+      "source": {
+        "name": "American Psychological Association: Building Resilience",
+        "url": "https://www.apa.org/topics/resilience/building-your-resilience"
+      }
+    },
+    {
+      "id": "a023",
+      "type": "affirmation",
+      "text": "I'm not my thoughts. I'm the one noticing them.",
+      "area": "emotional",
+      "source": {
+        "name": "NCCIH: Meditation and Mindfulness",
+        "url": "https://www.nccih.nih.gov/health/tips/8-things-to-know-about-meditation-and-mindfulness"
+      }
+    },
+    {
+      "id": "a024",
+      "type": "affirmation",
+      "text": "It's okay to not be okay. It's also okay to feel great.",
+      "area": "emotional",
+      "source": {
+        "name": "Mental Health America: Tools 2 Thrive",
+        "url": "https://mhanational.org/tools-2-thrive"
+      }
+    },
+    {
+      "id": "a025",
+      "type": "affirmation",
+      "text": "Small wins count. I'm keeping score of the good stuff too.",
+      "area": "emotional",
+      "source": {
+        "name": "NIH: Emotional Wellness Toolkit",
+        "url": "https://www.nih.gov/health-information/emotional-wellness-toolkit"
+      }
+    },
+    {
+      "id": "s001",
+      "type": "suggestion",
+      "text": "Try paced breathing: breathe out a little longer than you breathe in, for one minute.",
+      "area": "emotional",
+      "source": {
+        "name": "McLean Hospital: Practical DBT Strategies",
+        "url": "https://home.mcleanhospital.org/dbt-strategies"
+      }
+    },
+    {
+      "id": "s002",
+      "type": "suggestion",
+      "text": "Splash cool water on your face. It's a quick reset when emotions run hot.",
+      "area": "emotional",
+      "source": {
+        "name": "McLean Hospital: Practical DBT Strategies",
+        "url": "https://home.mcleanhospital.org/dbt-strategies"
+      }
+    },
+    {
+      "id": "s003",
+      "type": "suggestion",
+      "text": "Put a name to what you're feeling right now. Naming it takes some of the edge off.",
+      "area": "emotional",
+      "source": {
+        "name": "University of Illinois Extension: Self-Compassion",
+        "url": "https://extension.illinois.edu/everyones-mental-health-matters/self-compassion"
+      }
+    },
+    {
+      "id": "s004",
+      "type": "suggestion",
+      "text": "Write down one worry, then one thing you can actually do about it.",
+      "area": "emotional",
+      "source": {
+        "name": "NIH: Emotional Wellness Toolkit",
+        "url": "https://www.nih.gov/health-information/emotional-wellness-toolkit"
+      }
+    },
+    {
+      "id": "s005",
+      "type": "suggestion",
+      "text": "Catch one \"I can't\" today and flip it to \"I can keep trying.\"",
+      "area": "emotional",
+      "source": {
+        "name": "Mayo Clinic: Positive Self-Talk",
+        "url": "https://mayoclinic.org/connected-care/use-positive-self-talk-to-protect-your-health/vid-20508725"
+      }
+    },
+    {
+      "id": "s006",
+      "type": "suggestion",
+      "text": "Put a hand on your chest and say something kind to yourself, like you would to a friend.",
+      "area": "emotional",
+      "source": {
+        "name": "Self-Compassion (Kristin Neff, via UNC)",
+        "url": "https://selfcompassion.web.unc.edu/what-is-self-compassion/the-three-components-of-self-compassion/"
+      }
+    },
+    {
+      "id": "s007",
+      "type": "suggestion",
+      "text": "When a thought starts spiraling, ask: is this a fact or a fear?",
+      "area": "emotional",
+      "source": {
+        "name": "Mayo Clinic: Positive Self-Talk",
+        "url": "https://mayoclinic.org/connected-care/use-positive-self-talk-to-protect-your-health/vid-20508725"
+      }
+    },
+    {
+      "id": "s008",
+      "type": "suggestion",
+      "text": "Make a short \"feel better\" list of three things that reliably help. Keep it handy.",
+      "area": "emotional",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "s009",
+      "type": "suggestion",
+      "text": "Soothe yourself with your senses: a warm drink, a soft blanket, a song you love.",
+      "area": "emotional",
+      "source": {
+        "name": "McLean Hospital: Practical DBT Strategies",
+        "url": "https://home.mcleanhospital.org/dbt-strategies"
+      }
+    },
+    {
+      "id": "s010",
+      "type": "suggestion",
+      "text": "Take a five-minute pause before reacting to something that bugs you today.",
+      "area": "emotional",
+      "source": {
+        "name": "Calm: Distress Tolerance Skills",
+        "url": "https://www.calm.com/blog/distress-tolerance-skills"
+      }
+    },
+    {
+      "id": "s011",
+      "type": "suggestion",
+      "text": "Write down three good things that happened today, even tiny ones.",
+      "area": "emotional",
+      "source": {
+        "name": "Greater Good Science Center: Gratitude Strategies",
+        "url": "https://greatergood.berkeley.edu/article/item/four_great_gratitude_strategies"
+      }
+    },
+    {
+      "id": "s012",
+      "type": "suggestion",
+      "text": "Do something that makes you laugh today: a funny video, a goofy memory, a friend.",
+      "area": "emotional",
+      "source": {
+        "name": "Mayo Clinic: Positive Thinking",
+        "url": "https://www.mayoclinic.org/healthy-lifestyle/stress-management/in-depth/positive-thinking/art-20043950"
+      }
+    },
+    {
+      "id": "s013",
+      "type": "suggestion",
+      "text": "If today feels heavy, reach out to someone you trust and just say so.",
+      "area": "emotional",
+      "source": {
+        "name": "NIH: Emotional Wellness Toolkit",
+        "url": "https://www.nih.gov/health-information/emotional-wellness-toolkit"
+      }
+    },
+    {
+      "id": "s014",
+      "type": "suggestion",
+      "text": "Notice where stress sits in your body. Drop your shoulders and unclench your jaw.",
+      "area": "emotional",
+      "source": {
+        "name": "NIH: Emotional Wellness Toolkit",
+        "url": "https://www.nih.gov/health-information/emotional-wellness-toolkit"
+      }
+    },
+    {
+      "id": "s015",
+      "type": "suggestion",
+      "text": "Try a quick body scan: start at your toes and notice each part, no judging.",
+      "area": "emotional",
+      "source": {
+        "name": "NCCIH: Meditation and Mindfulness",
+        "url": "https://www.nccih.nih.gov/health/tips/8-things-to-know-about-meditation-and-mindfulness"
+      }
+    },
+    {
+      "id": "a026",
+      "type": "affirmation",
+      "text": "My body does a lot for me. I'll do something nice for it today.",
+      "area": "physical",
+      "source": {
+        "name": "VA Whole Health: Circle of Health",
+        "url": "https://www.va.gov/WHOLEHEALTH/features/What_is_the_Circle_of_Health.asp"
+      }
+    },
+    {
+      "id": "a027",
+      "type": "affirmation",
+      "text": "Moving a little is way better than not moving at all.",
+      "area": "physical",
+      "source": {
+        "name": "CDC: Physical Activity Boosts Brain Health",
+        "url": "https://www.cdc.gov/physical-activity/features/boost-brain-health.html"
+      }
+    },
+    {
+      "id": "a028",
+      "type": "affirmation",
+      "text": "Rest is part of the plan, not a break from it.",
+      "area": "physical",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "a029",
+      "type": "affirmation",
+      "text": "Good sleep is self-care, not laziness.",
+      "area": "physical",
+      "source": {
+        "name": "Harvard Health: Sleep Hygiene",
+        "url": "https://www.health.harvard.edu/staying-healthy/sleep-hygiene-simple-practices-for-better-rest"
+      }
+    },
+    {
+      "id": "a030",
+      "type": "affirmation",
+      "text": "I can listen to what my body needs today.",
+      "area": "physical",
+      "source": {
+        "name": "VA Whole Health: Circle of Health",
+        "url": "https://www.va.gov/WHOLEHEALTH/features/What_is_the_Circle_of_Health.asp"
+      }
+    },
+    {
+      "id": "a031",
+      "type": "affirmation",
+      "text": "Feeling strong starts with the basics: water, food, sleep, a walk.",
+      "area": "physical",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "a032",
+      "type": "affirmation",
+      "text": "My body is on my team. I'll treat it that way.",
+      "area": "physical",
+      "source": {
+        "name": "VA Whole Health: Circle of Health",
+        "url": "https://www.va.gov/WHOLEHEALTH/features/What_is_the_Circle_of_Health.asp"
+      }
+    },
+    {
+      "id": "a033",
+      "type": "affirmation",
+      "text": "Every walk counts, even the short ones.",
+      "area": "physical",
+      "source": {
+        "name": "CDC: Benefits of Physical Activity",
+        "url": "https://www.cdc.gov/physical-activity-basics/benefits/index.html"
+      }
+    },
+    {
+      "id": "a034",
+      "type": "affirmation",
+      "text": "I can be patient with my body while it heals.",
+      "area": "physical",
+      "source": {
+        "name": "SAMHSA: Recovery",
+        "url": "https://www.samhsa.gov/substance-use/recovery/about"
+      }
+    },
+    {
+      "id": "a035",
+      "type": "affirmation",
+      "text": "Taking care of myself today makes tomorrow easier.",
+      "area": "physical",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "s016",
+      "type": "suggestion",
+      "text": "Take a 10-minute walk today. Any amount of movement helps your mood.",
+      "area": "physical",
+      "source": {
+        "name": "CDC: Physical Activity Boosts Brain Health",
+        "url": "https://www.cdc.gov/physical-activity/features/boost-brain-health.html"
+      }
+    },
+    {
+      "id": "s017",
+      "type": "suggestion",
+      "text": "Get some morning daylight. It helps you feel awake now and sleep better later.",
+      "area": "physical",
+      "source": {
+        "name": "Harvard Health: Sleep Hygiene",
+        "url": "https://www.health.harvard.edu/staying-healthy/sleep-hygiene-simple-practices-for-better-rest"
+      }
+    },
+    {
+      "id": "s018",
+      "type": "suggestion",
+      "text": "Go to bed and wake up around the same time tonight and tomorrow.",
+      "area": "physical",
+      "source": {
+        "name": "Harvard Health: Sleep Hygiene",
+        "url": "https://www.health.harvard.edu/staying-healthy/sleep-hygiene-simple-practices-for-better-rest"
+      }
+    },
+    {
+      "id": "s019",
+      "type": "suggestion",
+      "text": "Keep your bedroom cool, dark, and quiet tonight.",
+      "area": "physical",
+      "source": {
+        "name": "Harvard Health: Sleep Hygiene",
+        "url": "https://www.health.harvard.edu/staying-healthy/sleep-hygiene-simple-practices-for-better-rest"
+      }
+    },
+    {
+      "id": "s020",
+      "type": "suggestion",
+      "text": "Put the phone away an hour before bed. Read something on paper instead.",
+      "area": "physical",
+      "source": {
+        "name": "Harvard Health: Sleep Hygiene",
+        "url": "https://www.health.harvard.edu/staying-healthy/sleep-hygiene-simple-practices-for-better-rest"
+      }
+    },
+    {
+      "id": "s021",
+      "type": "suggestion",
+      "text": "Skip caffeine after lunch today and see how you sleep.",
+      "area": "physical",
+      "source": {
+        "name": "Harvard Health: Sleep Hygiene",
+        "url": "https://www.health.harvard.edu/staying-healthy/sleep-hygiene-simple-practices-for-better-rest"
+      }
+    },
+    {
+      "id": "s022",
+      "type": "suggestion",
+      "text": "Stretch for five minutes when you wake up.",
+      "area": "physical",
+      "source": {
+        "name": "CDC: Benefits of Physical Activity",
+        "url": "https://www.cdc.gov/physical-activity-basics/benefits/index.html"
+      }
+    },
+    {
+      "id": "s023",
+      "type": "suggestion",
+      "text": "Dance to one song. Seriously, it counts.",
+      "area": "physical",
+      "source": {
+        "name": "CDC: Benefits of Physical Activity",
+        "url": "https://www.cdc.gov/physical-activity-basics/benefits/index.html"
+      }
+    },
+    {
+      "id": "s024",
+      "type": "suggestion",
+      "text": "Eat a real meal with some color on the plate today.",
+      "area": "physical",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "s025",
+      "type": "suggestion",
+      "text": "Keep a water bottle where you can see it. Refill it twice.",
+      "area": "physical",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "s026",
+      "type": "suggestion",
+      "text": "Take the stairs once today.",
+      "area": "physical",
+      "source": {
+        "name": "CDC: Benefits of Physical Activity",
+        "url": "https://www.cdc.gov/physical-activity-basics/benefits/index.html"
+      }
+    },
+    {
+      "id": "s027",
+      "type": "suggestion",
+      "text": "Go for a swim, a bike ride, or anything that gets your heart going a little.",
+      "area": "physical",
+      "source": {
+        "name": "CDC: Benefits of Physical Activity",
+        "url": "https://www.cdc.gov/physical-activity-basics/benefits/index.html"
+      }
+    },
+    {
+      "id": "s028",
+      "type": "suggestion",
+      "text": "If you're sitting a lot, stand up and move for a couple of minutes every hour.",
+      "area": "physical",
+      "source": {
+        "name": "CDC: Benefits of Physical Activity",
+        "url": "https://www.cdc.gov/physical-activity-basics/benefits/index.html"
+      }
+    },
+    {
+      "id": "s029",
+      "type": "suggestion",
+      "text": "Try a short wind-down tonight: dim lights, warm shower, slow breaths.",
+      "area": "physical",
+      "source": {
+        "name": "Harvard Health: Sleep Hygiene",
+        "url": "https://www.health.harvard.edu/staying-healthy/sleep-hygiene-simple-practices-for-better-rest"
+      }
+    },
+    {
+      "id": "s030",
+      "type": "suggestion",
+      "text": "Can't sleep after 20 minutes? Get up and do something calm until you're sleepy.",
+      "area": "physical",
+      "source": {
+        "name": "Harvard Health: Sleep Hygiene",
+        "url": "https://www.health.harvard.edu/staying-healthy/sleep-hygiene-simple-practices-for-better-rest"
+      }
+    },
+    {
+      "id": "s031",
+      "type": "suggestion",
+      "text": "Use your bed for sleep, not scrolling.",
+      "area": "physical",
+      "source": {
+        "name": "Harvard Health: Sleep Hygiene",
+        "url": "https://www.health.harvard.edu/staying-healthy/sleep-hygiene-simple-practices-for-better-rest"
+      }
+    },
+    {
+      "id": "s032",
+      "type": "suggestion",
+      "text": "Do a few slow neck and shoulder rolls right now.",
+      "area": "physical",
+      "source": {
+        "name": "NIH: Emotional Wellness Toolkit",
+        "url": "https://www.nih.gov/health-information/emotional-wellness-toolkit"
+      }
+    },
+    {
+      "id": "s033",
+      "type": "suggestion",
+      "text": "Take a short walk after dinner.",
+      "area": "physical",
+      "source": {
+        "name": "CDC: Benefits of Physical Activity",
+        "url": "https://www.cdc.gov/physical-activity-basics/benefits/index.html"
+      }
+    },
+    {
+      "id": "s034",
+      "type": "suggestion",
+      "text": "Book that checkup you've been putting off.",
+      "area": "physical",
+      "source": {
+        "name": "VA Whole Health: Circle of Health",
+        "url": "https://www.va.gov/WHOLEHEALTH/features/What_is_the_Circle_of_Health.asp"
+      }
+    },
+    {
+      "id": "s035",
+      "type": "suggestion",
+      "text": "Notice how your body feels after moving. Remember that feeling next time.",
+      "area": "physical",
+      "source": {
+        "name": "CDC: Benefits of Physical Activity",
+        "url": "https://www.cdc.gov/physical-activity-basics/benefits/index.html"
+      }
+    },
+    {
+      "id": "s036",
+      "type": "suggestion",
+      "text": "Box breathing: in for 4, hold for 4, out for 4, hold for 4. Repeat four times.",
+      "area": "physical",
+      "source": {
+        "name": "NIH: Emotional Wellness Toolkit",
+        "url": "https://www.nih.gov/health-information/emotional-wellness-toolkit"
+      }
+    },
+    {
+      "id": "s037",
+      "type": "suggestion",
+      "text": "Try a few minutes of gentle stretching or yoga before bed.",
+      "area": "physical",
+      "source": {
+        "name": "NCCIH: Meditation and Mindfulness",
+        "url": "https://www.nccih.nih.gov/health/tips/8-things-to-know-about-meditation-and-mindfulness"
+      }
+    },
+    {
+      "id": "s038",
+      "type": "suggestion",
+      "text": "Get outside and move, even just around the block. Fresh air plus movement is a great combo.",
+      "area": "physical",
+      "source": {
+        "name": "Minnesota Dept. of Health: Nature and Mental Health",
+        "url": "https://www.health.state.mn.us/communities/mentalhealth/nature.html"
+      }
+    },
+    {
+      "id": "s039",
+      "type": "suggestion",
+      "text": "Plan tomorrow's breakfast tonight so the morning is easy.",
+      "area": "physical",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "a036",
+      "type": "affirmation",
+      "text": "I know what matters to me, and I can come back to it any time.",
+      "area": "spiritual",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "a037",
+      "type": "affirmation",
+      "text": "There's meaning in small, quiet moments. I'm paying attention.",
+      "area": "spiritual",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "a038",
+      "type": "affirmation",
+      "text": "I'm part of something bigger than today's worries.",
+      "area": "spiritual",
+      "source": {
+        "name": "VA Whole Health: Circle of Health",
+        "url": "https://www.va.gov/WHOLEHEALTH/features/What_is_the_Circle_of_Health.asp"
+      }
+    },
+    {
+      "id": "a039",
+      "type": "affirmation",
+      "text": "Peace is something I can practice, not just hope for.",
+      "area": "spiritual",
+      "source": {
+        "name": "NCCIH: Meditation and Mindfulness",
+        "url": "https://www.nccih.nih.gov/health/tips/8-things-to-know-about-meditation-and-mindfulness"
+      }
+    },
+    {
+      "id": "a040",
+      "type": "affirmation",
+      "text": "I can be still for a minute. The world will keep turning.",
+      "area": "spiritual",
+      "source": {
+        "name": "NCCIH: Meditation and Mindfulness",
+        "url": "https://www.nccih.nih.gov/health/tips/8-things-to-know-about-meditation-and-mindfulness"
+      }
+    },
+    {
+      "id": "a041",
+      "type": "affirmation",
+      "text": "Gratitude changes how the day feels, and I've got plenty to be grateful for.",
+      "area": "spiritual",
+      "source": {
+        "name": "Greater Good Science Center: What Is Gratitude?",
+        "url": "https://greatergood.berkeley.edu/gratitude/definition"
+      }
+    },
+    {
+      "id": "a042",
+      "type": "affirmation",
+      "text": "I'm growing, even when it's slow.",
+      "area": "spiritual",
+      "source": {
+        "name": "SAMHSA: Recovery",
+        "url": "https://www.samhsa.gov/substance-use/recovery/about"
+      }
+    },
+    {
+      "id": "a043",
+      "type": "affirmation",
+      "text": "I can accept what I can't change and work on what I can.",
+      "area": "spiritual",
+      "source": {
+        "name": "McLean Hospital: Practical DBT Strategies",
+        "url": "https://home.mcleanhospital.org/dbt-strategies"
+      }
+    },
+    {
+      "id": "a044",
+      "type": "affirmation",
+      "text": "Hope is real, and I've got some.",
+      "area": "spiritual",
+      "source": {
+        "name": "SAMHSA: Guiding Principles of Recovery",
+        "url": "https://store.samhsa.gov/sites/default/files/d7/priv/pep12-recdef.pdf"
+      }
+    },
+    {
+      "id": "a045",
+      "type": "affirmation",
+      "text": "My values are my compass. I'll check it today.",
+      "area": "spiritual",
+      "source": {
+        "name": "VA Whole Health: Circle of Health",
+        "url": "https://www.va.gov/WHOLEHEALTH/features/What_is_the_Circle_of_Health.asp"
+      }
+    },
+    {
+      "id": "s040",
+      "type": "suggestion",
+      "text": "Sit quietly for two minutes and just breathe. That's meditation.",
+      "area": "spiritual",
+      "source": {
+        "name": "NCCIH: Meditation and Mindfulness",
+        "url": "https://www.nccih.nih.gov/health/tips/8-things-to-know-about-meditation-and-mindfulness"
+      }
+    },
+    {
+      "id": "s041",
+      "type": "suggestion",
+      "text": "Spend a few minutes outside without your phone. Notice what you hear.",
+      "area": "spiritual",
+      "source": {
+        "name": "APA Monitor: Nurtured by Nature",
+        "url": "https://www.apa.org/monitor/2020/04/nurtured-nature"
+      }
+    },
+    {
+      "id": "s042",
+      "type": "suggestion",
+      "text": "Write down one value you want to live by today.",
+      "area": "spiritual",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s043",
+      "type": "suggestion",
+      "text": "Find a quiet spot and give yourself five minutes of solitude.",
+      "area": "spiritual",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s044",
+      "type": "suggestion",
+      "text": "Look up at the sky for a minute: clouds, sunrise, or stars.",
+      "area": "spiritual",
+      "source": {
+        "name": "American Psychiatric Association: Nature and Mental Well-Being",
+        "url": "https://www.psychiatry.org/news-room/apa-blogs/ways-nature-can-boost-your-mental-wellbeing"
+      }
+    },
+    {
+      "id": "s045",
+      "type": "suggestion",
+      "text": "Write a short thank-you note to someone who helped you. Send it if you can.",
+      "area": "spiritual",
+      "source": {
+        "name": "Greater Good Science Center: Gratitude Strategies",
+        "url": "https://greatergood.berkeley.edu/article/item/four_great_gratitude_strategies"
+      }
+    },
+    {
+      "id": "s046",
+      "type": "suggestion",
+      "text": "Before bed, think of one moment today you're grateful for.",
+      "area": "spiritual",
+      "source": {
+        "name": "Greater Good Science Center: Gratitude Strategies",
+        "url": "https://greatergood.berkeley.edu/article/item/four_great_gratitude_strategies"
+      }
+    },
+    {
+      "id": "s047",
+      "type": "suggestion",
+      "text": "Take a slow walk and really notice things: trees, birds, the light.",
+      "area": "spiritual",
+      "source": {
+        "name": "APA Monitor: Nurtured by Nature",
+        "url": "https://www.apa.org/monitor/2020/04/nurtured-nature"
+      }
+    },
+    {
+      "id": "s048",
+      "type": "suggestion",
+      "text": "Spend a little time with an animal if you can. They're great at being present.",
+      "area": "spiritual",
+      "source": {
+        "name": "American Psychiatric Association: Nature and Mental Well-Being",
+        "url": "https://www.psychiatry.org/news-room/apa-blogs/ways-nature-can-boost-your-mental-wellbeing"
+      }
+    },
+    {
+      "id": "s049",
+      "type": "suggestion",
+      "text": "Try a few minutes of guided meditation.",
+      "area": "spiritual",
+      "source": {
+        "name": "NCCIH: Meditation and Mindfulness",
+        "url": "https://www.nccih.nih.gov/health/tips/8-things-to-know-about-meditation-and-mindfulness"
+      }
+    },
+    {
+      "id": "s050",
+      "type": "suggestion",
+      "text": "Ask yourself: what would make today feel meaningful?",
+      "area": "spiritual",
+      "source": {
+        "name": "VA Whole Health: Circle of Health",
+        "url": "https://www.va.gov/WHOLEHEALTH/features/What_is_the_Circle_of_Health.asp"
+      }
+    },
+    {
+      "id": "s051",
+      "type": "suggestion",
+      "text": "Think about a hard thing you got through. What did it teach you?",
+      "area": "spiritual",
+      "source": {
+        "name": "American Psychological Association: Building Resilience",
+        "url": "https://www.apa.org/topics/resilience/building-your-resilience"
+      }
+    },
+    {
+      "id": "s052",
+      "type": "suggestion",
+      "text": "Put on music that makes you feel something, and just listen.",
+      "area": "spiritual",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s053",
+      "type": "suggestion",
+      "text": "Make a cup of tea or light a candle. Give yourself a small, quiet ritual.",
+      "area": "spiritual",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s054",
+      "type": "suggestion",
+      "text": "Watch birds for five minutes. City birds count too.",
+      "area": "spiritual",
+      "source": {
+        "name": "American Psychiatric Association: Nature and Mental Well-Being",
+        "url": "https://www.psychiatry.org/news-room/apa-blogs/ways-nature-can-boost-your-mental-wellbeing"
+      }
+    },
+    {
+      "id": "s055",
+      "type": "suggestion",
+      "text": "Write down three things you're grateful for that you usually take for granted.",
+      "area": "spiritual",
+      "source": {
+        "name": "Greater Good Science Center: Gratitude Strategies",
+        "url": "https://greatergood.berkeley.edu/article/item/four_great_gratitude_strategies"
+      }
+    },
+    {
+      "id": "s056",
+      "type": "suggestion",
+      "text": "Savor something today: your coffee, a song, a good conversation. Slow down and enjoy it.",
+      "area": "spiritual",
+      "source": {
+        "name": "Greater Good Science Center: Gratitude Strategies",
+        "url": "https://greatergood.berkeley.edu/article/item/four_great_gratitude_strategies"
+      }
+    },
+    {
+      "id": "a046",
+      "type": "affirmation",
+      "text": "I deserve good people around me, and I'm one of the good people.",
+      "area": "social",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "a047",
+      "type": "affirmation",
+      "text": "Boundaries help me show up better for the people I care about.",
+      "area": "social",
+      "source": {
+        "name": "NAMI: Taking Care of Yourself",
+        "url": "https://www.nami.org/family-members-and-caregivers/taking-care-of-yourself/"
+      }
+    },
+    {
+      "id": "a048",
+      "type": "affirmation",
+      "text": "I can let people in a little at a time.",
+      "area": "social",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "a049",
+      "type": "affirmation",
+      "text": "Connection is good medicine. I'll take my dose today.",
+      "area": "social",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "a050",
+      "type": "affirmation",
+      "text": "I'm worth checking in on, and so are my friends.",
+      "area": "social",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "a051",
+      "type": "affirmation",
+      "text": "It's okay to say no. It's also okay to say yes to fun.",
+      "area": "social",
+      "source": {
+        "name": "NAMI: Taking Care of Yourself",
+        "url": "https://www.nami.org/family-members-and-caregivers/taking-care-of-yourself/"
+      }
+    },
+    {
+      "id": "a052",
+      "type": "affirmation",
+      "text": "I can be a good listener today.",
+      "area": "social",
+      "source": {
+        "name": "NIH: Emotional Wellness Toolkit",
+        "url": "https://www.nih.gov/health-information/emotional-wellness-toolkit"
+      }
+    },
+    {
+      "id": "a053",
+      "type": "affirmation",
+      "text": "The right people are glad I'm here.",
+      "area": "social",
+      "source": {
+        "name": "SAMHSA: Recovery",
+        "url": "https://www.samhsa.gov/substance-use/recovery/about"
+      }
+    },
+    {
+      "id": "a054",
+      "type": "affirmation",
+      "text": "Welcoming someone new can make both our days.",
+      "area": "social",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "a055",
+      "type": "affirmation",
+      "text": "I don't have to do this alone.",
+      "area": "social",
+      "source": {
+        "name": "SAMHSA: Recovery",
+        "url": "https://www.samhsa.gov/substance-use/recovery/about"
+      }
+    },
+    {
+      "id": "s057",
+      "type": "suggestion",
+      "text": "Text someone you've been meaning to check on.",
+      "area": "social",
+      "source": {
+        "name": "U.S. Surgeon General: 5-for-5 Connection Challenge",
+        "url": "https://www.surgeongeneral.gov/Connection"
+      }
+    },
+    {
+      "id": "s058",
+      "type": "suggestion",
+      "text": "Call someone instead of texting. Hearing a voice is different.",
+      "area": "social",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "s059",
+      "type": "suggestion",
+      "text": "Put your phone away during your next meal with someone.",
+      "area": "social",
+      "source": {
+        "name": "Mayo Clinic: Benefits of Cutting Back Screen Time",
+        "url": "https://newsnetwork.mayoclinic.org/discussion/mayo-clinic-q-and-a-4-health-benefits-to-cutting-back-screen-time/"
+      }
+    },
+    {
+      "id": "s060",
+      "type": "suggestion",
+      "text": "Ask someone a real question today and listen to the whole answer.",
+      "area": "social",
+      "source": {
+        "name": "NIH: Emotional Wellness Toolkit",
+        "url": "https://www.nih.gov/health-information/emotional-wellness-toolkit"
+      }
+    },
+    {
+      "id": "s061",
+      "type": "suggestion",
+      "text": "Tell someone you appreciate them, and be specific about why.",
+      "area": "social",
+      "source": {
+        "name": "Greater Good Science Center: Gratitude Strategies",
+        "url": "https://greatergood.berkeley.edu/article/item/four_great_gratitude_strategies"
+      }
+    },
+    {
+      "id": "s062",
+      "type": "suggestion",
+      "text": "Make plans to see a friend in person this week.",
+      "area": "social",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "s063",
+      "type": "suggestion",
+      "text": "Say hi to a neighbor or coworker you don't usually talk to.",
+      "area": "social",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "s064",
+      "type": "suggestion",
+      "text": "Join a group, class, or meeting around something you're into.",
+      "area": "social",
+      "source": {
+        "name": "NIH: Emotional Wellness Toolkit",
+        "url": "https://www.nih.gov/health-information/emotional-wellness-toolkit"
+      }
+    },
+    {
+      "id": "s065",
+      "type": "suggestion",
+      "text": "Practice one boundary today, kindly and clearly.",
+      "area": "social",
+      "source": {
+        "name": "NAMI: Taking Care of Yourself",
+        "url": "https://www.nami.org/family-members-and-caregivers/taking-care-of-yourself/"
+      }
+    },
+    {
+      "id": "s066",
+      "type": "suggestion",
+      "text": "Reach out to someone who's going through a tough time.",
+      "area": "social",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "s067",
+      "type": "suggestion",
+      "text": "Make someone laugh today.",
+      "area": "social",
+      "source": {
+        "name": "NIH: Emotional Wellness Toolkit",
+        "url": "https://www.nih.gov/health-information/emotional-wellness-toolkit"
+      }
+    },
+    {
+      "id": "s068",
+      "type": "suggestion",
+      "text": "Thank someone for being in your corner.",
+      "area": "social",
+      "source": {
+        "name": "Greater Good Science Center: Gratitude Strategies",
+        "url": "https://greatergood.berkeley.edu/article/item/four_great_gratitude_strategies"
+      }
+    },
+    {
+      "id": "s069",
+      "type": "suggestion",
+      "text": "Share a meal with someone this week.",
+      "area": "social",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "s070",
+      "type": "suggestion",
+      "text": "Find a support or peer group that fits you. Peers get it.",
+      "area": "social",
+      "source": {
+        "name": "SAMHSA: Recovery",
+        "url": "https://www.samhsa.gov/substance-use/recovery/about"
+      }
+    },
+    {
+      "id": "s071",
+      "type": "suggestion",
+      "text": "Send someone a photo or memory that made you think of them.",
+      "area": "social",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "a056",
+      "type": "affirmation",
+      "text": "I'm allowed to be a beginner. Everybody starts somewhere.",
+      "area": "intellectual",
+      "source": {
+        "name": "Harvard Health: Keep Your Mind Sharp",
+        "url": "https://www.health.harvard.edu/mind-and-mood/6-simple-steps-to-keep-your-mind-sharp-at-any-age"
+      }
+    },
+    {
+      "id": "a057",
+      "type": "affirmation",
+      "text": "Learning new stuff keeps my brain sharp.",
+      "area": "intellectual",
+      "source": {
+        "name": "Harvard Health: Keep Your Mind Sharp",
+        "url": "https://www.health.harvard.edu/mind-and-mood/6-simple-steps-to-keep-your-mind-sharp-at-any-age"
+      }
+    },
+    {
+      "id": "a058",
+      "type": "affirmation",
+      "text": "Curiosity beats worry. I'll pick curiosity today.",
+      "area": "intellectual",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "a059",
+      "type": "affirmation",
+      "text": "I can learn something from today, good or bad.",
+      "area": "intellectual",
+      "source": {
+        "name": "American Psychological Association: Building Resilience",
+        "url": "https://www.apa.org/topics/resilience/building-your-resilience"
+      }
+    },
+    {
+      "id": "a060",
+      "type": "affirmation",
+      "text": "My brain is still growing. That's pretty awesome.",
+      "area": "intellectual",
+      "source": {
+        "name": "Harvard Health: Keep Your Mind Sharp",
+        "url": "https://www.health.harvard.edu/mind-and-mood/6-simple-steps-to-keep-your-mind-sharp-at-any-age"
+      }
+    },
+    {
+      "id": "a061",
+      "type": "affirmation",
+      "text": "I don't have to know everything. I just have to stay curious.",
+      "area": "intellectual",
+      "source": {
+        "name": "Alzheimer's Association: Stay Mentally Active",
+        "url": "https://alz.org/help-support/brain_health/stay_mentally_and_socially_active"
+      }
+    },
+    {
+      "id": "s072",
+      "type": "suggestion",
+      "text": "Read 10 pages of a book today. Paper counts double.",
+      "area": "intellectual",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s073",
+      "type": "suggestion",
+      "text": "Learn one new thing and tell someone about it.",
+      "area": "intellectual",
+      "source": {
+        "name": "Alzheimer's Association: Stay Mentally Active",
+        "url": "https://alz.org/help-support/brain_health/stay_mentally_and_socially_active"
+      }
+    },
+    {
+      "id": "s074",
+      "type": "suggestion",
+      "text": "Try a puzzle, a crossword, or a game that makes you think.",
+      "area": "intellectual",
+      "source": {
+        "name": "Alzheimer's Association: Stay Mentally Active",
+        "url": "https://alz.org/help-support/brain_health/stay_mentally_and_socially_active"
+      }
+    },
+    {
+      "id": "s075",
+      "type": "suggestion",
+      "text": "Pick up a hobby you've always been curious about.",
+      "area": "intellectual",
+      "source": {
+        "name": "AARP: Good Brain Habits",
+        "url": "https://www.aarp.org/health/healthy-living/good-brain-habits/"
+      }
+    },
+    {
+      "id": "s076",
+      "type": "suggestion",
+      "text": "Journal for five minutes. No rules, just get it out of your head.",
+      "area": "intellectual",
+      "source": {
+        "name": "University of Rochester Medical Center: Journaling",
+        "url": "https://www.urmc.rochester.edu/behavioral-health-partners/bhp-blog/april-2025/no-rules-just-write-a-new-approach-to-journaling"
+      }
+    },
+    {
+      "id": "s077",
+      "type": "suggestion",
+      "text": "Watch or listen to something educational instead of scrolling.",
+      "area": "intellectual",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s078",
+      "type": "suggestion",
+      "text": "Write about something stressful for 15 minutes, then close the notebook.",
+      "area": "intellectual",
+      "source": {
+        "name": "VA Whole Health: Therapeutic Journaling",
+        "url": "https://www.va.gov/WHOLEHEALTHLIBRARY/docs/Therapeutic-Journaling.pdf"
+      }
+    },
+    {
+      "id": "s079",
+      "type": "suggestion",
+      "text": "Try a new recipe this week.",
+      "area": "intellectual",
+      "source": {
+        "name": "Harvard Health: Keep Your Mind Sharp",
+        "url": "https://www.health.harvard.edu/mind-and-mood/6-simple-steps-to-keep-your-mind-sharp-at-any-age"
+      }
+    },
+    {
+      "id": "s080",
+      "type": "suggestion",
+      "text": "Learn a few words in a new language.",
+      "area": "intellectual",
+      "source": {
+        "name": "AARP: Good Brain Habits",
+        "url": "https://www.aarp.org/health/healthy-living/good-brain-habits/"
+      }
+    },
+    {
+      "id": "s081",
+      "type": "suggestion",
+      "text": "Look up the answer to something you've always wondered about.",
+      "area": "intellectual",
+      "source": {
+        "name": "Alzheimer's Association: Stay Mentally Active",
+        "url": "https://alz.org/help-support/brain_health/stay_mentally_and_socially_active"
+      }
+    },
+    {
+      "id": "s082",
+      "type": "suggestion",
+      "text": "Take a different route on your walk or drive and notice what's new.",
+      "area": "intellectual",
+      "source": {
+        "name": "Harvard Health: Keep Your Mind Sharp",
+        "url": "https://www.health.harvard.edu/mind-and-mood/6-simple-steps-to-keep-your-mind-sharp-at-any-age"
+      }
+    },
+    {
+      "id": "s083",
+      "type": "suggestion",
+      "text": "Doodle, draw, or make something with your hands.",
+      "area": "intellectual",
+      "source": {
+        "name": "University of Rochester Medical Center: Journaling",
+        "url": "https://www.urmc.rochester.edu/behavioral-health-partners/bhp-blog/april-2025/no-rules-just-write-a-new-approach-to-journaling"
+      }
+    },
+    {
+      "id": "s084",
+      "type": "suggestion",
+      "text": "Write down an idea you've been kicking around.",
+      "area": "intellectual",
+      "source": {
+        "name": "University of Rochester Medical Center: Journaling",
+        "url": "https://www.urmc.rochester.edu/behavioral-health-partners/bhp-blog/april-2025/no-rules-just-write-a-new-approach-to-journaling"
+      }
+    },
+    {
+      "id": "s085",
+      "type": "suggestion",
+      "text": "Read an old journal entry and notice how you've grown.",
+      "area": "intellectual",
+      "source": {
+        "name": "University of Rochester Medical Center: Journaling",
+        "url": "https://www.urmc.rochester.edu/behavioral-health-partners/bhp-blog/april-2025/no-rules-just-write-a-new-approach-to-journaling"
+      }
+    },
+    {
+      "id": "s086",
+      "type": "suggestion",
+      "text": "Take a free online class on something fun.",
+      "area": "intellectual",
+      "source": {
+        "name": "AARP: Good Brain Habits",
+        "url": "https://www.aarp.org/health/healthy-living/good-brain-habits/"
+      }
+    },
+    {
+      "id": "s087",
+      "type": "suggestion",
+      "text": "Learn about one coping skill and try it once this week.",
+      "area": "intellectual",
+      "source": {
+        "name": "McLean Hospital: Practical DBT Strategies",
+        "url": "https://home.mcleanhospital.org/dbt-strategies"
+      }
+    },
+    {
+      "id": "s088",
+      "type": "suggestion",
+      "text": "Ask someone to teach you something they're good at.",
+      "area": "intellectual",
+      "source": {
+        "name": "Alzheimer's Association: Stay Mentally Active",
+        "url": "https://alz.org/help-support/brain_health/stay_mentally_and_socially_active"
+      }
+    },
+    {
+      "id": "a062",
+      "type": "affirmation",
+      "text": "I don't need to do everything today. Just the next right thing.",
+      "area": "occupational",
+      "source": {
+        "name": "American Psychological Association: Building Resilience",
+        "url": "https://www.apa.org/topics/resilience/building-your-resilience"
+      }
+    },
+    {
+      "id": "a063",
+      "type": "affirmation",
+      "text": "My worth isn't measured by how productive I am.",
+      "area": "occupational",
+      "source": {
+        "name": "Mayo Clinic: Positive Thinking",
+        "url": "https://www.mayoclinic.org/healthy-lifestyle/stress-management/in-depth/positive-thinking/art-20043950"
+      }
+    },
+    {
+      "id": "a064",
+      "type": "affirmation",
+      "text": "Done is better than perfect. I can start small.",
+      "area": "occupational",
+      "source": {
+        "name": "Mayo Clinic: Positive Thinking",
+        "url": "https://www.mayoclinic.org/healthy-lifestyle/stress-management/in-depth/positive-thinking/art-20043950"
+      }
+    },
+    {
+      "id": "a065",
+      "type": "affirmation",
+      "text": "A little structure makes the day feel lighter.",
+      "area": "occupational",
+      "source": {
+        "name": "Mental Health America: Tools 2 Thrive",
+        "url": "https://mhanational.org/tools-2-thrive"
+      }
+    },
+    {
+      "id": "a066",
+      "type": "affirmation",
+      "text": "I can take breaks and still get things done.",
+      "area": "occupational",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "a067",
+      "type": "affirmation",
+      "text": "Meaningful work comes in a lot of forms, paid or not.",
+      "area": "occupational",
+      "source": {
+        "name": "SAMHSA: Recovery",
+        "url": "https://www.samhsa.gov/substance-use/recovery/about"
+      }
+    },
+    {
+      "id": "a068",
+      "type": "affirmation",
+      "text": "I'm good at more things than I give myself credit for.",
+      "area": "occupational",
+      "source": {
+        "name": "American Psychological Association: Building Resilience",
+        "url": "https://www.apa.org/topics/resilience/building-your-resilience"
+      }
+    },
+    {
+      "id": "a069",
+      "type": "affirmation",
+      "text": "Progress over perfection, every time.",
+      "area": "occupational",
+      "source": {
+        "name": "Mayo Clinic: Positive Thinking",
+        "url": "https://www.mayoclinic.org/healthy-lifestyle/stress-management/in-depth/positive-thinking/art-20043950"
+      }
+    },
+    {
+      "id": "a070",
+      "type": "affirmation",
+      "text": "I can ask for help at work. Nobody does it all alone.",
+      "area": "occupational",
+      "source": {
+        "name": "American Psychological Association: Building Resilience",
+        "url": "https://www.apa.org/topics/resilience/building-your-resilience"
+      }
+    },
+    {
+      "id": "s089",
+      "type": "suggestion",
+      "text": "Pick the one task that would make today feel like a win, and do it first.",
+      "area": "occupational",
+      "source": {
+        "name": "Mental Health America: Tools 2 Thrive",
+        "url": "https://mhanational.org/tools-2-thrive"
+      }
+    },
+    {
+      "id": "s090",
+      "type": "suggestion",
+      "text": "Set up your workspace so it's somewhere you actually want to be.",
+      "area": "occupational",
+      "source": {
+        "name": "Mental Health America: Tools 2 Thrive",
+        "url": "https://mhanational.org/tools-2-thrive"
+      }
+    },
+    {
+      "id": "s091",
+      "type": "suggestion",
+      "text": "Work for 25 minutes, then take a 5-minute break away from the screen.",
+      "area": "occupational",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "s092",
+      "type": "suggestion",
+      "text": "Write tomorrow's top three tasks before you stop for the day.",
+      "area": "occupational",
+      "source": {
+        "name": "Mental Health America: Tools 2 Thrive",
+        "url": "https://mhanational.org/tools-2-thrive"
+      }
+    },
+    {
+      "id": "s093",
+      "type": "suggestion",
+      "text": "Break a big task into tiny steps. Just do the first one.",
+      "area": "occupational",
+      "source": {
+        "name": "American Psychological Association: Building Resilience",
+        "url": "https://www.apa.org/topics/resilience/building-your-resilience"
+      }
+    },
+    {
+      "id": "s094",
+      "type": "suggestion",
+      "text": "Celebrate one thing you finished today, even a small one.",
+      "area": "occupational",
+      "source": {
+        "name": "NIH: Emotional Wellness Toolkit",
+        "url": "https://www.nih.gov/health-information/emotional-wellness-toolkit"
+      }
+    },
+    {
+      "id": "s095",
+      "type": "suggestion",
+      "text": "Turn off notifications for an hour and focus on one thing.",
+      "area": "occupational",
+      "source": {
+        "name": "Cleveland Clinic: Digital Detox",
+        "url": "https://health.clevelandclinic.org/digital-detox"
+      }
+    },
+    {
+      "id": "s096",
+      "type": "suggestion",
+      "text": "Take a real lunch break today, away from your desk.",
+      "area": "occupational",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "s097",
+      "type": "suggestion",
+      "text": "Start your day with a simple routine you can count on.",
+      "area": "occupational",
+      "source": {
+        "name": "Mental Health America: Tools 2 Thrive",
+        "url": "https://mhanational.org/tools-2-thrive"
+      }
+    },
+    {
+      "id": "s098",
+      "type": "suggestion",
+      "text": "Set a clear stop time for work tonight and stick to it.",
+      "area": "occupational",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "s099",
+      "type": "suggestion",
+      "text": "Write down one thing you learned at work or school this week.",
+      "area": "occupational",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s100",
+      "type": "suggestion",
+      "text": "Say no to one thing that isn't a priority.",
+      "area": "occupational",
+      "source": {
+        "name": "NAMI: Taking Care of Yourself",
+        "url": "https://www.nami.org/family-members-and-caregivers/taking-care-of-yourself/"
+      }
+    },
+    {
+      "id": "s101",
+      "type": "suggestion",
+      "text": "Tidy your desk at the end of the day so tomorrow starts clean.",
+      "area": "occupational",
+      "source": {
+        "name": "Mental Health America: Tools 2 Thrive",
+        "url": "https://mhanational.org/tools-2-thrive"
+      }
+    },
+    {
+      "id": "s102",
+      "type": "suggestion",
+      "text": "Notice which kind of work gives you energy. Do a little more of it.",
+      "area": "occupational",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "a071",
+      "type": "affirmation",
+      "text": "A calmer space makes a calmer me.",
+      "area": "environmental",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "a072",
+      "type": "affirmation",
+      "text": "Small changes to my space can make a big difference.",
+      "area": "environmental",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "a073",
+      "type": "affirmation",
+      "text": "Fresh air and sunlight are free, and they help a lot.",
+      "area": "environmental",
+      "source": {
+        "name": "Minnesota Dept. of Health: Nature and Mental Health",
+        "url": "https://www.health.state.mn.us/communities/mentalhealth/nature.html"
+      }
+    },
+    {
+      "id": "a074",
+      "type": "affirmation",
+      "text": "I'm making my space work for me.",
+      "area": "environmental",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "a075",
+      "type": "affirmation",
+      "text": "Nature doesn't need me to be productive. It just lets me be.",
+      "area": "environmental",
+      "source": {
+        "name": "APA Monitor: Nurtured by Nature",
+        "url": "https://www.apa.org/monitor/2020/04/nurtured-nature"
+      }
+    },
+    {
+      "id": "s103",
+      "type": "suggestion",
+      "text": "Clear one surface: a nightstand, a desk corner, a counter.",
+      "area": "environmental",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s104",
+      "type": "suggestion",
+      "text": "Open a window for ten minutes and let fresh air in.",
+      "area": "environmental",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s105",
+      "type": "suggestion",
+      "text": "Make your bed. It's a win you can see all day.",
+      "area": "environmental",
+      "source": {
+        "name": "Mental Health America: Tools 2 Thrive",
+        "url": "https://mhanational.org/tools-2-thrive"
+      }
+    },
+    {
+      "id": "s106",
+      "type": "suggestion",
+      "text": "Leave your phone in another room for the first hour after you wake up.",
+      "area": "environmental",
+      "source": {
+        "name": "Cleveland Clinic: Digital Detox",
+        "url": "https://health.clevelandclinic.org/digital-detox"
+      }
+    },
+    {
+      "id": "s107",
+      "type": "suggestion",
+      "text": "Add a plant to your space, or water the ones you have.",
+      "area": "environmental",
+      "source": {
+        "name": "APA Monitor: Nurtured by Nature",
+        "url": "https://www.apa.org/monitor/2020/04/nurtured-nature"
+      }
+    },
+    {
+      "id": "s108",
+      "type": "suggestion",
+      "text": "Spend at least a few minutes outside today. Even a short break helps.",
+      "area": "environmental",
+      "source": {
+        "name": "Minnesota Dept. of Health: Nature and Mental Health",
+        "url": "https://www.health.state.mn.us/communities/mentalhealth/nature.html"
+      }
+    },
+    {
+      "id": "s109",
+      "type": "suggestion",
+      "text": "Turn off the TV or background noise for a while and enjoy the quiet.",
+      "area": "environmental",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s110",
+      "type": "suggestion",
+      "text": "Put away five things that are out of place.",
+      "area": "environmental",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s111",
+      "type": "suggestion",
+      "text": "Switch to softer lighting this evening.",
+      "area": "environmental",
+      "source": {
+        "name": "Harvard Health: Sleep Hygiene",
+        "url": "https://www.health.harvard.edu/staying-healthy/sleep-hygiene-simple-practices-for-better-rest"
+      }
+    },
+    {
+      "id": "s112",
+      "type": "suggestion",
+      "text": "Set up a cozy corner for reading, journaling, or just breathing.",
+      "area": "environmental",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s113",
+      "type": "suggestion",
+      "text": "Delete apps you don't use and move the tempting ones off your home screen.",
+      "area": "environmental",
+      "source": {
+        "name": "NAMI: Reducing Screen Time",
+        "url": "https://www.nami.org/blog/how-to-reduce-screen-time-in-the-digital-age/"
+      }
+    },
+    {
+      "id": "s114",
+      "type": "suggestion",
+      "text": "Set your phone to grayscale for an evening and see how it feels.",
+      "area": "environmental",
+      "source": {
+        "name": "Cleveland Clinic: Digital Detox",
+        "url": "https://health.clevelandclinic.org/digital-detox"
+      }
+    },
+    {
+      "id": "s115",
+      "type": "suggestion",
+      "text": "Go to a park, a trail, or anywhere green this week.",
+      "area": "environmental",
+      "source": {
+        "name": "APA Monitor: Nurtured by Nature",
+        "url": "https://www.apa.org/monitor/2020/04/nurtured-nature"
+      }
+    },
+    {
+      "id": "s116",
+      "type": "suggestion",
+      "text": "Charge your phone outside the bedroom tonight.",
+      "area": "environmental",
+      "source": {
+        "name": "Harvard Health: Sleep Hygiene",
+        "url": "https://www.health.harvard.edu/staying-healthy/sleep-hygiene-simple-practices-for-better-rest"
+      }
+    },
+    {
+      "id": "s117",
+      "type": "suggestion",
+      "text": "Do a 10-minute tidy with music on.",
+      "area": "environmental",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s118",
+      "type": "suggestion",
+      "text": "Pick up a little litter on your walk. Your neighborhood will thank you.",
+      "area": "environmental",
+      "source": {
+        "name": "Mayo Clinic: Health Benefits of Volunteering",
+        "url": "https://newsnetwork.mayoclinic.org/discussion/mayo-clinic-q-and-a-health-benefits-of-volunteering"
+      }
+    },
+    {
+      "id": "s119",
+      "type": "suggestion",
+      "text": "Mute or unfollow accounts that make you feel worse.",
+      "area": "environmental",
+      "source": {
+        "name": "NAMI: Reducing Screen Time",
+        "url": "https://www.nami.org/blog/how-to-reduce-screen-time-in-the-digital-age/"
+      }
+    },
+    {
+      "id": "s120",
+      "type": "suggestion",
+      "text": "Sit by a window and watch the weather for a few minutes.",
+      "area": "environmental",
+      "source": {
+        "name": "Minnesota Dept. of Health: Nature and Mental Health",
+        "url": "https://www.health.state.mn.us/communities/mentalhealth/nature.html"
+      }
+    },
+    {
+      "id": "s121",
+      "type": "suggestion",
+      "text": "Take one full day off social media this week.",
+      "area": "environmental",
+      "source": {
+        "name": "Cleveland Clinic: Digital Detox",
+        "url": "https://health.clevelandclinic.org/digital-detox"
+      }
+    },
+    {
+      "id": "s122",
+      "type": "suggestion",
+      "text": "Find one thing in your space that makes you happy, and keep it where you can see it.",
+      "area": "environmental",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "a076",
+      "type": "affirmation",
+      "text": "I can look at my money with curiosity instead of fear.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "a077",
+      "type": "affirmation",
+      "text": "Small, steady choices add up.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "a078",
+      "type": "affirmation",
+      "text": "My worth isn't my bank balance.",
+      "area": "financial",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "a079",
+      "type": "affirmation",
+      "text": "I'm learning to take care of future me.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "a080",
+      "type": "affirmation",
+      "text": "It's okay to start small with money. Small is still progress.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "a081",
+      "type": "affirmation",
+      "text": "Knowing where I stand beats guessing.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s123",
+      "type": "suggestion",
+      "text": "Before buying something you don't need, wait 24 hours.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s124",
+      "type": "suggestion",
+      "text": "Check one account balance calmly, just to know where you stand.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s125",
+      "type": "suggestion",
+      "text": "Write down everything you spend today. No judging, just noticing.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s126",
+      "type": "suggestion",
+      "text": "Set up a small automatic transfer to savings, even a few dollars.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s127",
+      "type": "suggestion",
+      "text": "Look over your subscriptions and cancel one you don't use.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s128",
+      "type": "suggestion",
+      "text": "Pack lunch tomorrow instead of buying it.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s129",
+      "type": "suggestion",
+      "text": "Pick one money goal for this month and write it down.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s130",
+      "type": "suggestion",
+      "text": "Take the CFPB's 10-question financial well-being check-in and see where you stand.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s131",
+      "type": "suggestion",
+      "text": "Map out where your money comes from and when it arrives this month.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s132",
+      "type": "suggestion",
+      "text": "List your bills and due dates in one place.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s133",
+      "type": "suggestion",
+      "text": "Talk to someone you trust about a money worry instead of carrying it alone.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s134",
+      "type": "suggestion",
+      "text": "Find one free thing to do this weekend.",
+      "area": "financial",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s135",
+      "type": "suggestion",
+      "text": "Pull your free credit report and make sure it looks right.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s136",
+      "type": "suggestion",
+      "text": "Start an emergency fund, even with a small first deposit.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s137",
+      "type": "suggestion",
+      "text": "Set a fun-money limit for the week, then enjoy it guilt-free.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "s138",
+      "type": "suggestion",
+      "text": "Notice when you shop to feel better. Try a walk or a call first.",
+      "area": "financial",
+      "source": {
+        "name": "CFPB: 25 Tips for Financial Well-Being",
+        "url": "https://www.consumerfinance.gov/about-us/blog/get-money-smart-25-tips-improve-your-financial-well-being"
+      }
+    },
+    {
+      "id": "a082",
+      "type": "affirmation",
+      "text": "Small kindnesses ripple further than I can see.",
+      "area": "community",
+      "source": {
+        "name": "Mayo Clinic: Health Benefits of Volunteering",
+        "url": "https://newsnetwork.mayoclinic.org/discussion/mayo-clinic-q-and-a-health-benefits-of-volunteering"
+      }
+    },
+    {
+      "id": "a083",
+      "type": "affirmation",
+      "text": "I've got something to offer my community.",
+      "area": "community",
+      "source": {
+        "name": "SAMHSA: Recovery",
+        "url": "https://www.samhsa.gov/substance-use/recovery/about"
+      }
+    },
+    {
+      "id": "a084",
+      "type": "affirmation",
+      "text": "Showing up for others helps me show up for myself.",
+      "area": "community",
+      "source": {
+        "name": "Mayo Clinic: Health Benefits of Volunteering",
+        "url": "https://newsnetwork.mayoclinic.org/discussion/mayo-clinic-q-and-a-health-benefits-of-volunteering"
+      }
+    },
+    {
+      "id": "a085",
+      "type": "affirmation",
+      "text": "We do better together.",
+      "area": "community",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "a086",
+      "type": "affirmation",
+      "text": "Being part of a group means I belong somewhere.",
+      "area": "community",
+      "source": {
+        "name": "SAMHSA: Recovery",
+        "url": "https://www.samhsa.gov/substance-use/recovery/about"
+      }
+    },
+    {
+      "id": "s139",
+      "type": "suggestion",
+      "text": "Do one kind thing for a stranger today, no credit needed.",
+      "area": "community",
+      "source": {
+        "name": "Mayo Clinic: Health Benefits of Volunteering",
+        "url": "https://newsnetwork.mayoclinic.org/discussion/mayo-clinic-q-and-a-health-benefits-of-volunteering"
+      }
+    },
+    {
+      "id": "s140",
+      "type": "suggestion",
+      "text": "Thank someone whose work usually goes unnoticed.",
+      "area": "community",
+      "source": {
+        "name": "Greater Good Science Center: Gratitude Strategies",
+        "url": "https://greatergood.berkeley.edu/article/item/four_great_gratitude_strategies"
+      }
+    },
+    {
+      "id": "s141",
+      "type": "suggestion",
+      "text": "Look up a local volunteer opportunity and sign up for one shift.",
+      "area": "community",
+      "source": {
+        "name": "Mayo Clinic: Health Benefits of Volunteering",
+        "url": "https://newsnetwork.mayoclinic.org/discussion/mayo-clinic-q-and-a-health-benefits-of-volunteering"
+      }
+    },
+    {
+      "id": "s142",
+      "type": "suggestion",
+      "text": "Have fun with your group today. Joy is contagious.",
+      "area": "community",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "s143",
+      "type": "suggestion",
+      "text": "Welcome someone new and help them feel included.",
+      "area": "community",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "s144",
+      "type": "suggestion",
+      "text": "Support a local business this week.",
+      "area": "community",
+      "source": {
+        "name": "SAMHSA: Eight Dimensions of Wellness",
+        "url": "https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness"
+      }
+    },
+    {
+      "id": "s145",
+      "type": "suggestion",
+      "text": "Donate something you don't use anymore.",
+      "area": "community",
+      "source": {
+        "name": "Mayo Clinic: Health Benefits of Volunteering",
+        "url": "https://newsnetwork.mayoclinic.org/discussion/mayo-clinic-q-and-a-health-benefits-of-volunteering"
+      }
+    },
+    {
+      "id": "s146",
+      "type": "suggestion",
+      "text": "Check in on an older neighbor or relative.",
+      "area": "community",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "s147",
+      "type": "suggestion",
+      "text": "Go to a community event, class, or meetup.",
+      "area": "community",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "s148",
+      "type": "suggestion",
+      "text": "Offer to help someone with a task they've been stuck on.",
+      "area": "community",
+      "source": {
+        "name": "Mayo Clinic: Health Benefits of Volunteering",
+        "url": "https://newsnetwork.mayoclinic.org/discussion/mayo-clinic-q-and-a-health-benefits-of-volunteering"
+      }
+    },
+    {
+      "id": "s149",
+      "type": "suggestion",
+      "text": "Leave a kind note for someone to find.",
+      "area": "community",
+      "source": {
+        "name": "Mayo Clinic: Health Benefits of Volunteering",
+        "url": "https://newsnetwork.mayoclinic.org/discussion/mayo-clinic-q-and-a-health-benefits-of-volunteering"
+      }
+    },
+    {
+      "id": "s150",
+      "type": "suggestion",
+      "text": "Share a resource that helped you with someone who might need it.",
+      "area": "community",
+      "source": {
+        "name": "SAMHSA: Recovery",
+        "url": "https://www.samhsa.gov/substance-use/recovery/about"
+      }
+    },
+    {
+      "id": "s151",
+      "type": "suggestion",
+      "text": "Encourage someone in your group who's having a hard week.",
+      "area": "community",
+      "source": {
+        "name": "SAMHSA: Recovery",
+        "url": "https://www.samhsa.gov/substance-use/recovery/about"
+      }
+    },
+    {
+      "id": "s152",
+      "type": "suggestion",
+      "text": "Show up for a friend's event or big moment.",
+      "area": "community",
+      "source": {
+        "name": "U.S. Surgeon General: Social Connection",
+        "url": "https://www.hhs.gov/surgeongeneral/priorities/connection/index.html"
+      }
+    },
+    {
+      "id": "a087",
+      "type": "affirmation",
+      "text": "Showing up for myself today, in any small way, is enough.",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "a088",
+      "type": "affirmation",
+      "text": "I'm allowed to begin again as many times as I need.",
+      "source": {
+        "name": "SAMHSA: Guiding Principles of Recovery",
+        "url": "https://store.samhsa.gov/sites/default/files/d7/priv/pep12-recdef.pdf"
+      }
+    },
+    {
+      "id": "a089",
+      "type": "affirmation",
+      "text": "Recovery isn't a straight line, and that's okay.",
+      "source": {
+        "name": "SAMHSA: Recovery",
+        "url": "https://www.samhsa.gov/substance-use/recovery/about"
+      }
+    },
+    {
+      "id": "a090",
+      "type": "affirmation",
+      "text": "Setbacks are part of it. I'm still moving forward.",
+      "source": {
+        "name": "SAMHSA: Recovery",
+        "url": "https://www.samhsa.gov/substance-use/recovery/about"
+      }
+    },
+    {
+      "id": "a091",
+      "type": "affirmation",
+      "text": "I can do hard things, and I don't have to do them alone.",
+      "source": {
+        "name": "SAMHSA: Guiding Principles of Recovery",
+        "url": "https://store.samhsa.gov/sites/default/files/d7/priv/pep12-recdef.pdf"
+      }
+    },
+    {
+      "id": "a092",
+      "type": "affirmation",
+      "text": "Today doesn't have to be perfect to be good.",
+      "source": {
+        "name": "Mayo Clinic: Positive Thinking",
+        "url": "https://www.mayoclinic.org/healthy-lifestyle/stress-management/in-depth/positive-thinking/art-20043950"
+      }
+    },
+    {
+      "id": "a093",
+      "type": "affirmation",
+      "text": "I'm proud of myself for being here.",
+      "source": {
+        "name": "Mental Health America: Tools 2 Thrive",
+        "url": "https://mhanational.org/tools-2-thrive"
+      }
+    },
+    {
+      "id": "a094",
+      "type": "affirmation",
+      "text": "Keep on keepin' on.",
+      "source": {
+        "name": "American Psychological Association: Building Resilience",
+        "url": "https://www.apa.org/topics/resilience/building-your-resilience"
+      }
+    },
+    {
+      "id": "a095",
+      "type": "affirmation",
+      "text": "I've got the tools. I just have to use them.",
+      "source": {
+        "name": "Mental Health America: Tools 2 Thrive",
+        "url": "https://mhanational.org/tools-2-thrive"
+      }
+    },
+    {
+      "id": "a096",
+      "type": "affirmation",
+      "text": "Every day I check in is a day I chose me.",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "a097",
+      "type": "affirmation",
+      "text": "Healing takes time, and I'm giving it time.",
+      "source": {
+        "name": "SAMHSA: Recovery",
+        "url": "https://www.samhsa.gov/substance-use/recovery/about"
+      }
+    },
+    {
+      "id": "a098",
+      "type": "affirmation",
+      "text": "I'm not starting over. I'm starting from experience.",
+      "source": {
+        "name": "American Psychological Association: Building Resilience",
+        "url": "https://www.apa.org/topics/resilience/building-your-resilience"
+      }
+    },
+    {
+      "id": "a099",
+      "type": "affirmation",
+      "text": "Little steps still get me there.",
+      "source": {
+        "name": "American Psychological Association: Building Resilience",
+        "url": "https://www.apa.org/topics/resilience/building-your-resilience"
+      }
+    },
+    {
+      "id": "a100",
+      "type": "affirmation",
+      "text": "My story isn't over. Good chapters are coming.",
+      "source": {
+        "name": "SAMHSA: Guiding Principles of Recovery",
+        "url": "https://store.samhsa.gov/sites/default/files/d7/priv/pep12-recdef.pdf"
+      }
+    },
+    {
+      "id": "a101",
+      "type": "affirmation",
+      "text": "I'm doing better than I think I am.",
+      "source": {
+        "name": "NIH: Emotional Wellness Toolkit",
+        "url": "https://www.nih.gov/health-information/emotional-wellness-toolkit"
+      }
+    },
+    {
+      "id": "s153",
+      "type": "suggestion",
+      "text": "Try living one of today's affirmations instead of reading another.",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    },
+    {
+      "id": "s154",
+      "type": "suggestion",
+      "text": "Pick one small thing that would make today 1% better, and do it.",
+      "source": {
+        "name": "Mental Health America: Tools 2 Thrive",
+        "url": "https://mhanational.org/tools-2-thrive"
+      }
+    },
+    {
+      "id": "s155",
+      "type": "suggestion",
+      "text": "Check in with yourself at lunch: how am I actually doing?",
+      "source": {
+        "name": "VA Whole Health: Circle of Health",
+        "url": "https://www.va.gov/WHOLEHEALTH/features/What_is_the_Circle_of_Health.asp"
+      }
+    },
+    {
+      "id": "s156",
+      "type": "suggestion",
+      "text": "Look back at a past check-in and notice what's gotten easier.",
+      "source": {
+        "name": "University of Rochester Medical Center: Journaling",
+        "url": "https://www.urmc.rochester.edu/behavioral-health-partners/bhp-blog/april-2025/no-rules-just-write-a-new-approach-to-journaling"
+      }
+    },
+    {
+      "id": "s157",
+      "type": "suggestion",
+      "text": "If things have felt hard for two weeks or more, talk to a doctor or counselor.",
+      "source": {
+        "name": "NIMH: Caring for Your Mental Health",
+        "url": "https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health"
+      }
+    }
   ],
   "breakReminders": [
-    "That's your affirmations for today. The best next step is offline: go take a walk, stretch, or look out a window.",
-    "You've had today's wisdom. Now give your eyes and mind a rest from screens. New affirmations arrive tomorrow.",
-    "Time to put the phone down. Notice something real around you: a sound, a smell, the light.",
-    "Enough screen for now. Go do one kind thing for your body: water, a stretch, fresh air.",
-    "You're all set for today. Try living one of these affirmations instead of reading another."
+    "That's it for today. Go do something offline: take a walk, stretch, look out a window.",
+    "You're all set for today. Give your eyes a break. New ones show up tomorrow.",
+    "Phone down for a bit. Notice something real around you: a sound, a smell, the light.",
+    "Enough screen for now. Do something nice for your body: water, a stretch, fresh air.",
+    "You've got your three. Try living one of them instead of reading another.",
+    "Done for today. Go make it a good one."
   ],
   "visitNudges": [
-    "You've stopped by quite a few times today. Maybe it's a good moment to step away from the screen for a while.",
-    "Checking in often today? That's okay. Consider a tech break: a walk, a call, or a few slow breaths.",
-    "This page will still be here tomorrow. Give yourself permission to log off for a bit."
+    "You've stopped by a bunch today. Maybe a good time to step away from the screen for a while.",
+    "Checking in a lot today? That's okay. Think about a tech break: a walk, a call, or a few slow breaths.",
+    "This page will still be here tomorrow. You're allowed to log off for a bit."
   ]
 }
