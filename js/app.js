@@ -206,8 +206,8 @@ function getEntry(date,kind){ return S.entries.find(e=>e.date===date && e.kind==
 function avgRating(e){ const v=Object.entries(e.answers).filter(([k])=>k.endsWith("_scale")).map(([,v])=>+v).filter(Boolean); return v.length?(v.reduce((a,b)=>a+b,0)/v.length):null; }
 
 function render(){
-  if(S.form) return renderForm();
   ({today:renderToday, history:renderHistory, badges:renderBadges, settings:renderSettings})[S.view]();
+  if(S.form) renderForm(); else closeSheet();
 }
 
 function renderToday(){
@@ -273,76 +273,103 @@ function storeNote(){
   return `<div class="note warn">Entries are being saved in this browser only. Use the <b>Data</b> tab to back them up.</div>`;
 }
 
-/* ---------- Form (one wellness area per step) ---------- */
+/* ---------- Form: a pop-up window, one wellness area per step ---------- */
+let sheetBg=null;
+function sheetEl(){
+  if(!sheetBg){
+    sheetBg=document.createElement("div"); sheetBg.className="sheet-bg";
+    sheetBg.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"></div>`;
+    sheetBg.addEventListener("mousedown",e=>{ if(e.target===sheetBg) requestClose(); });
+    document.body.appendChild(sheetBg); document.body.classList.add("noscroll");
+  }
+  return sheetBg.querySelector(".sheet");
+}
+function closeSheet(){
+  if(!sheetBg) return;
+  const bg=sheetBg; sheetBg=null; document.body.classList.remove("noscroll"); document.onkeydown=null;
+  bg.classList.add("closing"); setTimeout(()=>bg.remove(),180);
+}
+function requestClose(){
+  if(!S.form) return closeSheet();
+  if(S.form.dirty) confirmBox("Discard this check-in?","Your answers haven't been saved yet.","Discard",()=>{S.form=null;render();});
+  else { S.form=null; render(); }
+}
 function openForm(kind,date,step=0){
   const ex=getEntry(date,kind);
-  S.form={kind,date,answers:{...(ex?.answers||{})},existing:!!ex,step};
-  render(); window.scrollTo(0,0);
+  S.form={kind,date,answers:{...(ex?.answers||{})},existing:!!ex,step,dirty:false};
+  renderForm();
 }
 const hasVal=v=>v!==undefined && v!==null && String(v).trim()!=="";
 function sectionIds(sec){ return (sec.scale?[sec.scale.id]:[]).concat(sec.prompts.map(p=>p.id)); }
 function goStep(n,dir){
   const F=S.form, N=FORMS[F.kind].sections.length;
-  F.step=Math.max(0,Math.min(N-1,n)); F.dir=dir; render(); window.scrollTo(0,0);
+  F.step=Math.max(0,Math.min(N-1,n)); F.dir=dir; renderForm();
 }
 function renderForm(){
   const F=S.form, def=FORMS[F.kind], N=def.sections.length, sec=def.sections[F.step], D=DIMENSIONS[sec.dim];
-  const last=F.step===N-1;
-  $app.innerHTML = `
-    <div class="form-head">
-      <button class="back" id="back">✕ Close</button>
-      <h2>${def.icon} ${def.title}</h2>
-      <input type="date" class="datepick" id="fdate" value="${F.date}" max="${today()}">
-    </div>
+  const last=F.step===N-1, $s=sheetEl();
+  $s.className=`sheet ${F.kind}`;
+  $s.innerHTML = `
+    <header class="sheet-head">
+      <div class="sheet-title"><span class="sheet-ico">${def.icon}</span>
+        <div><h2 id="sheet-title">${def.title}</h2>
+        <input type="date" class="datepick" id="fdate" value="${F.date}" max="${today()}" aria-label="Check-in date"></div></div>
+      <button class="xbtn" id="back" aria-label="Close">✕</button>
+    </header>
     <div class="steps" role="tablist">${def.sections.map((x,i)=>{const XD=DIMENSIONS[x.dim]; const done=sectionIds(x).some(id=>hasVal(F.answers[id]));
       return `<button class="stepdot ${i===F.step?"cur":""} ${done?"done":""}" style="--dc:${XD.color}" data-step="${i}" title="${XD.label}" aria-label="${XD.label}">${XD.icon}</button>`;}).join("")}</div>
-    <div class="stepcount">Step ${F.step+1} of ${N}</div>
-    <section class="card dim step-in ${F.dir==="back"?"from-left":""}" style="--dc:${D.color}">
-      <h3><span>${D.icon}</span>${D.label}${sec.dim==="closing"?"":" Wellness"}</h3>
-      ${sec.scale?`<div class="q"><label class="qt">${esc(sec.scale.q)}</label>
-        <div class="scale" data-id="${sec.scale.id}">${[1,2,3,4,5].map(v=>`<button type="button" data-v="${v}" class="${+F.answers[sec.scale.id]===v?"on":""}" aria-label="${v}">${v}</button>`).join("")}</div>
-        <div class="anchors"><span>1 = ${esc(sec.scale.low)}</span><span>5 = ${esc(sec.scale.high)}</span></div></div>`:""}
-      ${sec.prompts.map(p=>`<div class="q"><label class="qt" for="${p.id}">${esc(p.q)}</label>
-        <textarea id="${p.id}" data-id="${p.id}" placeholder="Write freely… or skip">${esc(F.answers[p.id]||"")}</textarea></div>`).join("")}
-    </section>
-    <div class="actions stepnav">
+    <div class="sheet-body">
+      <div class="stepcount">Step ${F.step+1} of ${N}</div>
+      <section class="dim step-in ${F.dir==="back"?"from-left":""}" style="--dc:${D.color}">
+        <h3><span>${D.icon}</span>${D.label}${sec.dim==="closing"?"":" Wellness"}</h3>
+        ${sec.scale?`<div class="q"><label class="qt">${esc(sec.scale.q)}</label>
+          <div class="scale" data-id="${sec.scale.id}">${[1,2,3,4,5].map(v=>`<button type="button" data-v="${v}" class="${+F.answers[sec.scale.id]===v?"on":""}" aria-label="${v}">${v}</button>`).join("")}</div>
+          <div class="anchors"><span>1 = ${esc(sec.scale.low)}</span><span>5 = ${esc(sec.scale.high)}</span></div></div>`:""}
+        ${sec.prompts.map(p=>`<div class="q"><label class="qt" for="${p.id}">${esc(p.q)}</label>
+          <textarea id="${p.id}" data-id="${p.id}" placeholder="Write freely… or skip">${esc(F.answers[p.id]||"")}</textarea></div>`).join("")}
+      </section>
+      ${F.existing&&!last?`<div style="text-align:right;margin-top:10px"><button class="linkbtn" id="savenow">Save changes now</button></div>`:""}
+    </div>
+    <footer class="sheet-foot">
       ${F.existing&&last?`<button class="btn danger" id="del" style="margin-right:auto">Delete</button>`:""}
       <button class="btn ghost" id="prev" ${F.step===0?"disabled":""}>← Back</button>
       ${last
-        ?`<button class="btn" id="save">${F.existing?"Save changes":"Complete check-in ✓"}</button>`
+        ?`<button class="btn" id="save">${F.existing?"Save changes":"Complete ✓"}</button>`
         :`<button class="btn" id="next">Next: ${DIMENSIONS[def.sections[F.step+1].dim].label} →</button>`}
-    </div>
-    ${F.existing&&!last?`<div style="text-align:right;margin-top:8px"><button class="linkbtn" id="savenow">Save changes now</button></div>`:""}`;
-  const refreshDot=()=>{ const dot=$app.querySelector(`.stepdot[data-step="${F.step}"]`); dot.classList.toggle("done",sectionIds(sec).some(id=>hasVal(F.answers[id]))); };
-  $app.querySelectorAll(".scale").forEach(el=>el.onclick=e=>{
+    </footer>`;
+  $s.querySelector(".sheet-body").scrollTop=0;
+  const refreshDot=()=>{ F.dirty=true; const dot=$s.querySelector(`.stepdot[data-step="${F.step}"]`); dot.classList.toggle("done",sectionIds(sec).some(id=>hasVal(F.answers[id]))); };
+  $s.querySelectorAll(".scale").forEach(el=>el.onclick=e=>{
     const b=e.target.closest("button"); if(!b) return;
     const v=+b.dataset.v; const id=el.dataset.id;
     F.answers[id] = (+F.answers[id]===v)?undefined:v;
     el.querySelectorAll("button").forEach(x=>x.classList.toggle("on",+x.dataset.v===F.answers[id]));
     refreshDot();
   });
-  $app.querySelectorAll("textarea").forEach(t=>t.oninput=()=>{F.answers[t.dataset.id]=t.value; refreshDot();});
-  $app.querySelectorAll(".stepdot").forEach(b=>b.onclick=()=>{const n=+b.dataset.step; goStep(n,n<F.step?"back":"fwd");});
-  document.getElementById("fdate").onchange=e=>{ const d=e.target.value; if(!d||d>today()) return; const keep=F.answers, st=F.step; openForm(F.kind,d,st); if(!S.form.existing){ S.form.answers=keep; render(); } };
-  document.getElementById("back").onclick=()=>{S.form=null;render();};
-  document.getElementById("prev").onclick=()=>goStep(F.step-1,"back");
-  const nx=document.getElementById("next"); if(nx) nx.onclick=()=>goStep(F.step+1,"fwd");
-  const sv=document.getElementById("save"); if(sv) sv.onclick=saveForm;
-  const sn=document.getElementById("savenow"); if(sn) sn.onclick=saveForm;
-  const del=document.getElementById("del"); if(del) del.onclick=()=>confirmBox("Delete this check-in?","This can't be undone.","Delete",async()=>{
+  $s.querySelectorAll("textarea").forEach(t=>t.oninput=()=>{F.answers[t.dataset.id]=t.value; refreshDot();});
+  $s.querySelectorAll(".stepdot").forEach(b=>b.onclick=()=>{const n=+b.dataset.step; goStep(n,n<F.step?"back":"fwd");});
+  $s.querySelector("#fdate").onchange=e=>{ const d=e.target.value; if(!d||d>today()) return; const keep=F.answers, st=F.step, dirty=F.dirty; openForm(F.kind,d,st); if(!S.form.existing){ S.form.answers=keep; S.form.dirty=dirty; renderForm(); } };
+  $s.querySelector("#back").onclick=requestClose;
+  $s.querySelector("#prev").onclick=()=>goStep(F.step-1,"back");
+  const nx=$s.querySelector("#next"); if(nx) nx.onclick=()=>goStep(F.step+1,"fwd");
+  const sv=$s.querySelector("#save"); if(sv) sv.onclick=saveForm;
+  const sn=$s.querySelector("#savenow"); if(sn) sn.onclick=saveForm;
+  const del=$s.querySelector("#del"); if(del) del.onclick=()=>confirmBox("Delete this check-in?","This can't be undone.","Delete",async()=>{
     const key=`${F.date}_${F.kind}`; try{ await S.store.remove(key); }catch(e){ return toast("Couldn't delete — try again."); }
     S.entries=S.entries.filter(e=>e.key!==key); S.form=null; render(); toast("Check-in deleted");
   });
-  // keyboard: 1–5 picks a rating when not typing; ←/→ moves between steps
+  // keyboard: Esc closes; 1–5 picks a rating when not typing; ←/→ moves between steps
   document.onkeydown = ev=>{
-    if(!S.form || modalEl || ev.target.tagName==="TEXTAREA" || ev.target.tagName==="INPUT") return;
-    if(/^[1-5]$/.test(ev.key) && sec.scale){ $app.querySelector(`.scale button[data-v="${ev.key}"]`)?.click(); }
+    if(!S.form || modalEl) return;
+    if(ev.key==="Escape"){ ev.preventDefault(); return requestClose(); }
+    if(ev.target.tagName==="TEXTAREA" || ev.target.tagName==="INPUT") return;
+    if(/^[1-5]$/.test(ev.key) && sec.scale){ $s.querySelector(`.scale button[data-v="${ev.key}"]`)?.click(); }
     else if(ev.key==="ArrowRight" && !last) goStep(F.step+1,"fwd");
     else if(ev.key==="ArrowLeft" && F.step>0) goStep(F.step-1,"back");
   };
 }
 async function saveForm(){
-  const F=S.form; const btn=document.getElementById("save")||document.getElementById("savenow"); btn.disabled=true;
+  const F=S.form; const btn=sheetEl().querySelector("#save,#savenow"); btn.disabled=true;
   const answers={}; Object.entries(F.answers).forEach(([k,v])=>{ if(v!==undefined && String(v).trim()!=="") answers[k]=typeof v==="string"?v.trim():v; });
   if(!Object.keys(answers).length){ btn.disabled=false; return toast("Answer at least one question first."); }
   const key=`${F.date}_${F.kind}`; const prev=getEntry(F.date,F.kind); const now=new Date().toISOString();
