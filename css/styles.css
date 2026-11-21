@@ -432,3 +432,32 @@ textarea[readonly]:focus{border-color:var(--line)}
 .howto-col h4{margin:0 0 6px;font-size:.92rem}
 .howto-col ol{margin:0;padding-left:20px;font-size:.92rem}
 @media(max-width:560px){.howto{grid-template-columns:1fr}}
+
+/* Writing help: tap-to-add ideas */
+.ideas{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.ideas-label{font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-right:2px}
+.idea,.idea-more{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 11px;font:inherit;font-size:.85rem;line-height:1.3;text-align:left;cursor:pointer}
+.idea:hover{border-color:var(--dc,var(--accent))}
+.idea.on{background:color-mix(in srgb,var(--dc,var(--accent)) 14%,var(--card));border-color:var(--dc,var(--accent))}
+.idea-more{border-style:dashed;color:var(--muted)}
+
+/* Feelings wheel */
+.wheel-toggle{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--dc,var(--accent));background:color-mix(in srgb,var(--dc,var(--accent)) 10%,var(--card));color:var(--ink);border-radius:999px;padding:7px 14px;font:inherit;font-size:.9rem;font-weight:600;margin:2px 0 10px;cursor:pointer}
+.wheel-panel{border:1.5px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;background:var(--bg)}
+.wheel-wrap{display:flex;gap:14px;align-items:flex-start}
+.wheel{width:200px;flex:none}
+.wedge{cursor:pointer;transition:transform .15s}
+.wedge path{stroke:var(--bg);stroke-width:2}
+.wedge text{fill:#fff;font:700 11px "DM Sans",system-ui,sans-serif;pointer-events:none}
+.wedge:not(.on) path{opacity:.82}
+.wedge:focus{outline:none}.wedge:focus-visible path{stroke:var(--ink)}
+.wheel-hub{fill:var(--card)}
+.hub-n{fill:var(--ink);font:700 18px "DM Sans",system-ui,sans-serif}
+.hub-t{fill:var(--muted);font:500 10px "DM Sans",system-ui,sans-serif}
+.wheel-side{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.feel-list,.feel-chosen{display:flex;flex-wrap:wrap;gap:6px}
+.feel{border:1.5px solid var(--fc,var(--line));background:var(--card);color:var(--ink);border-radius:999px;padding:5px 11px;font:inherit;font-size:.85rem;cursor:pointer}
+.feel.on{background:var(--fc,var(--dc,var(--accent)));border-color:var(--fc,var(--dc,var(--accent)));color:#fff}
+.feel-chosen{border-top:1px dashed var(--line);padding-top:8px}
+.feel-chosen .feel{--fc:var(--dc,var(--accent))}
+@media (max-width:560px){.wheel-wrap{flex-direction:column;align-items:center}.wheel{width:190px}.wheel-side{width:100%}}

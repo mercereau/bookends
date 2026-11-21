@@ -1,0 +1,423 @@
+{
+ "settings": {
+  "shown": 3,
+  "_notes": "shown = idea chips offered per question at a time (picked at random). Prompts are keyed by check-in, then by question id from FORMS in js/app.js. hint replaces the placeholder text; pinned ideas are always shown first; ideas are tap-to-add phrases picked at random. Keep ideas short, doable, and guilt-free. Morning ideas are plans (present tense); night ideas look back (past tense)."
+ },
+ "prompts": {
+  "morning": {
+   "emotional_text": {
+    "hint": "Name the feeling, then one small way you'll take care of it.",
+    "ideas": [
+     "Take five slow breaths when it shows up",
+     "Text someone I trust",
+     "Go easy on myself today",
+     "Write it down and let it be",
+     "Take a short walk to reset",
+     "Put on music that matches my mood",
+     "Ask for help if I need it",
+     "Notice it without judging it",
+     "Step outside for a few minutes",
+     "Keep doing what's helping",
+     "Give myself a five-minute break",
+     "Say it out loud to someone"
+    ]
+   },
+   "physical_text": {
+    "hint": "One simple thing for your body: move, rest, or nourish.",
+    "ideas": [
+     "Take a short walk",
+     "Drink a full glass of water first thing",
+     "Eat some fruit",
+     "Stretch for five minutes",
+     "Take a 30-minute nap if I need it",
+     "Eat a real breakfast",
+     "Get outside in daylight",
+     "Stand up and move every hour",
+     "Pack a healthy snack",
+     "Do a few minutes of yoga",
+     "Take the stairs",
+     "Rest when my body asks"
+    ]
+   },
+   "spiritual_text": {
+    "hint": "Something that connects you to what matters: a practice, a value, a quiet moment.",
+    "ideas": [
+     "Two minutes of quiet before my phone",
+     "Name three things I'm grateful for",
+     "Read something that grounds me",
+     "Pray or meditate for a few minutes",
+     "Spend a moment outside and just notice",
+     "Pick one value to live by today",
+     "Light a candle and pause",
+     "Journal for five minutes",
+     "Take a mindful walk",
+     "Do one kind thing quietly",
+     "Listen to something uplifting"
+    ]
+   },
+   "social_text": {
+    "hint": "Who you want to connect with, or a boundary you want to keep.",
+    "ideas": [
+     "Reach out to a friend",
+     "Say no to something that drains me",
+     "Listen more than I talk",
+     "Thank someone",
+     "Eat a meal with someone",
+     "Check in on someone I've been thinking about",
+     "Keep my phone away during conversations",
+     "Ask for what I need",
+     "Call a family member",
+     "Say yes to an invitation",
+     "Take space when I need it"
+    ]
+   },
+   "intellectual_text": {
+    "hint": "Something to learn, read, or get curious about.",
+    "ideas": [
+     "Read ten pages of a book",
+     "Listen to a podcast",
+     "Learn one new word",
+     "Try a puzzle or crossword",
+     "Watch a short documentary",
+     "Ask a question I've been wondering about",
+     "Practice a skill for 15 minutes",
+     "Look up something I'm curious about",
+     "Try a new recipe",
+     "Write down one idea",
+     "Take a different route and notice things"
+    ]
+   },
+   "occupational_text": {
+    "hint": "One task, routine, or goal that would make today feel focused.",
+    "ideas": [
+     "Finish the one task I've been putting off",
+     "Make a short to-do list",
+     "Work in a focused 25-minute block",
+     "Take real breaks",
+     "Clear my inbox",
+     "Ask for help on something I'm stuck on",
+     "Set a time to stop working",
+     "Start with the hardest thing",
+     "Celebrate one small win",
+     "Keep my morning routine",
+     "Plan tomorrow before I finish"
+    ]
+   },
+   "environmental_text": {
+    "hint": "One small way to tend to your space.",
+    "ideas": [
+     "Make my bed",
+     "Clear off my desk",
+     "Open a window for fresh air",
+     "Do the dishes",
+     "Put away one pile",
+     "Water the plants",
+     "Take out the trash",
+     "Let in some natural light",
+     "Tidy for ten minutes",
+     "Put on calming music at home",
+     "Spend some time outside"
+    ]
+   },
+   "financial_text": {
+    "hint": "One money habit or bit of awareness to carry with you.",
+    "ideas": [
+     "Pack lunch instead of buying",
+     "Check my account balance",
+     "Wait a day before buying something extra",
+     "Pay one bill",
+     "Write down what I spend today",
+     "Cancel a subscription I don't use",
+     "Move a little into savings",
+     "Stick to my grocery list",
+     "Look at my budget for five minutes",
+     "Have a no-spend day",
+     "Notice spending when I'm stressed"
+    ]
+   },
+   "community_text": {
+    "hint": "One way to support or lift up the people around you.",
+    "ideas": [
+     "Hold the door and smile",
+     "Pick up litter on a walk",
+     "Check on a neighbor",
+     "Support a local business",
+     "Give a sincere compliment",
+     "Donate something I don't need",
+     "Be patient with someone who's struggling",
+     "Share something helpful",
+     "Volunteer for a small task",
+     "Say thank you to a worker",
+     "Listen without fixing"
+    ]
+   }
+  },
+  "night": {
+   "emotional_text": {
+    "hint": "Name the emotions you felt most today, and what helped you feel regulated.",
+    "ideas": [
+     "Took a few deep breaths",
+     "Talked it through with someone",
+     "Gave myself a break",
+     "Went for a walk",
+     "Wrote it down",
+     "Let myself feel it",
+     "Listened to music",
+     "Stepped away for a minute",
+     "Used a coping skill",
+     "Asked for help",
+     "Noticed it before it took over",
+     "Was kinder to myself than usual"
+    ]
+   },
+   "physical_text": {
+    "hint": "What helped your body feel strong, rested, or cared for.",
+    "ideas": [
+     "Went for a walk",
+     "Drank plenty of water",
+     "Ate some fruit or vegetables",
+     "Stretched",
+     "Took a nap",
+     "Got some sunlight",
+     "Ate regular meals",
+     "Exercised",
+     "Rested when I was tired",
+     "Took a shower and felt better",
+     "Moved more than yesterday"
+    ]
+   },
+   "sleep_text": {
+    "hint": "One thing you'll do tonight to help you sleep.",
+    "ideas": [
+     "Put my phone away 30 minutes before bed",
+     "Read a few pages in bed",
+     "Take a warm shower",
+     "Keep the room cool and dark",
+     "Do a short breathing exercise",
+     "Write tomorrow's to-do list so my mind can rest",
+     "Go to bed at my usual time",
+     "Skip caffeine this evening",
+     "Listen to calm music or a sleep story",
+     "Stretch gently",
+     "Dim the lights an hour before bed"
+    ]
+   },
+   "spiritual_text": {
+    "hint": "A moment when you felt aligned with your values or a sense of purpose.",
+    "ideas": [
+     "A quiet moment outside",
+     "Helping someone",
+     "Practicing gratitude",
+     "Prayer or meditation",
+     "Telling the truth when it was hard",
+     "Being patient",
+     "Spending time in nature",
+     "Doing something creative",
+     "Keeping a promise to myself",
+     "Listening to someone fully",
+     "Slowing down"
+    ]
+   },
+   "social_text": {
+    "hint": "A moment of connection, or a boundary you set.",
+    "ideas": [
+     "Had a good conversation",
+     "Reached out to a friend",
+     "Said no and felt okay about it",
+     "Shared a laugh with someone",
+     "Asked for help",
+     "Spent time with family",
+     "Took space when I needed it",
+     "Made a new connection",
+     "Let someone help me",
+     "Showed up for someone",
+     "Listened without interrupting"
+    ]
+   },
+   "intellectual_text": {
+    "hint": "Something you learned, explored, or thought about.",
+    "ideas": [
+     "Read something interesting",
+     "Learned something at work",
+     "Listened to a podcast",
+     "Solved a tricky problem",
+     "Had a thoughtful conversation",
+     "Tried something new",
+     "Worked on a puzzle",
+     "Practiced a skill",
+     "Looked up something I was curious about",
+     "Reflected on how I'm doing",
+     "Watched something that made me think"
+    ]
+   },
+   "occupational_text": {
+    "hint": "What gave you a sense of accomplishment or purpose.",
+    "ideas": [
+     "Finished a task I'd been avoiding",
+     "Stayed focused for a while",
+     "Helped a coworker",
+     "Kept my routine",
+     "Took breaks and still got things done",
+     "Made progress on a goal",
+     "Asked for what I needed",
+     "Stopped work on time",
+     "Cleared my to-do list",
+     "Learned from a mistake",
+     "Showed up even when it was hard"
+    ]
+   },
+   "environmental_text": {
+    "hint": "Something you noticed or changed about your space.",
+    "ideas": [
+     "Cleaned up my space",
+     "Made my bed",
+     "Opened the windows",
+     "Did the dishes",
+     "Spent time outside",
+     "Noticed what feels cluttered",
+     "Added something that makes me happy",
+     "Organized one area",
+     "Did laundry",
+     "Found a calm spot to work",
+     "Noticed my space felt good"
+    ]
+   },
+   "financial_text": {
+    "hint": "Any step toward awareness or responsibility with money.",
+    "ideas": [
+     "Stuck to my budget",
+     "Packed my lunch",
+     "Paid a bill on time",
+     "Checked my balance",
+     "Skipped an impulse buy",
+     "Tracked what I spent",
+     "Moved money into savings",
+     "Had a no-spend day",
+     "Talked openly about money",
+     "Noticed a spending trigger",
+     "Gave myself a break from money worries"
+    ]
+   },
+   "proud_text": {
+    "hint": "Big or small, it counts. What are you proud of?",
+    "pinned": [
+     "I showed up for myself and filled out my Bookends"
+    ],
+    "ideas": [
+     "I asked for help",
+     "I was kind to myself",
+     "I finished something hard",
+     "I kept a promise to myself",
+     "I set a boundary",
+     "I got out of bed",
+     "I made someone smile",
+     "I took care of my body",
+     "I stayed calm in a tough moment",
+     "I made time for something I enjoy"
+    ]
+   }
+  }
+ },
+ "feelingsWheel": {
+  "_notes": "Core feelings with more specific words around them. People pick up to 3 words that fit.",
+  "max": 3,
+  "groups": [
+   {
+    "core": "Joyful",
+    "color": "#e3a53a",
+    "feelings": [
+     "happy",
+     "excited",
+     "grateful",
+     "hopeful",
+     "playful",
+     "proud",
+     "cheerful",
+     "energized",
+     "optimistic",
+     "delighted"
+    ]
+   },
+   {
+    "core": "Peaceful",
+    "color": "#5a9e7c",
+    "feelings": [
+     "calm",
+     "content",
+     "relaxed",
+     "safe",
+     "grounded",
+     "relieved",
+     "thankful",
+     "loved",
+     "secure",
+     "at ease"
+    ]
+   },
+   {
+    "core": "Powerful",
+    "color": "#4f7fc4",
+    "feelings": [
+     "confident",
+     "capable",
+     "motivated",
+     "respected",
+     "valued",
+     "focused",
+     "brave",
+     "determined",
+     "appreciated",
+     "worthy"
+    ]
+   },
+   {
+    "core": "Sad",
+    "color": "#7a72b8",
+    "feelings": [
+     "lonely",
+     "tired",
+     "disappointed",
+     "hurt",
+     "down",
+     "discouraged",
+     "grieving",
+     "bored",
+     "empty",
+     "homesick"
+    ]
+   },
+   {
+    "core": "Scared",
+    "color": "#a0607a",
+    "feelings": [
+     "anxious",
+     "worried",
+     "overwhelmed",
+     "insecure",
+     "nervous",
+     "confused",
+     "helpless",
+     "rejected",
+     "stressed",
+     "uncertain"
+    ]
+   },
+   {
+    "core": "Mad",
+    "color": "#c0604d",
+    "feelings": [
+     "frustrated",
+     "irritated",
+     "annoyed",
+     "jealous",
+     "resentful",
+     "impatient",
+     "angry",
+     "critical",
+     "on edge",
+     "fed up"
+    ]
+   }
+  ]
+ }
+}

@@ -109,6 +109,17 @@ print('OK' if not dupes and not missing else f'Duplicate ids: {dupes}  Missing s
 
 Then reload the app. Everyone gets the same three affirmations each day, so you may not see your new ones right away. That's expected.
 
+## 3b. Adding writing ideas
+
+The tap-to-add ideas under each question live in `data/suggestions.json`, under `prompts` → `morning` or `night` → the question id. To add one, put a new phrase in that question's `ideas` list.
+
+- **Short and doable:** a few words, something that takes minutes and costs nothing.
+- **Match the check-in:** morning ideas are plans ("Take a short walk"); night ideas look back ("Went for a walk").
+- **Write it as the person would:** "Text a friend", not "You should text a friend".
+- **No guilt and no medical advice**, same as affirmations.
+
+Check that the file is still valid JSON with `python3 -m json.tool data/suggestions.json > /dev/null && echo OK`.
+
 ## 4. Changing code or styles
 
 - Whenever you edit `css/styles.css` or `js/app.js`, **bump its `?v=` number in `index.html`**. Browsers cache these files for a year, so without the bump, returning visitors keep the old version.
@@ -119,7 +130,7 @@ Then reload the app. Everyone gets the same three affirmations each day, so you 
 ## 5. Commit and push
 
 ```sh
-git add data/affirmations.json
+git add data/affirmations.json data/suggestions.json
 git commit -m "Add 5 sleep and rest affirmations"
 git push -u origin add-affirmations-sleep
 ```

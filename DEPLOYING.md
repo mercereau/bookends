@@ -20,6 +20,7 @@ The code is under the MIT License, so you're free to reuse it. The written conte
 | What | Where |
 | --- | --- |
 | Affirmations and suggestions | `data/affirmations.json` (see "Editing affirmations" in the README) |
+| Writing hints, ideas and feelings wheel | `data/suggestions.json` (see "Editing writing ideas" in the README) |
 | About page text | `renderAbout()` in `js/app.js` |
 | GitHub link on the About page | the `about-source` section in `js/app.js` |
 | Name and logo | `index.html` (title, header and inline logo), `site.webmanifest`, `favicon.*`, `icon-*.png`, `apple-touch-icon.png` |

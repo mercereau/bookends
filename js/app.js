@@ -77,6 +77,7 @@ const BADGES = [
   {id:"evening-glow", em:"🌙", name:"Evening Glow",    desc:"Log your first nightly reflection", test:s=>s.nights>=1},
   {id:"full-circle",  em:"⭕", name:"Full Circle",     desc:"Morning and night on the same day", test:s=>s.fullDays>=1},
   {id:"proud-first",  em:"💛", name:"Proud of You",    desc:"Name your first proud moment", test:s=>s.proud>=1},
+  {id:"feelings-wheel", em:"🎡", name:"Name It to Tame It", desc:"Use the feelings wheel to name how you feel", test:s=>s.feelings>=1},
   {id:"full-picture", em:"🎯", name:"Full Picture",    desc:"Rate every wellness area in one check-in", test:s=>s.allScales>=1},
   {id:"streak-2",     em:"✨", name:"Two in a Row",    desc:"Check in two days in a row", test:s=>s.longest>=2, progress:s=>[s.longest,2]},
   {id:"entries-5",    em:"🙌", name:"High Five",       desc:"5 total check-ins", test:s=>s.total>=5, progress:s=>[s.total,5]},
@@ -256,6 +257,7 @@ function computeStats(entries, asOf=today()){
     current, longest: longestRun(dates), longestFull: longestRun(fullDates),
     comebacks, early,
     proud: es.filter(e=>e.kind==="night" && (e.answers.proud_text||"").trim()).length,
+    feelings: es.filter(e=>Array.isArray(e.answers.emotional_feelings) && e.answers.emotional_feelings.length).length,
     complete: es.filter(isComplete).length,
     holidays: new Set(dates.flatMap(d=>holidaysOn(d).map(h=>h.id))).size,
     allScales: es.filter(e=>FORMS[e.kind].sections.filter(x=>x.scale).every(x=>e.answers[x.scale.id])).length,
@@ -606,7 +608,8 @@ function requestClose(){
 }
 function openForm(kind,date,step=0){
   const ex=getEntry(date,kind);
-  S.form={kind,date,answers:{...(ex?.answers||{})},existing:!!ex,step,dirty:false,readOnly:date<today()}; // finished days are read-only
+  S.form={kind,date,answers:{...(ex?.answers||{})},existing:!!ex,step,dirty:false,readOnly:date<today(),ideas:{},wheelCore:null,wheelOpen:false}; // finished days are read-only
+  const F=S.form; F.feel=Array.isArray(F.answers[FEEL_KEY])?[...F.answers[FEEL_KEY]]:[]; F.feelLine=feelLine(F.feel,F.kind);
   renderForm();
 }
 const hasVal=v=>v!==undefined && v!==null && String(v).trim()!=="";
@@ -614,6 +617,63 @@ function sectionIds(sec){ return (sec.scale?[sec.scale.id]:[]).concat(sec.prompt
 function goStep(n,dir){
   const F=S.form, N=FORMS[F.kind].sections.length;
   F.step=Math.max(0,Math.min(N-1,n)); F.dir=dir; renderForm();
+}
+/* ---------- Writing help: hints, tap-to-add ideas (data/suggestions.json) and the feelings wheel ---------- */
+const SUG={data:null};
+async function loadSuggestions(){
+  try{ const r=await fetch("data/suggestions.json",{cache:"no-cache"}); if(!r.ok) throw 0; SUG.data=await r.json(); }
+  catch(e){ SUG.data=null; }   // no file, no ideas: the form still works with a plain placeholder
+}
+const sugFor=(kind,pid)=>SUG.data?.prompts?.[kind]?.[pid]||null;
+function pickIdeas(kind,pid,avoid=[]){   // pinned ideas always come first, then a random few
+  const sg=sugFor(kind,pid), pinned=sg?.pinned||[], pool=(sg?.ideas||[]).filter(t=>!pinned.includes(t)), n=SUG.data?.settings?.shown||3;
+  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+  const fresh=pool.filter(t=>!avoid.includes(t));
+  return pinned.concat((fresh.length>=n?fresh:pool).slice(0,n));
+}
+function ideasHTML(F,pid){
+  const shown=F.ideas[pid]; if(!shown?.length) return "";
+  const val=F.answers[pid]||"";
+  return `<div class="ideas" data-for="${pid}"><span class="ideas-label">Ideas</span>${shown.map(t=>{ const on=val.includes(t);
+    return `<button type="button" class="idea ${on?"on":""}" data-t="${esc(t)}" aria-pressed="${on}">${on?"✓":"+"} ${esc(t)}</button>`; }).join("")}
+    <button type="button" class="idea-more" data-more="${pid}" aria-label="Show different ideas">↻ More</button></div>`;
+}
+function addIdea(F,v,t){
+  v=v.replace(/\s+$/,""); if(!v) return t;
+  const sep = F.feelLine && v===F.feelLine ? "\n" : /[.!?]$/.test(v) ? " " : ". ";
+  return v+sep+t;
+}
+function removeIdea(v,t){
+  const i=v.indexOf(t); if(i<0) return v;
+  return (v.slice(0,i)+v.slice(i+t.length)).replace(/^[ .]+/,"").replace(/\. *\./g,".").replace(/ {2,}/g," ").replace(/\s+$/,"");
+}
+/* Feelings wheel: pick up to 3 words; they become the first line of the emotional answer. */
+const WHEEL_ID="emotional_text", FEEL_KEY="emotional_feelings";
+const wheelData=()=>SUG.data?.feelingsWheel?.groups?.length?SUG.data.feelingsWheel:null;
+function feelLine(list,kind){ if(!list.length) return ""; const w=list.length===1?list[0]:list.slice(0,-1).join(", ")+" and "+list[list.length-1]; return kind==="night"?`Today I felt ${w}.`:`Feeling ${w}.`; }
+function wheelHTML(F){
+  const W=wheelData(), max=W.max||3, G=W.groups, n=G.length, cx=110, cy=110, R=104, r=44;
+  const pt=(a,rad)=>[cx+rad*Math.cos(a), cy+rad*Math.sin(a)];
+  const wedges=G.map((g,i)=>{
+    const a0=-Math.PI/2+i*2*Math.PI/n, a1=a0+2*Math.PI/n, am=(a0+a1)/2, act=F.wheelCore===i;
+    const off=act?6:0, dx=off*Math.cos(am), dy=off*Math.sin(am);
+    const [x0,y0]=pt(a0,R),[x1,y1]=pt(a1,R),[x2,y2]=pt(a1,r),[x3,y3]=pt(a0,r),[tx,ty]=pt(am,(R+r)/2);
+    const picked=G[i].feelings.filter(f=>F.feel.includes(f)).length;
+    return `<g class="wedge ${act?"on":""}" data-core="${i}" transform="translate(${dx.toFixed(1)} ${dy.toFixed(1)})" role="button" tabindex="0" aria-label="${esc(g.core)}">
+      <path d="M${x0},${y0}A${R},${R} 0 0 1 ${x1},${y1}L${x2},${y2}A${r},${r} 0 0 0 ${x3},${y3}Z" fill="${g.color}"/>
+      <text x="${tx}" y="${ty+4}" text-anchor="middle">${esc(g.core)}${picked?" •":""}</text></g>`;
+  }).join("");
+  const core=F.wheelCore!=null?G[F.wheelCore]:null;
+  return `<div class="wheel-wrap">
+    <svg class="wheel" viewBox="0 0 220 220" aria-label="Feelings wheel">${wedges}
+      <circle cx="${cx}" cy="${cy}" r="${r-4}" class="wheel-hub"/><text x="${cx}" y="${cy-2}" text-anchor="middle" class="hub-n">${F.feel.length}/${max}</text>
+      <text x="${cx}" y="${cy+13}" text-anchor="middle" class="hub-t">chosen</text></svg>
+    <div class="wheel-side">
+      ${core?`<div class="small muted">${esc(core.core)} feelings. Tap up to ${max} that fit.</div>
+        <div class="feel-list" style="--fc:${core.color}">${core.feelings.map(f=>`<button type="button" class="feel ${F.feel.includes(f)?"on":""}" data-f="${esc(f)}" aria-pressed="${F.feel.includes(f)}">${esc(f)}</button>`).join("")}</div>`
+        :`<div class="small muted">Tap a color on the wheel to see more specific feelings, then pick up to ${max} that fit.</div>`}
+      ${F.feel.length?`<div class="feel-chosen">${F.feel.map(f=>`<button type="button" class="feel on" data-f="${esc(f)}" aria-label="Remove ${esc(f)}">${esc(f)} ✕</button>`).join("")}</div>`:""}
+    </div></div>`;
 }
 function renderForm(){
   const F=S.form, def=FORMS[F.kind], N=def.sections.length, sec=def.sections[F.step], D=DIMENSIONS[sec.dim];
@@ -635,8 +695,13 @@ function renderForm(){
         ${sec.scale?`<div class="q"><label class="qt">${esc(sec.scale.q)}</label>
           <div class="scale" data-id="${sec.scale.id}">${[1,2,3,4,5].map(v=>`<button type="button" data-v="${v}" class="${+F.answers[sec.scale.id]===v?"on":""}" aria-label="${v}" ${F.readOnly?"disabled":""}>${v}</button>`).join("")}</div>
           <div class="anchors"><span>1 = ${esc(sec.scale.low)}</span><span>5 = ${esc(sec.scale.high)}</span></div></div>`:""}
-        ${sec.prompts.map(p=>`<div class="q"><label class="qt" for="${p.id}">${esc(p.q)}</label>
-          <textarea id="${p.id}" data-id="${p.id}" placeholder="${F.readOnly?"No answer":"Write freely… or skip"}" ${F.readOnly?"readonly":""}>${esc(F.answers[p.id]||"")}</textarea></div>`).join("")}
+        ${sec.prompts.map(p=>{ const sg=sugFor(F.kind,p.id), wheel=!F.readOnly && p.id===WHEEL_ID && wheelData();
+          if(!F.readOnly && sg && !F.ideas[p.id]) F.ideas[p.id]=pickIdeas(F.kind,p.id);
+          return `<div class="q"><label class="qt" for="${p.id}">${esc(p.q)}</label>
+          ${wheel?`<button type="button" class="wheel-toggle ${F.wheelOpen?"open":""}" aria-expanded="${F.wheelOpen}">🎡 ${F.wheelOpen?"Hide the feelings wheel":"Name it with the feelings wheel"}</button>
+            <div class="wheel-panel" ${F.wheelOpen?"":"hidden"}>${F.wheelOpen?wheelHTML(F):""}</div>`:""}
+          <textarea id="${p.id}" data-id="${p.id}" placeholder="${F.readOnly?"No answer":esc(sg?.hint?sg.hint+" Or skip.":"Write freely… or skip")}" ${F.readOnly?"readonly":""}>${esc(F.answers[p.id]||"")}</textarea>
+          ${F.readOnly?"":ideasHTML(F,p.id)}</div>`; }).join("")}
       </section>
       ${F.existing&&!last&&!F.readOnly?`<div style="text-align:right;margin-top:10px"><button class="linkbtn" id="savenow">Save changes now</button></div>`:""}
     </div>
@@ -658,7 +723,39 @@ function renderForm(){
     el.querySelectorAll("button").forEach(x=>x.classList.toggle("on",+x.dataset.v===F.answers[id]));
     refreshDot();
   });
-  $s.querySelectorAll("textarea").forEach(t=>t.oninput=()=>{F.answers[t.dataset.id]=t.value; refreshDot();});
+  const syncIdeas=pid=>{ const box=$s.querySelector(`.ideas[data-for="${pid}"]`); if(box) box.outerHTML=ideasHTML(F,pid); bindIdeas(); };
+  const setText=(pid,v)=>{ const ta=$s.querySelector(`textarea[data-id="${pid}"]`); ta.value=v; F.answers[pid]=v; refreshDot(); syncIdeas(pid); };
+  $s.querySelectorAll("textarea").forEach(t=>t.oninput=()=>{F.answers[t.dataset.id]=t.value; refreshDot(); syncIdeas(t.dataset.id); t.focus();});
+  function bindIdeas(){
+    $s.querySelectorAll(".ideas").forEach(box=>{ const pid=box.dataset.for;
+      box.querySelectorAll(".idea").forEach(b=>b.onclick=()=>{ const t=b.dataset.t, v=F.answers[pid]||"";
+        setText(pid, v.includes(t)?removeIdea(v,t):addIdea(F,v,t)); });
+      box.querySelector(".idea-more").onclick=()=>{ // keep the ideas already added, swap out the rest
+        const pinned=sugFor(F.kind,pid)?.pinned||[], n=(SUG.data?.settings?.shown||3)+pinned.length;
+        const keep=[...new Set(pinned.concat(F.ideas[pid].filter(t=>(F.answers[pid]||"").includes(t))))];
+        F.ideas[pid]=keep.concat(pickIdeas(F.kind,pid,F.ideas[pid]).filter(t=>!keep.includes(t))).slice(0,Math.max(n,keep.length+1)); syncIdeas(pid); };
+    });
+  }
+  bindIdeas();
+  // feelings wheel
+  const wt=$s.querySelector(".wheel-toggle");
+  const drawWheel=()=>{ const panel=$s.querySelector(".wheel-panel"); panel.hidden=!F.wheelOpen; panel.innerHTML=F.wheelOpen?wheelHTML(F):"";
+    wt.classList.toggle("open",F.wheelOpen); wt.setAttribute("aria-expanded",F.wheelOpen); wt.textContent=`🎡 ${F.wheelOpen?"Hide the feelings wheel":"Name it with the feelings wheel"}`;
+    panel.querySelectorAll(".wedge").forEach(g=>{ const go=()=>{ F.wheelCore=+g.dataset.core; drawWheel(); }; g.onclick=go; g.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } }; });
+    panel.querySelectorAll(".feel").forEach(b=>b.onclick=()=>toggleFeel(b.dataset.f)); };
+  function toggleFeel(f){
+    const max=wheelData().max||3;
+    if(F.feel.includes(f)) F.feel=F.feel.filter(x=>x!==f);
+    else if(F.feel.length>=max) return toast(`Pick up to ${max}. Tap one you chose to swap it out.`);
+    else F.feel=[...F.feel,f];
+    const ta=$s.querySelector(`textarea[data-id="${WHEEL_ID}"]`); let v=ta.value;
+    if(F.feelLine && v.startsWith(F.feelLine)) v=v.slice(F.feelLine.length).replace(/^[ \n]+/,"");
+    F.feelLine=feelLine(F.feel,F.kind);
+    F.answers[FEEL_KEY]=F.feel.length?[...F.feel]:undefined;
+    setText(WHEEL_ID, F.feelLine?(v?F.feelLine+"\n"+v:F.feelLine):v);
+    drawWheel();
+  }
+  if(wt){ wt.onclick=()=>{ F.wheelOpen=!F.wheelOpen; if(F.wheelOpen&&F.wheelCore==null) F.wheelCore=null; drawWheel(); }; if(F.wheelOpen) drawWheel(); }
   $s.querySelectorAll(".stepdot").forEach(b=>b.onclick=()=>{const n=+b.dataset.step; goStep(n,n<F.step?"back":"fwd");});
   $s.querySelector("#back").onclick=requestClose;
   $s.querySelector("#prev").onclick=()=>goStep(F.step-1,"back");
@@ -1123,6 +1220,7 @@ function providerSummaryJSON(days, withNotes){
     for(const sec of FORMS[k].sections){
       if(sec.scale) questions[k][sec.scale.id]={area:areaLabel(sec.dim),type:"rating",question:sec.scale.q,low:sec.scale.low,high:sec.scale.high};
       if(withNotes) for(const pr of sec.prompts||[]) questions[k][pr.id]={area:areaLabel(sec.dim),type:"note",question:pr.q};
+      if(withNotes && sec.dim==="emotional") questions[k][FEEL_KEY]={area:areaLabel(sec.dim),type:"feelings",question:"Feelings picked from the feelings wheel (up to 3)"};
     }
   }
   const averages={};
@@ -1137,6 +1235,7 @@ function providerSummaryJSON(days, withNotes){
       for(const sec of FORMS[k].sections){
         if(sec.scale){ const r=+e.answers[sec.scale.id]; if(r) ratings[sec.scale.id]=r; }
         if(withNotes) for(const pr of sec.prompts||[]){ const t=String(e.answers[pr.id]||"").trim(); if(t) notes[pr.id]=t; }
+        if(withNotes && sec.dim==="emotional" && Array.isArray(e.answers[FEEL_KEY]) && e.answers[FEEL_KEY].length) notes[FEEL_KEY]=[...e.answers[FEEL_KEY]];
       }
       out[k]=withNotes?{ratings,notes}:{ratings};
     }
@@ -1299,7 +1398,7 @@ function confetti(count){
 /* ---------- Boot ---------- */
 (async function boot(){
   countVisit();
-  const affReady = loadAffirmations();
+  const affReady = Promise.all([loadAffirmations(), loadSuggestions()]);
   S.store = await pickStore();
   await affReady;
   try{ const all = await S.store.list(); const meta=all.find(e=>e.key===AFF_META_KEY);

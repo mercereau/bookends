@@ -15,6 +15,7 @@ The app has no accounts and no tracking, and it doesn't send your entries anywhe
 - **Two check-ins a day.** Morning adds a community prompt. Night adds a sleep-hygiene prompt and "What's one thing I'm proud of today?"
 - **Check-in windows.** Each check-in is open only during its window, and you set the windows in Settings. Each window can be 1 to 8 hours. Past days are read-only. If you miss a day, the app says so gently, and that's it.
 - **Badges and streaks** without guilt. You only see badges you've earned. Earning one means something nice happened, not that you're behind on the rest. There are also monthly badges, holiday badges and affirmation badges.
+- **Writing help.** Each question has a short hint about what to include, plus a few tap-to-add ideas picked at random ("Take a short walk", "Eat some fruit"). Emotional wellness adds a **feelings wheel**: pick up to three feelings and they're filled in for you. Using it earns a badge.
 - **Daily affirmations**, three a day at most. If you keep coming back, the app nudges you to take a break from the screen. You can turn affirmations off, show them on the Today screen, or get a pop-up once a day.
 - **Your week on the shelf.** Each day is a book, colored by which check-ins you did. Tap a book to see that day's highlights.
 - **History.** Trends, past entries and a calendar.
@@ -43,6 +44,7 @@ index.html              The single page: header, tabs, footer, font loading
 css/styles.css          All styles, including dark mode and phone layouts
 js/app.js               The whole app, in plain JavaScript with no dependencies
 data/affirmations.json  Affirmations, suggestions and take-a-break messages
+data/suggestions.json   Writing hints, tap-to-add ideas and the feelings wheel
 fonts/                  Self-hosted DM Sans and Fraunces (variable, Latin subset) + OFL licenses
 favicon.*, icon-*.png, apple-touch-icon.png, site.webmanifest
 _headers                Cloudflare security and caching headers
@@ -115,6 +117,37 @@ The site is hosted on Cloudflare and connected to this GitHub repo. Every push t
   You can also use `community`, for ways to support the people around you. It matches the morning check-in's community prompt. Leave `area` out if the affirmation fits every area.
 - `id` must be unique and must never be reused. Each person's affirmation history stores ids, so reusing one would mix up their history.
 - Everyone sees the same three affirmations each day. The daily order is shuffled with the date as the seed.
+
+## Editing writing ideas
+
+`data/suggestions.json` holds the help shown under each question in a check-in.
+
+```json
+{
+  "settings": { "shown": 3 },
+  "prompts": {
+    "morning": {
+      "physical_text": {
+        "hint": "One simple thing for your body: move, rest, or nourish.",
+        "ideas": ["Take a short walk", "Eat some fruit", "Take a 30-minute nap if I need it"]
+      }
+    }
+  },
+  "feelingsWheel": {
+    "max": 3,
+    "groups": [{ "core": "Joyful", "color": "#e3a53a", "feelings": ["happy", "grateful", "hopeful"] }]
+  }
+}
+```
+
+- `prompts` is keyed by check-in (`morning` or `night`), then by the question's id from `FORMS` in `js/app.js` (such as `physical_text` or `sleep_text`).
+- `hint` replaces the placeholder in the text box.
+- `pinned` (optional) ideas always show first, before the random ones. The closing question pins "I showed up for myself and filled out my Bookends".
+- `ideas` are tap-to-add phrases. The app shows `shown` of them at random, and **More** swaps in others. Morning ideas are plans ("Take a short walk"); night ideas look back ("Went for a walk").
+- `feelingsWheel.groups` are the colored sections of the wheel. Each feeling word should appear only once across all groups.
+- A question with no entry just shows "Write freely… or skip". If the file is missing, the forms still work.
+
+The file is cached for 5 minutes and doesn't need a version bump.
 
 ## Data formats
 

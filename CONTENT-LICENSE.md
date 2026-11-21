@@ -5,6 +5,7 @@ The MIT License in [`LICENSE`](LICENSE) covers the **code** in this repository: 
 It does **not** cover the written and visual content, which is © 2026 Jonathan Mercereau, all rights reserved:
 
 - The affirmations and suggestions in `data/affirmations.json`
+- The writing hints, ideas and feelings wheel in `data/suggestions.json`
 - The About page text and other written copy in the app
 - The Bookends name and the bracket logo, including `favicon.svg`, `favicon.ico`, `apple-touch-icon.png` and the `icon-*.png` files
 
