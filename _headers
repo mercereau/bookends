@@ -1,0 +1,28 @@
+# Cloudflare static asset headers. See https://developers.cloudflare.com/pages/configuration/headers/
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  X-Frame-Options: DENY
+
+# The page itself always revalidates so new ?v= links are picked up right away.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+
+# CSS and JS are versioned with ?v= in index.html, so they can be cached for a long time.
+/css/*
+  Cache-Control: public, max-age=31536000, immutable
+/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Fonts never change in place.
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Affirmations can be edited without a version bump.
+/data/*
+  Cache-Control: public, max-age=300

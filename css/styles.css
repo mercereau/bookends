@@ -411,8 +411,10 @@ textarea[readonly]:focus{border-color:var(--line)}
 .about-share{--ac:#c0604d}
 .about-privacy{--ac:#a0607a}
 .about-home{--ac:#4a6fb5}
+.about-source{--ac:#5d6b64}
+.src-link{display:inline-block;text-decoration:none;margin-top:2px}
 .about-care{--ac:var(--accent);border-color:transparent;border-left-color:var(--accent)}
-@media (prefers-color-scheme:dark){.about-name{--ac:#b49ae0}.about-how{--ac:#6cc0cc}.about-privacy{--ac:#d89ab4}.about-share{--ac:#e8907e}.about-home{--ac:#8fa7e0}}
+@media (prefers-color-scheme:dark){.about-name{--ac:#b49ae0}.about-how{--ac:#6cc0cc}.about-privacy{--ac:#d89ab4}.about-share{--ac:#e8907e}.about-home{--ac:#8fa7e0}.about-source{--ac:#a9b6af}}
 
 /* About: jump links + section anchors */
 .about .card{scroll-margin-top:16px}

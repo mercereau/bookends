@@ -888,7 +888,7 @@ function renderBadges(){
 
 /* ---------- Data (export / import) ---------- */
 /* ---------- About ---------- */
-const ABOUT_SECTIONS=[["about-why","Why I made this"],["about-name","Why \"Bookends\"?"],["about-how","How it works"],["about-homescreen","Home Screen"],["about-privacy","Your privacy"],["about-free","Free, on purpose"],["about-providers","For providers"],["about-sharing","Sharing with your provider"],["about-note","A quick note"]];
+const ABOUT_SECTIONS=[["about-note","A quick note"],["about-why","Why I made this"],["about-name","Why \"Bookends\"?"],["about-how","How it works"],["about-homescreen","Home Screen"],["about-privacy","Your privacy"],["about-free","Free, on purpose"],["about-providers","For providers"],["about-sharing","Sharing with your provider"],["about-source","Open source"]];
 function renderAbout(){
   const privacy = S.store.kind==="cloud"
     ? "Your check-ins are saved to your own private space. Only you can read them. Nobody else who opens this page can see them."
@@ -897,6 +897,10 @@ function renderAbout(){
     <article class="about">
       <nav class="card about-toc" aria-label="On this page"><span class="small muted">On this page</span>
         <div class="toc-links">${ABOUT_SECTIONS.map(([id,t])=>`<a href="#${id}">${t}</a>`).join("")}</div></nav>
+      <section class="card about-care" id="about-note">
+        <h3>A quick note<a class="anchor" href="#about-note" aria-label="Link to this section">#</a></h3>
+        <p>Bookends is a self-care tool. It's not therapy or medical care. If you're having a hard time, please reach out to a professional or someone you trust. In the US, you can call or text <b>988</b> any time to reach the Suicide &amp; Crisis Lifeline.</p>
+      </section>
       <section class="card about-hero" id="about-why">
         <svg class="mark" viewBox="60 50 120 120" aria-hidden="true">
           <path d="M90 62H70V158H90" fill="none" stroke="var(--morning)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
@@ -988,9 +992,10 @@ function renderAbout(){
         <p class="small muted">Tip: regular email and text messages aren't very private. If your provider has a secure portal, use that instead. You can also just open <b>History</b> together and walk through a day.</p>
       </section>
 
-      <section class="card about-care" id="about-note">
-        <h3>A quick note<a class="anchor" href="#about-note" aria-label="Link to this section">#</a></h3>
-        <p>Bookends is a self-care tool. It's not therapy or medical care. If you're having a hard time, please reach out to a professional or someone you trust. In the US, you can call or text <b>988</b> any time to reach the Suicide &amp; Crisis Lifeline.</p>
+      <section class="card about-source" id="about-source">
+        <h3>Open source<a class="anchor" href="#about-source" aria-label="Link to this section">#</a></h3>
+        <p>Bookends is open source. You can read every line of code, see exactly how your entries are stored, or suggest an idea or report a bug.</p>
+        <p><a class="btn ghost src-link" href="https://github.com/mercereau/bookends" target="_blank" rel="noopener">View Bookends on GitHub ↗</a></p>
       </section>
     </article>`;
 }
