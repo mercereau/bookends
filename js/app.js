@@ -982,7 +982,7 @@ function renderAbout(){
         <ol>
           <li>Go to <b>Settings</b> and find <b>Share with your provider</b>.</li>
           <li>Pick a time period (7, 14, 30, or 90 days) and choose whether to include your written notes or just your ratings.</li>
-          <li>Tap <b>Download summary</b>. You'll get a simple page you can open, print, or save as a PDF.</li>
+          <li>Tap <b>Download as Report (HTML)</b> for a simple page with charts you can open, print, or save as a PDF. If your provider would rather have the raw numbers, tap <b>Download as Data (JSON)</b> instead.</li>
           <li>Share it the way you and your provider prefer: show it during a session, bring a printed copy, or upload it through your provider's secure patient portal.</li>
         </ol>
         <p class="small muted">Tip: regular email and text messages aren't very private. If your provider has a secure portal, use that instead. You can also just open <b>History</b> together and walk through a day.</p>
@@ -1106,6 +1106,51 @@ ${strip}
 <h2>Day by day</h2>${dayBlocks||"<p>No check-ins in this range.</p>"}
 </body></html>`;
 }
+/* Same period and notes choice as the report, as structured data a provider's tools can read. */
+function providerSummaryJSON(days, withNotes){
+  const end=today(), start=addDays(end,-(days-1));
+  const ents=S.entries.filter(e=>e.date>=start && e.date<=end);
+  const dates=[...new Set(ents.map(e=>e.date))].sort();
+  const areaLabel=dim=>dim==="closing"?"Proud of":(DIMENSIONS[dim]?.label||dim);
+  const questions={};
+  for(const k of ["morning","night"]){
+    questions[k]={};
+    for(const sec of FORMS[k].sections){
+      if(sec.scale) questions[k][sec.scale.id]={area:areaLabel(sec.dim),type:"rating",question:sec.scale.q,low:sec.scale.low,high:sec.scale.high};
+      if(withNotes) for(const pr of sec.prompts||[]) questions[k][pr.id]={area:areaLabel(sec.dim),type:"note",question:pr.q};
+    }
+  }
+  const averages={};
+  for(const k of ["morning","night"]) for(const sec of FORMS[k].sections){ if(!sec.scale) continue;
+    const v=ents.filter(e=>e.kind===k).map(e=>+e.answers[sec.scale.id]).filter(Boolean);
+    (averages[sec.dim] ||= {area:areaLabel(sec.dim)})[k]=v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*100)/100:null; }
+  const dayList=dates.map(d=>{
+    const out={date:d};
+    for(const k of ["morning","night"]){
+      const e=getEntry(d,k); if(!e) continue;
+      const ratings={}, notes={};
+      for(const sec of FORMS[k].sections){
+        if(sec.scale){ const r=+e.answers[sec.scale.id]; if(r) ratings[sec.scale.id]=r; }
+        if(withNotes) for(const pr of sec.prompts||[]){ const t=String(e.answers[pr.id]||"").trim(); if(t) notes[pr.id]=t; }
+      }
+      out[k]=withNotes?{ratings,notes}:{ratings};
+    }
+    return out;
+  });
+  return JSON.stringify({
+    source:"Bookends (bookends.day)", format:"bookends-provider-summary", version:1,
+    created:new Date().toISOString(),
+    period:{start,end,days}, includesNotes:withNotes,
+    scale:{min:1,max:5,description:"5 is the most positive end of each scale"},
+    summary:{daysCheckedIn:dates.length, morningIntentions:ents.filter(e=>e.kind==="morning").length, nightlyReflections:ents.filter(e=>e.kind==="night").length, averages},
+    questions, days:dayList
+  },null,2);
+}
+async function downloadProviderData(days,withNotes){
+  if(!S.entries.length) return toast("No check-ins to share yet.");
+  const ok=await saveFile(`bookends-summary-${today()}.json`, providerSummaryJSON(days,withNotes), "application/json");
+  if(ok) toast("Data saved. You decide who sees it.");
+}
 async function downloadProviderSummary(days,withNotes){
   if(!S.entries.length) return toast("No check-ins to share yet.");
   const ok=await saveFile(`bookends-summary-${today()}.html`, providerSummaryHTML(days,withNotes), "text/html");
@@ -1145,7 +1190,8 @@ function renderSettings(){
         <label class="time-row"><span>Time period</span><select id="shDays">${[7,14,30,90].map(n=>`<option value="${n}" ${n===14?"selected":""}>Last ${n} days</option>`).join("")}</select></label>
         <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Include my written notes</b><span class="small muted">Turn off to share ratings only.</span></span><input type="checkbox" class="switch" id="shNotes" checked></label>
       </div>
-      <div class="actions" style="justify-content:flex-start"><button class="btn" id="shGo" ${S.entries.length?"":"disabled"}>⬇ Download summary</button></div>
+      <div class="actions" style="justify-content:flex-start"><button class="btn" id="shGo" ${S.entries.length?"":"disabled"}>⬇ Download as Report (HTML)</button><button class="btn ghost" id="shJson" ${S.entries.length?"":"disabled"}>⬇ Download as Data (JSON)</button></div>
+      <p class="small muted" style="margin-top:8px">The report is easy to read and print. The data file has the same ratings and notes (if included), as structured data that your provider's software can read.</p>
     </div>
     <div class="card" style="margin-top:14px">
       <h2 style="font-size:1.15rem">Where your entries live</h2>
@@ -1187,6 +1233,7 @@ function renderSettings(){
   });
   document.getElementById("export").onclick=downloadBackup;
   document.getElementById("shGo").onclick=()=>downloadProviderSummary(+document.getElementById("shDays").value, document.getElementById("shNotes").checked);
+  document.getElementById("shJson").onclick=()=>downloadProviderData(+document.getElementById("shDays").value, document.getElementById("shNotes").checked);
   document.getElementById("copy").onclick=async()=>{
     const json=backupJSON();
     try{ await navigator.clipboard.writeText(json); toast("Copied to clipboard"); }
