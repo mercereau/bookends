@@ -71,6 +71,8 @@ The site is hosted on Cloudflare and connected to this GitHub repo. Every push t
 - **Build command:** none
 - **Output directory:** `/` (the repo root)
 
+**Want to run your own copy?** [DEPLOYING.md](DEPLOYING.md) walks through forking the repo, connecting it to Cloudflare and adding your own domain.
+
 ### Cache busting
 
 `index.html` loads the CSS and JS with a version number, such as `css/styles.css?v=37` and `js/app.js?v=39`. `_headers` tells browsers to cache those files for a year. **Whenever you change `css/styles.css` or `js/app.js`, bump its `?v=` number in `index.html`.** If you don't, returning visitors will keep the old file. `index.html` itself is never cached, so a new number takes effect on the next visit.
@@ -111,12 +113,9 @@ The site is hosted on Cloudflare and connected to this GitHub repo. Every push t
 
 ## Contributing
 
-Issues and pull requests are welcome. A few things to keep:
+Issues and pull requests are welcome, especially new affirmations. [CONTRIBUTING.md](CONTRIBUTING.md) covers creating a branch, adding affirmations and opening a pull request.
 
-- **No guilt, no shame.** Copy should never scold, count what someone missed, or make a skipped day feel like failure.
-- **Private by default.** No analytics, no third-party scripts, and no network calls with someone's entries.
-- **Plain JavaScript.** No build step and no dependencies.
-- **Check it on a phone** in both light and dark mode.
+The short version of what to protect: **no guilt, no shame**, private by default, plain JavaScript with no build step, and it has to work well on a phone.
 
 ## License
 

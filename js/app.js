@@ -888,7 +888,7 @@ function renderBadges(){
 
 /* ---------- Data (export / import) ---------- */
 /* ---------- About ---------- */
-const ABOUT_SECTIONS=[["about-note","A quick note"],["about-why","Why I made this"],["about-name","Why \"Bookends\"?"],["about-how","How it works"],["about-homescreen","Home Screen"],["about-privacy","Your privacy"],["about-free","Free, on purpose"],["about-providers","For providers"],["about-sharing","Sharing with your provider"],["about-source","Open source"]];
+const ABOUT_SECTIONS=[["about-note","A quick note"],["about-why","Why I made this"],["about-name","Why \"Bookends\"?"],["about-how","How it works"],["about-homescreen","Add to Home Screen"],["about-privacy","Your privacy"],["about-free","Free, on purpose"],["about-providers","For providers"],["about-sharing","Sharing with your provider"],["about-source","Open source"]];
 function renderAbout(){
   const privacy = S.store.kind==="cloud"
     ? "Your check-ins are saved to your own private space. Only you can read them. Nobody else who opens this page can see them."

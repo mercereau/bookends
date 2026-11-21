@@ -1,0 +1,19 @@
+# OS and editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Tooling (the site itself has no build step)
+node_modules/
+.wrangler/
+.env
+.dev.vars
+*.log
+
+# Personal exports. Never commit someone's journal.
+bookends-backup-*.json
+bookends-summary-*.json
+bookends-summary-*.html
+samples/
