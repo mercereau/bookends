@@ -321,17 +321,16 @@ function renderToday(){
       ${ciCard("night",n,nightOpen,"Look back on how today went","Start reflection →",closedMsg("night"))}
     </div>
     <div class="card" style="margin-top:14px">
-      <div class="small muted">Last 7 days</div>
-      <div class="week">${days.map(d=>`
-        <div class="day ${d===t?"today":""}"><span class="dl">${parse(d).toLocaleDateString(undefined,{weekday:"narrow"})}</span>
-          <div class="dots"><span class="dot m ${s.byDate[d]?.morning?"on":""}"></span><span class="dot n ${s.byDate[d]?.night?"on":""}"></span></div>
-        </div>`).join("")}</div>
+      <div class="shelf-head"><span class="small muted">Your week on the shelf</span>
+        <span class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i style="background:var(--night)"></i>Night</span></span></div>
+      ${shelfHTML(days,s,t)}
       ${nextBadgeHint(s,earned)}
     </div>
     ${storeNote()}
   `;
   $app.querySelectorAll("[data-open]:not([disabled])").forEach(b=>b.onclick=()=>openForm(b.dataset.open,t));
   scheduleWindowFlip();
+  $app.querySelectorAll(".book[data-d]").forEach(b=>b.onclick=()=>dayPicker(b.dataset.d));
   const ae=document.getElementById("affEntry"); if(ae) ae.onclick=()=>openAffSheet(false);
   if(S.prefs.affMode==="embedded") bindAffirm();
   const qb=document.getElementById("quickBackup"); if(qb) qb.onclick=downloadBackup;
@@ -378,6 +377,20 @@ function holidayBannerHTML(earned){
   const hs=holidaysOn(today()); if(!hs.length) return "";
   const h=hs[0], got=earned["holiday-"+h.id] && S.entries.some(e=>e.date===today());
   return `<div class="note holiday">${h.em} <b>Happy ${h.name}.</b> ${got?"You checked in today. Be gentle with yourself and enjoy the day.":"Holidays can be a lot. A few minutes for yourself today earns a holiday badge."}</div>`;
+}
+/* Last 7 days as books on a shelf, between two bookends. Top of the spine = morning, bottom = night. */
+function shelfHTML(days,s,t){
+  const books=days.map(d=>{
+    const r=s.byDate[d]||{}, m=!!r.morning, n=!!r.night;
+    const h=66+(parseInt(d.slice(8),10)*7%4)*6;         // gentle height variety, stable per date
+    const name=parse(d).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});
+    const what=m&&n?"morning and night":m?"morning":n?"night":"no check-ins";
+    return `<button class="book ${m||n?"":"empty"} ${d===t?"today":""}" data-d="${d}" style="height:${h}px" aria-label="${name}: ${what}">
+        <span class="b-m ${m?"on":""}"></span><span class="b-n ${n?"on":""}"></span></button>`;
+  }).join("");
+  const labels=days.map(d=>`<span class="${d===t?"today":""}">${parse(d).toLocaleDateString(undefined,{weekday:"narrow"})}</span>`).join("");
+  return `<div class="shelf"><span class="bookend l" aria-hidden="true"></span><div class="books">${books}</div><span class="bookend r" aria-hidden="true"></span></div>
+    <div class="plank" aria-hidden="true"></div><div class="shelf-days">${labels}</div>`;
 }
 function nextBadgeHint(s,earned){
   const next = nextUp(s,earned);
@@ -588,7 +601,7 @@ function renderForm(){
     <header class="sheet-head">
       <div class="sheet-title"><span class="sheet-ico">${def.icon}</span>
         <div><h2 id="sheet-title">${def.title}</h2>
-        <input type="date" class="datepick" id="fdate" value="${F.date}" max="${today()}" aria-label="Check-in date"></div></div>
+        <span class="sheet-date">${F.date===today()?"Today · ":""}${fmtDate(F.date)}</span></div></div>
       <button class="xbtn" id="back" aria-label="Close">✕</button>
     </header>
     <div class="steps" role="tablist">${def.sections.map((x,i)=>{const XD=DIMENSIONS[x.dim]; const done=sectionIds(x).some(id=>hasVal(F.answers[id]));
@@ -623,7 +636,6 @@ function renderForm(){
   });
   $s.querySelectorAll("textarea").forEach(t=>t.oninput=()=>{F.answers[t.dataset.id]=t.value; refreshDot();});
   $s.querySelectorAll(".stepdot").forEach(b=>b.onclick=()=>{const n=+b.dataset.step; goStep(n,n<F.step?"back":"fwd");});
-  $s.querySelector("#fdate").onchange=e=>{ const d=e.target.value; if(!d||d>today()) return; const keep=F.answers, st=F.step, dirty=F.dirty; openForm(F.kind,d,st); if(!S.form.existing){ S.form.answers=keep; S.form.dirty=dirty; renderForm(); } };
   $s.querySelector("#back").onclick=requestClose;
   $s.querySelector("#prev").onclick=()=>goStep(F.step-1,"back");
   const nx=$s.querySelector("#next"); if(nx) nx.onclick=()=>goStep(F.step+1,"fwd");
@@ -680,7 +692,7 @@ function renderHistory(){
         <button class="back" id="next">→</button>
       </div>
       <div class="cal">${"SMTWTFS".split("").map(d=>`<span class="h">${d}</span>`).join("")}${cells.join("")}</div>
-      <div class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i style="background:var(--night)"></i>Night</span><span class="muted">Tap a day to view or fill it in</span></div>
+      <div class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i style="background:var(--night)"></i>Night</span><span class="muted">Tap a day to look back</span></div>
     </div>
     <div class="section-title"><h2>Trends</h2><span class="small muted">last 30 days · 1–5</span></div>
     <div class="card">${trendsHTML()}</div>
@@ -709,16 +721,19 @@ function trendsHTML(){
   }).join("") + `<div class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i style="background:var(--night)"></i>Night</span></div>`;
 }
 function dayPicker(d){
-  const m=getEntry(d,"morning"), n=getEntry(d,"night");
-  modal(`<h2>${fmtDate(d)}</h2><div class="list">
-    <div style="cursor:pointer" data-k="morning"><span class="em">🌅</span><span><b>Morning Intention</b><br><span class="small muted">${m?"Logged — tap to view":"Not logged — tap to add"}</span></span></div>
-    <div style="cursor:pointer" data-k="night"><span class="em">🌙</span><span><b>Nightly Reflection</b><br><span class="small muted">${n?"Logged — tap to view":"Not logged — tap to add"}</span></span></div>
-  </div><button class="btn ghost" data-close>Close</button>`, el=>{
-    el.querySelectorAll("[data-k]").forEach(x=>{
-      const k=x.dataset.k, locked = d===today() && !getEntry(d,k) && !isOpen(k);
-      if(locked){ x.style.opacity=.45; x.style.cursor="not-allowed"; x.querySelector(".small").textContent = closedMsg(k); return; }
-      x.onclick=()=>{closeModal(); openForm(k,d);};
-    });
+  // Check-ins are for today only. Past days can be looked back on, never filled in afterward.
+  const isToday=d===today(), rows=["morning","night"].map(k=>{
+    const e=getEntry(d,k), F=FORMS[k];
+    let sub, can=false;
+    if(e){ sub="Logged · tap to view"; can=true; }
+    else if(isToday){ if(isOpen(k)){ sub="Not yet · tap to start"; can=true; } else sub=closedMsg(k); }
+    else sub="Nothing logged";
+    return `<div class="${can?"go":"rest"}" data-k="${k}" ${can?'role="button" tabindex="0"':""}><span class="em">${F.icon}</span><span><b>${F.title}</b><br><span class="small muted">${sub}</span></span></div>`;
+  }).join("");
+  const none=!isToday && !getEntry(d,"morning") && !getEntry(d,"night");
+  modal(`<h2>${fmtDate(d)}</h2>${none?`<p class="muted">No check-ins this day. That's okay. There's always tomorrow.</p>`:""}
+    <div class="list day-list">${rows}</div><button class="btn ghost" data-close>Close</button>`, el=>{
+    el.querySelectorAll(".go[data-k]").forEach(x=>{ const open=()=>{closeModal(); openForm(x.dataset.k,d);}; x.onclick=open; x.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); open(); } }; });
   });
 }
 
@@ -768,6 +783,7 @@ function renderAbout(){
         <ul>
           <li><b>🌅 Morning intention</b> is open from ${hourLabel(win("morning")[0])} to ${hourLabel(win("morning")[1])}. <b>🌙 Nightly reflection</b> is open from ${hourLabel(win("night")[0])} to ${hourLabel(win("night")[1])}. You can change both windows in <b>Settings</b>.</li>
           <li>Each check-in walks through the eight areas of wellness, one at a time. Rate each one from 1 to 5 and write as much or as little as you want. Skipping is fine.</li>
+          <li><b>Check-ins are for today.</b> You can look back on past days, but you can't fill them in afterward. If you miss a day, that's okay. There's always tomorrow. No guilt, no shame.</li>
           <li><b>Badges reward showing up, never your ratings.</b> A hard day logged honestly counts just as much as a great one. There's no list to finish.</li>
           <li><b>Daily affirmations:</b> you get three a day, then a nudge to put the phone down. That's on purpose. The goal is to live your day, not stare at this page. Choose how they show up, or turn them off, in <b>Settings</b>.</li>
         </ul>
