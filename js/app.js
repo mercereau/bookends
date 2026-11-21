@@ -786,12 +786,31 @@ function highlightHTML(kind,h){
   return `<div class="hl ${kind}" style="--dc:${D.color}">
       <div class="hl-top"><span class="hl-kind">${F.icon} ${kind==="morning"?"Morning highlight":"Evening highlight"}</span>
         ${h.rating?dots(h.rating):""}</div>
-      <div class="hl-area">${D.icon} ${D.label}${anchor?` <span class="muted">· ${esc(anchor)}</span>`:""}</div>
+      <div class="hl-area">${D.icon} ${h.sec.dim==="closing"?"Proud of":D.label}${anchor?` <span class="muted">· ${esc(anchor)}</span>`:""}</div>
       ${h.notes.map(n=>`<blockquote>${esc(n.a)}</blockquote>`).join("")}
     </div>`;
 }
+function dayBadgesHTML(d){
+  const earned=earnedBadges(S.entries), got=badgeList().filter(b=>earned[b.id]===d);
+  if(!got.length) return "";
+  return `<div class="day-badges"><h4>🏅 Badges earned this day</h4><div class="mini-badges">${got.map(b=>
+    `<button class="mini-badge" data-b="${esc(b.id)}" data-name="${esc(b.name)}" data-desc="${esc(b.desc)}" aria-label="${esc(b.name)}: ${esc(b.desc)}. Open badges.">
+       <span class="mb-em">${b.em}</span></button>`).join("")}</div></div>`;
+}
+/* Small floating tooltip, positioned against the viewport so scroll areas never clip it */
+let tipEl=null;
+function showTip(target,title,text){
+  if(!tipEl){ tipEl=document.createElement("div"); tipEl.className="float-tip"; tipEl.setAttribute("role","tooltip"); document.body.appendChild(tipEl); }
+  tipEl.innerHTML=`<b>${esc(title)}</b>${esc(text)}`; tipEl.classList.add("show");
+  const r=target.getBoundingClientRect(), t=tipEl.getBoundingClientRect(), pad=8;
+  let left=r.left+r.width/2-t.width/2; left=Math.max(pad,Math.min(innerWidth-t.width-pad,left));
+  let top=r.top-t.height-10, below=false; if(top<pad){ top=r.bottom+10; below=true; }
+  tipEl.style.left=left+"px"; tipEl.style.top=top+"px";
+  tipEl.style.setProperty("--ax",(r.left+r.width/2-left)+"px"); tipEl.classList.toggle("below",below);
+}
+function hideTip(){ if(tipEl) tipEl.classList.remove("show"); }
 let dayBg=null;
-function closeDaySheet(){ if(!dayBg) return; const bg=dayBg; dayBg=null; if(!S.form&&!affBg) document.body.classList.remove("noscroll"); bg.classList.add("closing"); setTimeout(()=>bg.remove(),180); }
+function closeDaySheet(){ hideTip(); if(!dayBg) return; const bg=dayBg; dayBg=null; if(!S.form&&!affBg) document.body.classList.remove("noscroll"); bg.classList.add("closing"); setTimeout(()=>bg.remove(),180); }
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && dayBg && !modalEl){ e.preventDefault(); closeDaySheet(); } });
 function dayPicker(d){ openDaySheet(d); }
 function openDaySheet(d){
@@ -805,6 +824,7 @@ function openDaySheet(d){
     body+=`<div class="hls">${highlightHTML("morning",hm)}${highlightHTML("night",hn)}</div>`;
     if(proud && !(hn && hn.sec.dim==="closing")) body+=`<div class="proud">⭐ <b>Proud of:</b> ${esc(proud)}</div>`;
     if(!hm && !hn && !proud) body=`<p class="muted">Checked in, no notes this time. Showing up counts.</p>`;
+    body+=dayBadgesHTML(d);
     body+=`<button class="linkbtn full-link" id="dayFull">See the full day in History →</button>`;
   } else {
     body= isToday ? `<p class="muted">Nothing logged yet today.</p>` : `<p class="muted">No check-ins this day. That's okay. There's always tomorrow.</p>`;
@@ -827,9 +847,18 @@ function openDaySheet(d){
   dayBg.querySelector("#dayClose").onclick=dayBg.querySelector("#dayDone").onclick=closeDaySheet;
   dayBg.querySelectorAll("[data-open-k]").forEach(bt=>bt.onclick=()=>{ const k=bt.dataset.openK; dayBg.remove(); dayBg=null; openForm(k,d); });
   const full=dayBg.querySelector("#dayFull"); if(full) full.onclick=()=>{ closeDaySheet(); showDayInHistory(d); };
+  dayBg.querySelectorAll(".mini-badge[data-b]").forEach(bt=>{
+    bt.onclick=()=>{ hideTip(); closeDaySheet(); S.focusBadge=bt.dataset.b; setView("badges"); };
+    bt.onmouseenter=bt.onfocus=()=>showTip(bt, bt.dataset.name, bt.dataset.desc);
+    bt.onmouseleave=bt.onblur=hideTip;
+  });
 }
 
 /* ---------- Badges ---------- */
+function focusBadgeAfterRender(){
+  if(!S.focusBadge) return; const el=document.getElementById("badge-"+S.focusBadge); S.focusBadge=null;
+  if(el) setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"center"}),40);
+}
 function renderBadges(){
   // Only earned badges are shown, newest first: no totals or locked slots to "complete".
   const earned=earnedBadges(S.entries), n=Object.keys(earned).length;
@@ -840,9 +869,10 @@ function renderBadges(){
       <div><h2 style="font-size:1.2rem">${n?`You've earned ${n} ${n===1?"badge":"badges"}`:"Your badges will show up here"}</h2>
       <div class="small muted">${n?"Every one of these is a time you showed up for yourself. ":""}Badges reward showing up, never your ratings. A hard day logged honestly counts just as much.</div></div>
     </div>
-    ${n?`<div class="grid badges" style="margin-top:14px">${got.map(b=>`<div class="card badge"><div class="em">${b.em}</div><h4>${b.name}</h4><p>${b.desc}</p><p class="when">Earned ${fmtDate(earned[b.id])}</p></div>`).join("")}</div>
+    ${n?`<div class="grid badges" style="margin-top:14px">${got.map(b=>`<div class="card badge ${S.focusBadge===b.id?"focus":""}" id="badge-${esc(b.id)}"><div class="em">${b.em}</div><h4>${b.name}</h4><p>${b.desc}</p><p class="when">Earned ${fmtDate(earned[b.id])}</p></div>`).join("")}</div>
       <p class="small muted" style="text-align:center;margin-top:18px">More badges appear as you keep checking in. There's no list to finish.</p>`
     :`<div class="card muted" style="margin-top:14px;text-align:center">Your first badge is one check-in or affirmation away.</div>`}`;
+  focusBadgeAfterRender();
 }
 
 /* ---------- Data (export / import) ---------- */
