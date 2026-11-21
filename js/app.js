@@ -309,9 +309,9 @@ function renderToday(){
   $app.innerHTML = `
     <div class="grid stats">
       <div class="card stat streak"><div class="n">${s.current}🔥</div><div class="l">day streak</div></div>
-      <div class="card stat"><div class="n">${s.longest}</div><div class="l">longest streak</div></div>
+      <div class="card stat"><div class="n">${s.longest}</div><div class="l">longest<span class="hide-sm"> streak</span></div></div>
       <div class="card stat"><div class="n">${s.total}</div><div class="l">check-ins</div></div>
-      <button class="card stat stat-link" id="toBadges" aria-label="See your badges"><div class="n">${Object.keys(earned).length}🏅</div><div class="l">${Object.keys(earned).length===1?"badge":"badges"} earned <span class="go-arrow">→</span></div></button>
+      <button class="card stat stat-link" id="toBadges" aria-label="See your badges"><div class="n">${Object.keys(earned).length}🏅</div><div class="l">${Object.keys(earned).length===1?"badge":"badges"}<span class="hide-sm"> earned</span> <span class="go-arrow">→</span></div></button>
     </div>
     ${holidayBannerHTML(earned)}
     ${visitNudgeHTML()}
