@@ -78,6 +78,7 @@ const BADGES = [
   {id:"full-circle",  em:"⭕", name:"Full Circle",     desc:"Morning and night on the same day", test:s=>s.fullDays>=1},
   {id:"proud-first",  em:"💛", name:"Proud of You",    desc:"Name your first proud moment", test:s=>s.proud>=1},
   {id:"feelings-wheel", em:"🎡", name:"Name It to Tame It", desc:"Use the feelings wheel to name how you feel", test:s=>s.feelings>=1},
+  {id:"backup-first", em:"💾", name:"Safe Keeping",   desc:"Download a backup of your entries", test:s=>s.backups>=1},
   {id:"full-picture", em:"🎯", name:"Full Picture",    desc:"Rate every wellness area in one check-in", test:s=>s.allScales>=1},
   {id:"streak-2",     em:"✨", name:"Two in a Row",    desc:"Check in two days in a row", test:s=>s.longest>=2, progress:s=>[s.longest,2]},
   {id:"entries-5",    em:"🙌", name:"High Five",       desc:"5 total check-ins", test:s=>s.total>=5, progress:s=>[s.total,5]},
@@ -257,6 +258,7 @@ function computeStats(entries, asOf=today()){
     current, longest: longestRun(dates), longestFull: longestRun(fullDates),
     comebacks, early,
     proud: es.filter(e=>e.kind==="night" && (e.answers.proud_text||"").trim()).length,
+    backups: (S.backups||[]).filter(d=>d<=asOf).length,
     feelings: es.filter(e=>Array.isArray(e.answers.emotional_feelings) && e.answers.emotional_feelings.length).length,
     complete: es.filter(isComplete).length,
     holidays: new Set(dates.flatMap(d=>holidaysOn(d).map(h=>h.id))).size,
@@ -275,7 +277,7 @@ function affStats(asOf){
 }
 function earnedBadges(entries){
   // returns {badgeId: dateEarned}
-  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{})))].filter(d=>d<=today()).sort();
+  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[]))].filter(d=>d<=today()).sort();
   for(const d of dates){
     const s=computeStats(entries,d);
     for(const b of BADGES) if(!out[b.id] && b.test(s)) out[b.id]=d;
@@ -288,7 +290,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, prefs:{affMode:"popup",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, backups:[], prefs:{affMode:"popup",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -485,6 +487,10 @@ function affirmCardHTML(){
       ${more}${foot}</section>`;
 }
 const AFF_META_KEY="meta_affirmations";
+/* Days a backup was downloaded (for the Safe Keeping badge). Not part of the backup file itself. */
+const BACKUPS_META_KEY="meta_backups";
+function saveBackupLog(){ const doc={key:BACKUPS_META_KEY,kind:"meta",days:S.backups,updatedAt:new Date().toISOString(),v:1};
+  affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{}); }
 let affSaving=Promise.resolve();
 function saveAffLog(){ // one write at a time; kept with the user's entries (synced on the Claude-hosted copy)
   const doc={key:AFF_META_KEY,kind:"meta",days:S.affLog,updatedAt:new Date().toISOString(),v:1};
@@ -608,7 +614,7 @@ function requestClose(){
 }
 function openForm(kind,date,step=0){
   const ex=getEntry(date,kind);
-  S.form={kind,date,answers:{...(ex?.answers||{})},existing:!!ex,step,dirty:false,readOnly:date<today(),ideas:{},wheelCore:null,wheelOpen:false}; // finished days are read-only
+  S.form={kind,date,answers:{...(ex?.answers||{})},existing:!!ex,step,dirty:false,readOnly:date<today() || (date===today() && !isOpen(kind)),ideas:{},wheelCore:null,wheelOpen:false}; // locked once its window has closed (and on finished days). A check-in started while open can still be saved after the window closes.
   const F=S.form; F.feel=Array.isArray(F.answers[FEEL_KEY])?[...F.answers[FEEL_KEY]]:[]; F.feelLine=feelLine(F.feel,F.kind);
   renderForm();
 }
@@ -1264,7 +1270,14 @@ async function downloadProviderSummary(days,withNotes){
 async function downloadBackup(){
   if(!hasData()) return toast("Nothing to back up yet.");
   const filename=`bookends-backup-${today()}.json`, json=backupJSON();
-  if(await saveFile(filename,json,"application/json")){ try{ localStorage.setItem(BACKUP_KEY,new Date().toISOString()); }catch(e){} toast(`Saved ${filename}`); if(!S.form) render(); }
+  if(await saveFile(filename,json,"application/json")){
+    try{ localStorage.setItem(BACKUP_KEY,new Date().toISOString()); }catch(e){}
+    const before=earnedBadges(S.entries);
+    if(!(S.backups||[]).includes(today())){ S.backups=[...(S.backups||[]),today()].sort(); saveBackupLog(); }
+    const after=earnedBadges(S.entries), fresh=badgeList().filter(b=>after[b.id]&&!before[b.id]);
+    if(!S.form) render();
+    if(fresh.length) celebrate(fresh,computeStats(S.entries)); else toast(`Saved ${filename}`);
+  }
 }
 const hourOptions=(lo,hi,sel)=>{ let o=""; for(let h=lo;h<=hi;h++) o+=`<option value="${h}" ${h===sel?"selected":""}>${h===24?"Midnight":h===12?"Noon":hourLabel(h)}</option>`; return o; };
 function renderSettings(){
@@ -1323,6 +1336,7 @@ function renderSettings(){
   document.getElementById("wipe").onclick=()=>confirmBox("Delete everything?",`All ${S.entries.length} check-ins and your badges will be gone. This can't be undone.`,"Delete all",async()=>{
     let n=0; for(const e of [...S.entries]){ try{ await S.store.remove(e.key); S.entries=S.entries.filter(x=>x.key!==e.key); n++; }catch(err){ break; } }
     try{ await affSaving; await S.store.remove(AFF_META_KEY); S.affLog={}; }catch(err){}
+    try{ await S.store.remove(BACKUPS_META_KEY); S.backups=[]; }catch(err){}
     toast(S.entries.length?`Deleted ${n}; some couldn't be removed — try again.`:"All entries deleted"); render();
   });
   const setWin=(key,kind)=>e=>{ S.prefs[key]=+e.target.value; fixWindows(S.prefs); savePrefs(); render();
@@ -1403,6 +1417,7 @@ function confetti(count){
   await affReady;
   try{ const all = await S.store.list(); const meta=all.find(e=>e.key===AFF_META_KEY);
     S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{}; S.entries = all.filter(e=>FORMS[e.kind]);
+    const bk=all.find(e=>e.key===BACKUPS_META_KEY); S.backups=Array.isArray(bk?.days)?bk.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
     const p=all.find(e=>e.key===PREFS_KEY); let lp=null; try{ lp=JSON.parse(localStorage.getItem("ir_prefs")||"null"); }catch(e){}
     S.prefs=normalizePrefs({...(lp||{}), ...((p&&p.prefs)||{})}); }
   catch(e){ S.entries=[]; toast("Couldn't load your entries — check your connection."); }
