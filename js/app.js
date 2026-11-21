@@ -286,7 +286,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { affLog:{}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { affLog:{}, prefs:{affMode:"popup"}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function setView(v){ S.view=v; S.form=null; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v)); render(); window.scrollTo(0,0); }
@@ -315,7 +315,7 @@ function renderToday(){
     </div>
     ${holidayBannerHTML(earned)}
     ${visitNudgeHTML()}
-    ${affirmCardHTML()}
+    ${S.prefs.affMode==="embedded"?affirmCardHTML():affEntryHTML()}
     <div class="grid checkins">
       ${ciCard("morning",m,morningOpen,"Set the tone for your day","Start check-in →",`Morning window closed at ${hourLabel(CUTOFF_HOUR)}`)}
       ${ciCard("night",n,!morningOpen,"Look back on how today went","Start reflection →",`Opens at ${hourLabel(CUTOFF_HOUR)}`)}
@@ -332,7 +332,8 @@ function renderToday(){
   `;
   $app.querySelectorAll("[data-open]:not([disabled])").forEach(b=>b.onclick=()=>openForm(b.dataset.open,t));
   scheduleWindowFlip();
-  bindAffirm();
+  const ae=document.getElementById("affEntry"); if(ae) ae.onclick=()=>openAffSheet(false);
+  if(S.prefs.affMode==="embedded") bindAffirm();
   const qb=document.getElementById("quickBackup"); if(qb) qb.onclick=downloadBackup;
 }
 /* Time windows: midnight–noon = morning only, noon–midnight = night only.
@@ -444,16 +445,90 @@ function saveAffLog(){ // one write at a time; kept with the user's entries (syn
   const doc={key:AFF_META_KEY,kind:"meta",days:S.affLog,updatedAt:new Date().toISOString(),v:1};
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
 }
+function revealAffirmation(){
+  const st=affState(), lim=affLimit(); if(st.shown.length>=lim) return;
+  const order=dailyOrder(), id=order[st.shown.length%order.length].id; st.shown.push(id); affSave(st);
+  const before=earnedBadges(S.entries);
+  const day=today(); S.affLog[day]=[...new Set([...(S.affLog[day]||[]),id])]; saveAffLog();
+  const now=earnedBadges(S.entries), fresh=badgeList().filter(b=>now[b.id] && !before[b.id]);
+  const el=document.getElementById("aff"); if(el){ el.outerHTML=affirmCardHTML(); document.getElementById("aff").classList.add("aff-in"); bindAffirm(); }
+  refreshAffEntry();
+  if(!fresh.length) return;
+  if(affBg){ affPendingBadges.push(...fresh); return; } // celebrate after the pop-up closes
+  setTimeout(()=>{ if(!S.form && S.view==="today"){ const y=scrollY; render(); scrollTo(0,y); } celebrate(fresh,computeStats(S.entries)); },450);
+}
+let affPendingBadges=[];
 function bindAffirm(){
-  const reveal=()=>{ const st=affState(), lim=affLimit(); if(st.shown.length>=lim) return;
-    const order=dailyOrder(), id=order[st.shown.length%order.length].id; st.shown.push(id); affSave(st);
-    const before=earnedBadges(S.entries);
-    const day=today(); S.affLog[day]=[...new Set([...(S.affLog[day]||[]),id])]; saveAffLog();
-    const now=earnedBadges(S.entries), fresh=badgeList().filter(b=>now[b.id] && !before[b.id]);
-    if(fresh.length) setTimeout(()=>{ if(!S.form && S.view==="today"){ const y=scrollY; render(); scrollTo(0,y); } celebrate(fresh,computeStats(S.entries)); },450);
-    const el=document.getElementById("aff"); el.outerHTML=affirmCardHTML(); const ne=document.getElementById("aff"); ne.classList.add("aff-in"); bindAffirm(); };
-  const r=document.getElementById("affReveal"); if(r) r.onclick=reveal;
-  const m=document.getElementById("affMore"); if(m) m.onclick=reveal;
+  const r=document.getElementById("affReveal"); if(r) r.onclick=revealAffirmation;
+  const m=document.getElementById("affMore"); if(m) m.onclick=revealAffirmation;
+}
+
+/* Compact row on the Today screen; the affirmation itself opens in a pop-up */
+function affEntryHTML(){
+  if(!AFF.data || S.prefs.affMode!=="popup") return "";
+  const st=affState(), lim=affLimit(), n=Math.min(st.shown.length,lim);
+  const sub = n===0 ? "A thought for your day is waiting"
+            : n<lim ? `${n} of ${lim} read today · tap for another`
+            : "All set for today · tap to see it again";
+  return `<button class="card aff-entry ${n>=lim?"done":""}" id="affEntry">
+      <span class="ae-ico">🌤️</span>
+      <span class="ae-txt"><b>Today's affirmation</b><span class="small muted">${sub}</span></span>
+      <span class="ae-go">${n===0?"Open":"View"} →</span></button>`;
+}
+function refreshAffEntry(){
+  const el=document.getElementById("affEntry"); if(!el) return;
+  el.outerHTML=affEntryHTML(); const ne=document.getElementById("affEntry"); if(ne) ne.onclick=()=>openAffSheet(false);
+}
+let affBg=null;
+function openAffSheet(autoReveal){
+  if(!AFF.data || S.prefs.affMode!=="popup") return;
+  closeAffSheet(true);
+  affBg=document.createElement("div"); affBg.className="sheet-bg aff-bg";
+  affBg.innerHTML=`<div class="sheet aff-sheet" role="dialog" aria-modal="true" aria-labelledby="aff-title">
+      <header class="sheet-head"><div class="sheet-title"><span class="sheet-ico">🌤️</span><div><h2 id="aff-title">Today's affirmation</h2></div></div>
+        <button class="xbtn" id="affClose" aria-label="Close">✕</button></header>
+      <div class="sheet-body">${affirmCardHTML()}</div>
+      <footer class="sheet-foot"><span class="small muted" style="margin-right:auto">Pops up once a day. <button class="linkbtn" id="affPrefs">Change</button></span><button class="btn" id="affDone">Close</button></footer>
+    </div>`;
+  affBg.addEventListener("mousedown",e=>{ if(e.target===affBg) closeAffSheet(); });
+  document.body.appendChild(affBg); document.body.classList.add("noscroll");
+  affBg.querySelector("#affClose").onclick=affBg.querySelector("#affDone").onclick=()=>closeAffSheet();
+  const pr=affBg.querySelector("#affPrefs"); if(pr) pr.onclick=()=>{ closeAffSheet(); setView("settings"); };
+  bindAffirm();
+  if(autoReveal && affState().shown.length===0) setTimeout(revealAffirmation,350);
+}
+function closeAffSheet(instant){
+  if(!affBg) return; const bg=affBg; affBg=null;
+  if(!S.form) document.body.classList.remove("noscroll");
+  if(instant) return bg.remove();
+  bg.classList.add("closing"); setTimeout(()=>bg.remove(),180);
+  if(affPendingBadges.length){
+    const fresh=affPendingBadges; affPendingBadges=[];
+    setTimeout(()=>{ if(!S.form && S.view==="today"){ const y=scrollY; render(); scrollTo(0,y); } celebrate(fresh,computeStats(S.entries)); },250);
+  }
+}
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && affBg && !modalEl){ e.preventDefault(); closeAffSheet(); } });
+function maybeAutoAffirm(){ // once per day, on the first visit, unless turned off in Settings
+  if(!AFF.data || S.prefs.affMode!=="popup" || S.view!=="today" || S.form) return;
+  const st=affState(); if(st.autoShown || st.shown.length) return;
+  st.autoShown=true; affSave(st);
+  setTimeout(()=>openAffSheet(true),700);
+}
+
+/* ---------- Preferences (kept with the user's data; synced on the Claude-hosted copy) ---------- */
+const PREFS_KEY="meta_prefs";
+const DEFAULT_PREFS={affMode:"popup"};
+const AFF_MODES=["off","embedded","popup"];
+function normalizePrefs(p){ // also upgrades the earlier on/off switches
+  const out={...DEFAULT_PREFS, ...p};
+  if(!AFF_MODES.includes(out.affMode)) out.affMode = p.affEnabled===false ? "off" : "popup";
+  if(!("affMode" in p) && p.affEnabled===false) out.affMode="off";
+  delete out.affEnabled; delete out.affAuto; return out;
+}
+function savePrefs(){
+  try{ localStorage.setItem("ir_prefs",JSON.stringify(S.prefs)); }catch(e){}
+  const doc={key:PREFS_KEY,kind:"meta",prefs:S.prefs,updatedAt:new Date().toISOString(),v:1};
+  affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
 }
 
 /* ---------- Form: a pop-up window, one wellness area per step ---------- */
@@ -651,7 +726,7 @@ function renderBadges(){
 function renderAbout(){
   const privacy = S.store.kind==="cloud"
     ? "Your check-ins are saved to your own private space. Only you can read them. Nobody else who opens this page can see them."
-    : "Your check-ins never leave this device. There's no account and no server storing them, so nobody else can read them, including me. That also means if you clear your browser data, they're gone, so use the <b>Data</b> tab to download a backup now and then.";
+    : "Your check-ins never leave this device. There's no account and no server storing them, so nobody else can read them, including me. That also means if you clear your browser data, they're gone, so use the <b>Settings</b> tab to download a backup now and then.";
   $app.innerHTML = `
     <article class="about">
       <section class="card about-hero">
@@ -677,7 +752,7 @@ function renderAbout(){
           <li><b>🌅 Morning intention</b> is open until noon. <b>🌙 Nightly reflection</b> opens after noon.</li>
           <li>Each check-in walks through the eight areas of wellness, one at a time. Rate each one from 1 to 5 and write as much or as little as you want. Skipping is fine.</li>
           <li><b>Badges reward showing up, never your ratings.</b> A hard day logged honestly counts just as much as a great one. There's no list to finish.</li>
-          <li><b>Daily affirmations:</b> you get three a day, then a nudge to put the phone down. That's on purpose. The goal is to live your day, not stare at this page.</li>
+          <li><b>Daily affirmations:</b> you get three a day, then a nudge to put the phone down. That's on purpose. The goal is to live your day, not stare at this page. Choose how they show up, or turn them off, in <b>Settings</b>.</li>
         </ul>
         <p class="small muted">The eight areas come from <a href="https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness" target="_blank" rel="noopener noreferrer">SAMHSA's Eight Dimensions of Wellness</a>. The affirmations are inspired by guidance from public health and mental health organizations, and each one links to its source.</p>
       </section>
@@ -725,8 +800,17 @@ async function downloadBackup(){
   }catch(e){ toast("Download isn't available here — use Copy JSON instead."); }
 }
 function renderSettings(){
+  const P=S.prefs;
   $app.innerHTML = `
     <div class="card">
+      <h2 style="font-size:1.15rem">Preferences</h2>
+      <div class="pref-label"><b>Daily affirmations</b><span class="small muted">Choose how they show up.</span></div>
+      <div class="choices" role="radiogroup" aria-label="Daily affirmations">
+        ${[["off","🚫","Off","No affirmations."],["embedded","📌","On the Today screen","Shown right on the main page."],["popup","🌤️","Pop-up","Opens once a day on your first visit. A small row on the Today screen reopens it."]]
+          .map(([v,ic,t,d])=>`<label class="choice ${P.affMode===v?"on":""}"><input type="radio" name="affMode" value="${v}" ${P.affMode===v?"checked":""}><span class="c-ic">${ic}</span><span class="c-t"><b>${t}</b><span class="small muted">${d}</span></span></label>`).join("")}
+      </div>
+    </div>`+`
+    <div class="card" style="margin-top:14px">
       <h2 style="font-size:1.15rem">Where your entries live</h2>
       <p class="small muted">${S.store.kind==="cloud"
         ?"Saved to your private space in this page's store. Only you can read them — not the page's owner or anyone it's shared with."
@@ -753,6 +837,10 @@ function renderSettings(){
     let n=0; for(const e of [...S.entries]){ try{ await S.store.remove(e.key); S.entries=S.entries.filter(x=>x.key!==e.key); n++; }catch(err){ break; } }
     try{ await affSaving; await S.store.remove(AFF_META_KEY); S.affLog={}; }catch(err){}
     toast(S.entries.length?`Deleted ${n}; some couldn't be removed — try again.`:"All entries deleted"); render();
+  });
+  document.querySelectorAll('input[name="affMode"]').forEach(r=>r.onchange=()=>{
+    S.prefs.affMode=r.value; savePrefs(); render();
+    toast({off:"Daily affirmations turned off",embedded:"Affirmations will show on the Today screen",popup:"Affirmations will pop up once a day"}[r.value]);
   });
   document.getElementById("export").onclick=downloadBackup;
   document.getElementById("copy").onclick=async()=>{
@@ -819,7 +907,10 @@ function confetti(count){
   S.store = await pickStore();
   await affReady;
   try{ const all = await S.store.list(); const meta=all.find(e=>e.key===AFF_META_KEY);
-    S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{}; S.entries = all.filter(e=>FORMS[e.kind]); }
+    S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{}; S.entries = all.filter(e=>FORMS[e.kind]);
+    const p=all.find(e=>e.key===PREFS_KEY); let lp=null; try{ lp=JSON.parse(localStorage.getItem("ir_prefs")||"null"); }catch(e){}
+    S.prefs=normalizePrefs({...(lp||{}), ...((p&&p.prefs)||{})}); }
   catch(e){ S.entries=[]; toast("Couldn't load your entries — check your connection."); }
   render();
+  maybeAutoAffirm();
 })();
