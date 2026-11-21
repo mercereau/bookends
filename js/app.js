@@ -4,14 +4,14 @@
    IDs are stored with entries, so keep them stable once you have data.
    ========================================================= */
 const DIMENSIONS = {
-  emotional:     {label:"Emotional",     icon:"💛", color:"#d98b3a"},
-  physical:      {label:"Physical",      icon:"🏃", color:"#c0604d"},
+  emotional:     {label:"Emotional",     icon:"💗", color:"#d98b3a"},
+  physical:      {label:"Physical",      icon:"💪", color:"#c0604d"},
   spiritual:     {label:"Spiritual",     icon:"🕊️", color:"#8a6bb8"},
-  social:        {label:"Social",        icon:"🤝", color:"#3f8f9b"},
-  intellectual:  {label:"Intellectual",  icon:"📚", color:"#4a6fb5"},
-  occupational:  {label:"Occupational",  icon:"🧭", color:"#5d8a4a"},
+  social:        {label:"Social",        icon:"🧑‍🤝‍🧑", color:"#3f8f9b"},
+  intellectual:  {label:"Intellectual",  icon:"💡", color:"#4a6fb5"},
+  occupational:  {label:"Occupational",  icon:"🗓️", color:"#5d8a4a"},
   environmental: {label:"Environmental", icon:"🌿", color:"#3f8a6a"},
-  financial:     {label:"Financial",     icon:"🪙", color:"#b08a2e"},
+  financial:     {label:"Financial",     icon:"🏦", color:"#b08a2e"},
   community:     {label:"Community",     icon:"🏡", color:"#a0607a"},
   closing:       {label:"Closing",       icon:"⭐", color:"#c99a2e"},
 };
