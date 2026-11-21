@@ -79,6 +79,7 @@ const BADGES = [
   {id:"proud-first",  em:"💛", name:"Proud of You",    desc:"Name your first proud moment", test:s=>s.proud>=1},
   {id:"feelings-wheel", em:"🎡", name:"Name It to Tame It", desc:"Use the feelings wheel to name how you feel", test:s=>s.feelings>=1},
   {id:"backup-first", em:"💾", name:"Safe Keeping",   desc:"Download a backup of your entries", test:s=>s.backups>=1},
+  {id:"home-screen",  em:"📱", name:"Right at Home",  desc:"Open Bookends from your Home Screen", test:s=>s.homeScreen>=1},
   {id:"full-picture", em:"🎯", name:"Full Picture",    desc:"Rate every wellness area in one check-in", test:s=>s.allScales>=1},
   {id:"streak-2",     em:"✨", name:"Two in a Row",    desc:"Check in two days in a row", test:s=>s.longest>=2, progress:s=>[s.longest,2]},
   {id:"entries-5",    em:"🙌", name:"High Five",       desc:"5 total check-ins", test:s=>s.total>=5, progress:s=>[s.total,5]},
@@ -259,6 +260,7 @@ function computeStats(entries, asOf=today()){
     comebacks, early,
     proud: es.filter(e=>e.kind==="night" && (e.answers.proud_text||"").trim()).length,
     backups: (S.backups||[]).filter(d=>d<=asOf).length,
+    homeScreen: S.homeDate && S.homeDate<=asOf ? 1 : 0,
     feelings: es.filter(e=>Array.isArray(e.answers.emotional_feelings) && e.answers.emotional_feelings.length).length,
     complete: es.filter(isComplete).length,
     holidays: new Set(dates.flatMap(d=>holidaysOn(d).map(h=>h.id))).size,
@@ -277,7 +279,7 @@ function affStats(asOf){
 }
 function earnedBadges(entries){
   // returns {badgeId: dateEarned}
-  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[]))].filter(d=>d<=today()).sort();
+  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.homeDate?[S.homeDate]:[]))].filter(d=>d<=today()).sort();
   for(const d of dates){
     const s=computeStats(entries,d);
     for(const b of BADGES) if(!out[b.id] && b.test(s)) out[b.id]=d;
@@ -290,7 +292,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, backups:[], prefs:{affMode:"popup",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, backups:[], homeDate:null, prefs:{affMode:"popup",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -489,6 +491,16 @@ function affirmCardHTML(){
 const AFF_META_KEY="meta_affirmations";
 /* Days a backup was downloaded (for the Safe Keeping badge). Not part of the backup file itself. */
 const BACKUPS_META_KEY="meta_backups";
+/* First day Bookends was opened from the Home Screen (installed web app), for the Right at Home badge. */
+const HOME_META_KEY="meta_homescreen";
+const isHomeScreenApp=()=>{ try{ return navigator.standalone===true || matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches; }catch(e){ return false; } };
+function noteHomeScreen(){ // returns any badges this newly earns
+  if(S.homeDate || !isHomeScreenApp()) return [];
+  const before=earnedBadges(S.entries); S.homeDate=today();
+  const doc={key:HOME_META_KEY,kind:"meta",date:S.homeDate,updatedAt:new Date().toISOString(),v:1};
+  affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
+  const after=earnedBadges(S.entries); return badgeList().filter(b=>after[b.id]&&!before[b.id]);
+}
 function saveBackupLog(){ const doc={key:BACKUPS_META_KEY,kind:"meta",days:S.backups,updatedAt:new Date().toISOString(),v:1};
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{}); }
 let affSaving=Promise.resolve();
@@ -1057,6 +1069,7 @@ function renderAbout(){
           </div>
         </div>
         <p class="small muted"><b>Heads up for iPhone:</b> the Home Screen app keeps its own storage, separate from Safari. If you've already been checking in from Safari, download a backup in <b>Settings</b> first, then restore it in the Home Screen app. Adding Bookends to your Home Screen also keeps Safari from clearing your entries if you haven't visited in a while.</p>
+        <p class="small muted">Opening Bookends from your Home Screen for the first time earns a little badge, too. 📱</p>
       </section>
 
       <section class="card about-privacy" id="about-privacy">
@@ -1337,6 +1350,7 @@ function renderSettings(){
     let n=0; for(const e of [...S.entries]){ try{ await S.store.remove(e.key); S.entries=S.entries.filter(x=>x.key!==e.key); n++; }catch(err){ break; } }
     try{ await affSaving; await S.store.remove(AFF_META_KEY); S.affLog={}; }catch(err){}
     try{ await S.store.remove(BACKUPS_META_KEY); S.backups=[]; }catch(err){}
+    try{ await S.store.remove(HOME_META_KEY); S.homeDate=null; }catch(err){}
     toast(S.entries.length?`Deleted ${n}; some couldn't be removed — try again.`:"All entries deleted"); render();
   });
   const setWin=(key,kind)=>e=>{ S.prefs[key]=+e.target.value; fixWindows(S.prefs); savePrefs(); render();
@@ -1417,11 +1431,14 @@ function confetti(count){
   await affReady;
   try{ const all = await S.store.list(); const meta=all.find(e=>e.key===AFF_META_KEY);
     S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{}; S.entries = all.filter(e=>FORMS[e.kind]);
+    const hm=all.find(e=>e.key===HOME_META_KEY); S.homeDate=/^\d{4}-\d{2}-\d{2}$/.test(hm?.date||"")?hm.date:null;
     const bk=all.find(e=>e.key===BACKUPS_META_KEY); S.backups=Array.isArray(bk?.days)?bk.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
     const p=all.find(e=>e.key===PREFS_KEY); let lp=null; try{ lp=JSON.parse(localStorage.getItem("ir_prefs")||"null"); }catch(e){}
     S.prefs=normalizePrefs({...(lp||{}), ...((p&&p.prefs)||{})}); }
   catch(e){ S.entries=[]; toast("Couldn't load your entries — check your connection."); }
   if(/^#about-/.test(location.hash)){ S.view="about"; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v==="about")); }
   render();
-  if(S.view==="about") setTimeout(scrollToHash,60); else maybeAutoAffirm();
+  const homeFresh=noteHomeScreen();
+  if(homeFresh.length){ render(); setTimeout(()=>celebrate(homeFresh,computeStats(S.entries)),400); } // affirmation pop-up waits until next visit
+  else if(S.view==="about") setTimeout(scrollToHash,60); else maybeAutoAffirm();
 })();
