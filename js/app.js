@@ -720,21 +720,79 @@ function trendsHTML(){
     return `<div class="trend"><span>${D.icon} ${D.label}</span><svg viewBox="0 0 100 32" preserveAspectRatio="none">${m.svg}${n.svg}</svg><b style="text-align:right">${avg}</b></div>`;
   }).join("") + `<div class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i style="background:var(--night)"></i>Night</span></div>`;
 }
-function dayPicker(d){
-  // Check-ins are for today only. Past days can be looked back on, never filled in afterward.
-  const isToday=d===today(), rows=["morning","night"].map(k=>{
-    const e=getEntry(d,k), F=FORMS[k];
-    let sub, can=false;
-    if(e){ sub="Logged · tap to view"; can=true; }
-    else if(isToday){ if(isOpen(k)){ sub="Not yet · tap to start"; can=true; } else sub=closedMsg(k); }
-    else sub="Nothing logged";
-    return `<div class="${can?"go":"rest"}" data-k="${k}" ${can?'role="button" tabindex="0"':""}><span class="em">${F.icon}</span><span><b>${F.title}</b><br><span class="small muted">${sub}</span></span></div>`;
-  }).join("");
-  const none=!isToday && !getEntry(d,"morning") && !getEntry(d,"night");
-  modal(`<h2>${fmtDate(d)}</h2>${none?`<p class="muted">No check-ins this day. That's okay. There's always tomorrow.</p>`:""}
-    <div class="list day-list">${rows}</div><button class="btn ghost" data-close>Close</button>`, el=>{
-    el.querySelectorAll(".go[data-k]").forEach(x=>{ const open=()=>{closeModal(); openForm(x.dataset.k,d);}; x.onclick=open; x.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); open(); } }; });
+/* ---------- Day view: the day's highlights and notes ---------- */
+const NOTE_BONUS=1.5; // a section with a written note outranks the same score without one
+function sectionsWithAnswers(e){
+  return FORMS[e.kind].sections.map(sec=>{
+    const rating=sec.scale?+e.answers[sec.scale.id]||0:0;
+    const notes=sec.prompts.map(p=>({q:p.q,a:(e.answers[p.id]||"").trim()})).filter(x=>x.a && !/^n\/?a$/i.test(x.a));
+    return {sec,rating,notes};
   });
+}
+function highlightOf(e){
+  let best=null;
+  for(const x of sectionsWithAnswers(e)){
+    if(!x.rating && !x.notes.length) continue;
+    const score=(x.sec.scale ? x.rating : (x.notes.length?3.5:0)) + (x.notes.length?NOTE_BONUS:0);
+    const len=x.notes.reduce((n,y)=>n+y.a.length,0);
+    if(!best || score>best.score || (score===best.score && len>best.len)) best={...x,score,len};
+  }
+  return best;
+}
+function dots(r){ return `<span class="rdots" aria-label="${r} of 5">${[1,2,3,4,5].map(i=>`<i class="${i<=r?"on":""}"></i>`).join("")}</span>`; }
+function highlightHTML(kind,h){
+  if(!h) return "";
+  const D=DIMENSIONS[h.sec.dim], F=FORMS[kind];
+  const anchor=h.sec.scale&&h.rating ? (h.rating>=4?h.sec.scale.high:h.rating<=2?h.sec.scale.low:"") : "";
+  return `<div class="hl ${kind}" style="--dc:${D.color}">
+      <div class="hl-top"><span class="hl-kind">${F.icon} ${kind==="morning"?"Morning highlight":"Evening highlight"}</span>
+        ${h.rating?dots(h.rating):""}</div>
+      <div class="hl-area">${D.icon} ${D.label}${anchor?` <span class="muted">· ${esc(anchor)}</span>`:""}</div>
+      ${h.notes.map(n=>`<blockquote>${esc(n.a)}</blockquote>`).join("")}
+    </div>`;
+}
+let dayBg=null;
+function closeDaySheet(){ if(!dayBg) return; const bg=dayBg; dayBg=null; if(!S.form&&!affBg) document.body.classList.remove("noscroll"); bg.classList.add("closing"); setTimeout(()=>bg.remove(),180); }
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && dayBg && !modalEl){ e.preventDefault(); closeDaySheet(); } });
+function dayPicker(d){ openDaySheet(d); }
+function openDaySheet(d){
+  if(dayBg){ dayBg.remove(); dayBg=null; }
+  const isToday=d===today(), ents=["morning","night"].map(k=>getEntry(d,k));
+  const [m,n]=ents, any=m||n;
+  let body="";
+  if(any){
+    const hm=m&&highlightOf(m), hn=n&&highlightOf(n);
+    const proud=n&&(n.answers.proud_text||"").trim();
+    body+=`<div class="hls">${highlightHTML("morning",hm)}${highlightHTML("night",hn)}</div>`;
+    if(proud && !(hn && hn.sec.dim==="closing")) body+=`<div class="proud">⭐ <b>Proud of:</b> ${esc(proud)}</div>`;
+    const rest=[["morning",m,hm],["night",n,hn]].map(([k,e,h])=>{
+      if(!e) return "";
+      const items=sectionsWithAnswers(e).filter(x=>x.notes.length && !(h&&x.sec===h.sec) && !(k==="night"&&x.sec.dim==="closing"))
+        .map(x=>{ const D=DIMENSIONS[x.sec.dim]; return x.notes.map(nt=>`<li><span class="nl">${D.icon} ${D.label}${x.rating?` · ${x.rating}/5`:""}</span><span>${esc(nt.a)}</span></li>`).join(""); }).join("");
+      return items?`<h4>${FORMS[k].icon} ${k==="morning"?"Morning notes":"Evening notes"}</h4><ul class="notes">${items}</ul>`:"";
+    }).join("");
+    body+= rest || (hm||hn ? "" : `<p class="muted">No notes written this day.</p>`);
+    if(!hm && !hn && !proud) body=`<p class="muted">Checked in, no notes this time. Showing up counts.</p>`;
+  } else {
+    body= isToday ? `<p class="muted">Nothing logged yet today.</p>` : `<p class="muted">No check-ins this day. That's okay. There's always tomorrow.</p>`;
+  }
+  const btns=["morning","night"].map(k=>{
+    const e=getEntry(d,k), F=FORMS[k];
+    if(e) return `<button class="btn ghost" data-open-k="${k}">${F.icon} View ${k==="morning"?"intention":"reflection"}</button>`;
+    if(isToday && isOpen(k)) return `<button class="btn" data-open-k="${k}">${F.icon} Start ${k==="morning"?"intention":"reflection"}</button>`;
+    return "";
+  }).join("");
+  dayBg=document.createElement("div"); dayBg.className="sheet-bg day-bg";
+  dayBg.innerHTML=`<div class="sheet day-sheet" role="dialog" aria-modal="true" aria-labelledby="day-title">
+      <header class="sheet-head"><div class="sheet-title"><span class="sheet-ico">📖</span><div><h2 id="day-title">${isToday?"Today":fmtDate(d)}</h2>
+        <span class="sheet-date">${isToday?fmtDate(d):(m&&n?"Morning and night":m?"Morning intention":n?"Nightly reflection":"No check-ins")}</span></div></div>
+        <button class="xbtn" id="dayClose" aria-label="Close">✕</button></header>
+      <div class="sheet-body">${body}</div>
+      <footer class="sheet-foot">${btns}<button class="btn ${btns?"ghost":""}" id="dayDone">Close</button></footer></div>`;
+  dayBg.addEventListener("mousedown",e=>{ if(e.target===dayBg) closeDaySheet(); });
+  document.body.appendChild(dayBg); document.body.classList.add("noscroll");
+  dayBg.querySelector("#dayClose").onclick=dayBg.querySelector("#dayDone").onclick=closeDaySheet;
+  dayBg.querySelectorAll("[data-open-k]").forEach(bt=>bt.onclick=()=>{ const k=bt.dataset.openK; dayBg.remove(); dayBg=null; openForm(k,d); });
 }
 
 /* ---------- Badges ---------- */

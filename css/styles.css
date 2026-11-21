@@ -298,3 +298,25 @@ body.noscroll{overflow:hidden}
 .day-list .go:hover{outline:1.5px solid var(--accent)}
 .day-list .rest{background:var(--bg);opacity:.75}
 .sheet-date{display:block;font-size:.85rem;color:var(--muted);margin-top:2px}
+
+/* ---------- Day view ---------- */
+.day-sheet{max-width:580px}
+.day-sheet .sheet-head{background:color-mix(in srgb,var(--wood) 18%,var(--card))}
+.day-sheet .sheet-body{padding-top:16px}
+.day-sheet .sheet-foot{flex-wrap:wrap}
+.hls{display:grid;gap:10px}
+.hl{border-radius:14px;padding:14px 16px;background:var(--bg);border-left:4px solid var(--dc)}
+.hl.morning{background:var(--morning-soft)} .hl.night{background:var(--night-soft)}
+.hl-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.hl-kind{font-size:.78rem;font-weight:700;letter-spacing:.02em;color:var(--muted);text-transform:uppercase}
+.hl-area{font-weight:700;margin:6px 0 2px;color:var(--dc)}
+.hl-area .muted{font-weight:400}
+.hl blockquote{font-family:Fraunces,Georgia,serif;font-size:1.12rem;line-height:1.45;margin:8px 0 0}
+.rdots{display:inline-flex;gap:3px}
+.rdots i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.rdots i.on{background:var(--dc,var(--accent))}
+.proud{margin-top:12px;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--gold) 16%,var(--card))}
+.day-sheet h4{margin:18px 0 6px;font-size:.9rem}
+.notes{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.notes li{display:flex;flex-direction:column;padding:10px 12px;border:1px solid var(--line);border-radius:12px}
+.notes .nl{font-size:.78rem;color:var(--muted);margin-bottom:2px}
