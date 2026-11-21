@@ -1028,33 +1028,81 @@ function providerSummaryHTML(days, withNotes){
   const end=today(), start=addDays(end,-(days-1));
   const ents=S.entries.filter(e=>e.date>=start && e.date<=end).sort((a,b)=>(a.date+a.kind).localeCompare(b.date+b.kind));
   const dates=[...new Set(ents.map(e=>e.date))];
+  const range=[...Array(days)].map((_,i)=>addDays(start,i));
   const dims=Object.keys(DIMENSIONS).filter(k=>FORMS.morning.sections.concat(FORMS.night.sections).some(x=>x.dim===k&&x.scale));
-  const avg=(kind,dim)=>{ const v=ents.filter(e=>e.kind===kind).map(e=>+e.answers[dim+"_scale"]).filter(Boolean); return v.length?(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):"–"; };
+  const AM="#d98b3a", PM="#4a5b9b", GRID="#e6ddd0", INK="#23302a", MUTED="#6b7570";
   const e2=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const val=(d,kind,dim)=>{ const e=getEntry(d,kind); return e?(+e.answers[dim+"_scale"]||null):null; };
+  const avgOf=(kind,dim)=>{ const v=ents.filter(e=>e.kind===kind).map(e=>+e.answers[dim+"_scale"]).filter(Boolean); return v.length?v.reduce((a,b)=>a+b,0)/v.length:null; };
+  const short=d=>parse(d).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+
+  // 1) Check-in calendar strip: top half = morning, bottom half = night
+  const W=700, cw=Math.min(36,(W-10)/days), gap=cw>8?2:1, ch=34;
+  const strip=`<svg viewBox="0 0 ${W} ${ch+22}" width="100%" role="img" aria-label="Check-ins per day: top half morning, bottom half night">
+    ${range.map((d,i)=>{ const x=i*cw, m=!!getEntry(d,"morning"), n=!!getEntry(d,"night");
+      return `<g><title>${e2(short(d))}: ${m&&n?"morning and night":m?"morning":n?"night":"no check-in"}</title>
+        <rect x="${x}" y="0" width="${cw-gap}" height="${ch/2-1}" rx="2" fill="${m?AM:"none"}" stroke="${m?AM:GRID}"/>
+        <rect x="${x}" y="${ch/2}" width="${cw-gap}" height="${ch/2-1}" rx="2" fill="${n?PM:"none"}" stroke="${n?PM:GRID}"/></g>`; }).join("")}
+    <text x="0" y="${ch+16}" font-size="11" fill="${MUTED}">${e2(short(start))}</text>
+    <text x="${W}" y="${ch+16}" font-size="11" fill="${MUTED}" text-anchor="end">${e2(short(end))}</text></svg>`;
+
+  // 2) Average per area: paired horizontal bars on a 1–5 scale
+  const rowH=34, LW=120, BW=W-LW-40, sx=v=>LW+((v-1)/4)*BW;   // bars start at 1, the bottom of the scale
+  const bars=`<svg viewBox="0 0 ${W} ${dims.length*rowH+26}" width="100%" role="img" aria-label="Average rating per wellness area, morning and night">
+    ${[1,2,3,4,5].map(t=>`<line x1="${sx(t)}" x2="${sx(t)}" y1="0" y2="${dims.length*rowH}" stroke="${GRID}"/><text x="${sx(t)}" y="${dims.length*rowH+16}" font-size="11" fill="${MUTED}" text-anchor="middle">${t}</text>`).join("")}
+    ${dims.map((k,i)=>{ const y=i*rowH, m=avgOf("morning",k), n=avgOf("night",k);
+      const bar=(v,yy,col,lab)=> v==null?`<text x="${LW+4}" y="${yy+9}" font-size="10" fill="${MUTED}">no ${lab} ratings</text>`
+        :`<rect x="${LW}" y="${yy}" width="${Math.max(2,sx(v)-LW)}" height="11" rx="3" fill="${col}"><title>${lab}: ${v.toFixed(1)}</title></rect><text x="${sx(v)+5}" y="${yy+9.5}" font-size="10" fill="${MUTED}">${v.toFixed(1)}</text>`;
+      return `<text x="0" y="${y+17}" font-size="13" font-weight="600" fill="${INK}">${e2(DIMENSIONS[k].label)}</text>${bar(m,y+5,AM,"morning")}${bar(n,y+18,PM,"night")}`; }).join("")}</svg>`;
+
+  // 3) Trend per area: small line charts, morning and night
+  const TW=330, TH=92, px=26, py=10, tx=i=>px+(days===1?0:i/(days-1))*(TW-px-8), ty=v=>py+(5-v)/4*(TH-py-18);
+  const line=(k,kind,col)=>{ const pts=range.map((d,i)=>{ const v=val(d,kind,k); return v?[tx(i),ty(v)]:null; }).filter(Boolean);
+    if(!pts.length) return ""; return `<polyline fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${pts.map(p=>p.join(",")).join(" ")}"/>`+pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="2.6" fill="${col}"/>`).join(""); };
+  const trends=dims.map(k=>`<figure class="trend"><figcaption>${e2(DIMENSIONS[k].label)}</figcaption>
+    <svg viewBox="0 0 ${TW} ${TH}" width="100%" role="img" aria-label="${e2(DIMENSIONS[k].label)} ratings over time">
+      ${[1,3,5].map(t=>`<line x1="${px}" x2="${TW-8}" y1="${ty(t)}" y2="${ty(t)}" stroke="${GRID}" ${t===3?'stroke-dasharray="3 3"':""}/><text x="${px-6}" y="${ty(t)+4}" font-size="10" fill="${MUTED}" text-anchor="end">${t}</text>`).join("")}
+      ${line(k,"morning",AM)}${line(k,"night",PM)}
+      <text x="${px}" y="${TH-2}" font-size="9.5" fill="${MUTED}">${e2(short(start))}</text><text x="${TW-8}" y="${TH-2}" font-size="9.5" fill="${MUTED}" text-anchor="end">${e2(short(end))}</text>
+    </svg></figure>`).join("");
+
+  // 4) Day by day with a five-block meter for each rating
+  const meter=(r,col)=>`<span class="meter" title="${r} of 5">${[1,2,3,4,5].map(i=>`<i style="background:${i<=r?col:"#eee"}"></i>`).join("")}</span>`;
   const dayBlocks=[...dates].reverse().map(d=>{
     const parts=["morning","night"].map(k=>{
       const e=getEntry(d,k); if(!e) return "";
+      const col=k==="morning"?AM:PM;
       const rows=sectionsWithAnswers(e).filter(x=>x.rating||(withNotes&&x.notes.length)).map(x=>{
         const D=DIMENSIONS[x.sec.dim], label=x.sec.dim==="closing"?"Proud of":D.label;
-        return `<tr><td class="a">${label}</td><td class="r">${x.rating?x.rating+"/5":""}</td><td>${withNotes?x.notes.map(n=>e2(n.a)).join("<br>"):""}</td></tr>`;
+        return `<tr><td class="a">${label}</td><td class="r">${x.rating?meter(x.rating,col):""}</td><td>${withNotes?x.notes.map(n=>e2(n.a)).join("<br>"):""}</td></tr>`;
       }).join("");
-      return rows?`<h4>${k==="morning"?"Morning intention":"Nightly reflection"}</h4><table>${rows}</table>`:"";
+      return rows?`<h4><span class="dot" style="background:${col}"></span>${k==="morning"?"Morning intention":"Nightly reflection"}</h4><table>${rows}</table>`:"";
     }).join("");
     return `<section><h3>${e2(fmtDate(d))}</h3>${parts}</section>`;
   }).join("");
+
+  const nM=ents.filter(e=>e.kind==="morning").length, nN=ents.filter(e=>e.kind==="night").length;
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Bookends check-in summary · ${e2(fmtDate(start))} to ${e2(fmtDate(end))}</title>
-<style>body{font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#23302a;max-width:760px;margin:24px auto;padding:0 16px}
-h1{font-size:1.4rem;margin:0}h2{font-size:1.1rem;margin:24px 0 8px;border-bottom:1px solid #ddd;padding-bottom:4px}h3{font-size:1rem;margin:18px 0 4px}h4{font-size:.85rem;margin:8px 0 4px;color:#6b7570;text-transform:uppercase;letter-spacing:.03em}
-.meta{color:#6b7570;font-size:.85rem}.note{background:#f6f1e9;border-radius:8px;padding:10px 12px;font-size:.85rem;margin:14px 0}
-table{border-collapse:collapse;width:100%;margin-bottom:6px}td{border-top:1px solid #eee;padding:5px 6px;vertical-align:top}td.a{width:130px;font-weight:600}td.r{width:44px;color:#2f6b52;font-weight:600}
-.avg td{text-align:left}@media print{.note{border:1px solid #ccc}section{break-inside:avoid}}</style></head><body>
+<style>body{font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:${INK};max-width:760px;margin:24px auto;padding:0 16px}
+h1{font-size:1.4rem;margin:0}h2{font-size:1.1rem;margin:28px 0 10px;border-bottom:1px solid #ddd;padding-bottom:4px}h3{font-size:1rem;margin:18px 0 4px}
+h4{font-size:.85rem;margin:8px 0 4px;color:${MUTED};text-transform:uppercase;letter-spacing:.03em;display:flex;align-items:center;gap:6px}
+.meta{color:${MUTED};font-size:.85rem}.note{background:#f6f1e9;border-radius:8px;padding:10px 12px;font-size:.85rem;margin:14px 0}
+.legend{display:flex;gap:16px;font-size:.85rem;color:${MUTED};margin:4px 0 10px}.legend i,.dot{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.trends{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px}.trend{margin:0}.trend figcaption{font-size:.85rem;font-weight:600;margin-bottom:-2px}
+table{border-collapse:collapse;width:100%;margin-bottom:6px}td{border-top:1px solid #eee;padding:5px 6px;vertical-align:top}td.a{width:120px;font-weight:600}td.r{width:96px}
+.meter{display:inline-flex;gap:2px;vertical-align:middle}.meter i{width:14px;height:10px;border-radius:2px;display:inline-block}
+@media(max-width:560px){.trends{grid-template-columns:1fr}}
+@media print{.note{border:1px solid #ccc}section,figure{break-inside:avoid}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
 <h1>Bookends check-in summary</h1>
 <div class="meta">${e2(fmtDate(start))} to ${e2(fmtDate(end))} (${days} days) · created ${e2(new Date().toLocaleString())}</div>
-<div class="note">Shared by the person who wrote it. Bookends doesn't send or store this summary anywhere. Ratings are 1 to 5, where 5 is the most positive end of each scale.${withNotes?"":" Written notes were left out by choice."}</div>
-<h2>At a glance</h2>
-<p>Checked in on <b>${dates.length}</b> of ${days} days · ${(c=>`${c} morning intention${c===1?"":"s"}`)(ents.filter(e=>e.kind==="morning").length)} · ${(c=>`${c} nightly reflection${c===1?"":"s"}`)(ents.filter(e=>e.kind==="night").length)}</p>
-<table class="avg"><tr><td class="a"></td><td><b>Morning avg</b></td><td><b>Night avg</b></td></tr>${dims.map(k=>`<tr><td class="a">${DIMENSIONS[k].label}</td><td>${avg("morning",k)}</td><td>${avg("night",k)}</td></tr>`).join("")}</table>
+<div class="note">Shared by the person who wrote it. Bookends doesn't send or store this summary anywhere. Ratings are on a 1 to 5 scale, where 5 is the most positive end of each scale.${withNotes?"":" Written notes were left out by choice."}</div>
+<div class="legend"><span><i style="background:${AM}"></i>Morning intention</span><span><i style="background:${PM}"></i>Nightly reflection</span></div>
+<h2>Check-ins</h2>
+<p style="margin:0 0 6px">Checked in on <b>${dates.length}</b> of ${days} days · ${nM} morning intention${nM===1?"":"s"} · ${nN} nightly reflection${nN===1?"":"s"}</p>
+${strip}
+<h2>Average by wellness area</h2>${bars}
+<h2>Trends over time</h2><div class="trends">${trends}</div>
 <h2>Day by day</h2>${dayBlocks||"<p>No check-ins in this range.</p>"}
 </body></html>`;
 }
@@ -1092,7 +1140,7 @@ function renderSettings(){
     </div>`+`
     <div class="card" style="margin-top:14px" id="shareCard">
       <h2 style="font-size:1.15rem">Share with your provider</h2>
-      <p class="small muted">Make a simple, printable summary of your check-ins to share with a therapist or counselor. Nothing is sent anywhere. You download it and decide who sees it.</p>
+      <p class="small muted">Make a simple, printable summary of your check-ins, with charts of your ratings over time, to share with a therapist or counselor. Nothing is sent anywhere. You download it and decide who sees it.</p>
       <div class="share-opts">
         <label class="time-row"><span>Time period</span><select id="shDays">${[7,14,30,90].map(n=>`<option value="${n}" ${n===14?"selected":""}>Last ${n} days</option>`).join("")}</select></label>
         <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Include my written notes</b><span class="small muted">Turn off to share ratings only.</span></span><input type="checkbox" class="switch" id="shNotes" checked></label>
