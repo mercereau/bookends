@@ -598,7 +598,7 @@ function requestClose(){
 }
 function openForm(kind,date,step=0){
   const ex=getEntry(date,kind);
-  S.form={kind,date,answers:{...(ex?.answers||{})},existing:!!ex,step,dirty:false};
+  S.form={kind,date,answers:{...(ex?.answers||{})},existing:!!ex,step,dirty:false,readOnly:date<today()}; // finished days are read-only
   renderForm();
 }
 const hasVal=v=>v!==undefined && v!==null && String(v).trim()!=="";
@@ -615,7 +615,7 @@ function renderForm(){
     <header class="sheet-head">
       <div class="sheet-title"><span class="sheet-ico">${def.icon}</span>
         <div><h2 id="sheet-title">${def.title}</h2>
-        <span class="sheet-date">${F.date===today()?"Today · ":""}${fmtDate(F.date)}</span></div></div>
+        <span class="sheet-date">${F.date===today()?"Today · ":""}${fmtDate(F.date)}${F.readOnly?` · <span class="ro-tag">🔒 Read only</span>`:""}</span></div></div>
       <button class="xbtn" id="back" aria-label="Close">✕</button>
     </header>
     <div class="steps" role="tablist">${def.sections.map((x,i)=>{const XD=DIMENSIONS[x.dim]; const done=sectionIds(x).some(id=>hasVal(F.answers[id]));
@@ -625,23 +625,25 @@ function renderForm(){
       <section class="dim step-in ${F.dir==="back"?"from-left":""}" style="--dc:${D.color}">
         <h3><span>${D.icon}</span>${D.label}${sec.dim==="closing"?"":" Wellness"}</h3>
         ${sec.scale?`<div class="q"><label class="qt">${esc(sec.scale.q)}</label>
-          <div class="scale" data-id="${sec.scale.id}">${[1,2,3,4,5].map(v=>`<button type="button" data-v="${v}" class="${+F.answers[sec.scale.id]===v?"on":""}" aria-label="${v}">${v}</button>`).join("")}</div>
+          <div class="scale" data-id="${sec.scale.id}">${[1,2,3,4,5].map(v=>`<button type="button" data-v="${v}" class="${+F.answers[sec.scale.id]===v?"on":""}" aria-label="${v}" ${F.readOnly?"disabled":""}>${v}</button>`).join("")}</div>
           <div class="anchors"><span>1 = ${esc(sec.scale.low)}</span><span>5 = ${esc(sec.scale.high)}</span></div></div>`:""}
         ${sec.prompts.map(p=>`<div class="q"><label class="qt" for="${p.id}">${esc(p.q)}</label>
-          <textarea id="${p.id}" data-id="${p.id}" placeholder="Write freely… or skip">${esc(F.answers[p.id]||"")}</textarea></div>`).join("")}
+          <textarea id="${p.id}" data-id="${p.id}" placeholder="${F.readOnly?"No answer":"Write freely… or skip"}" ${F.readOnly?"readonly":""}>${esc(F.answers[p.id]||"")}</textarea></div>`).join("")}
       </section>
-      ${F.existing&&!last?`<div style="text-align:right;margin-top:10px"><button class="linkbtn" id="savenow">Save changes now</button></div>`:""}
+      ${F.existing&&!last&&!F.readOnly?`<div style="text-align:right;margin-top:10px"><button class="linkbtn" id="savenow">Save changes now</button></div>`:""}
     </div>
     <footer class="sheet-foot">
-      ${F.existing&&last?`<button class="btn danger" id="del" style="margin-right:auto">Delete</button>`:""}
+      ${F.existing&&last&&!F.readOnly?`<button class="btn danger" id="del" style="margin-right:auto">Delete</button>`:""}
       <button class="btn ghost" id="prev" ${F.step===0?"disabled":""}>← Back</button>
       ${last
-        ?`<button class="btn" id="save">${F.existing?"Save changes":"Complete ✓"}</button>`
+        ?(F.readOnly?`<button class="btn" id="roClose">Close</button>`:`<button class="btn" id="save">${F.existing?"Save changes":"Complete ✓"}</button>`)
         :`<button class="btn" id="next">Next: ${DIMENSIONS[def.sections[F.step+1].dim].label} →</button>`}
     </footer>`;
   $s.querySelector(".sheet-body").scrollTop=0;
-  const refreshDot=()=>{ F.dirty=true; const dot=$s.querySelector(`.stepdot[data-step="${F.step}"]`); dot.classList.toggle("done",sectionIds(sec).some(id=>hasVal(F.answers[id]))); };
+  const rc=$s.querySelector("#roClose"); if(rc) rc.onclick=()=>{ S.form=null; render(); };
+  const refreshDot=()=>{ if(F.readOnly) return; F.dirty=true; const dot=$s.querySelector(`.stepdot[data-step="${F.step}"]`); dot.classList.toggle("done",sectionIds(sec).some(id=>hasVal(F.answers[id]))); };
   $s.querySelectorAll(".scale").forEach(el=>el.onclick=e=>{
+    if(F.readOnly) return;
     const b=e.target.closest("button"); if(!b) return;
     const v=+b.dataset.v; const id=el.dataset.id;
     F.answers[id] = (+F.answers[id]===v)?undefined:v;
@@ -664,12 +666,13 @@ function renderForm(){
     if(!S.form || modalEl) return;
     if(ev.key==="Escape"){ ev.preventDefault(); return requestClose(); }
     if(ev.target.tagName==="TEXTAREA" || ev.target.tagName==="INPUT") return;
-    if(/^[1-5]$/.test(ev.key) && sec.scale){ $s.querySelector(`.scale button[data-v="${ev.key}"]`)?.click(); }
+    if(/^[1-5]$/.test(ev.key) && sec.scale && !F.readOnly){ $s.querySelector(`.scale button[data-v="${ev.key}"]`)?.click(); }
     else if(ev.key==="ArrowRight" && !last) goStep(F.step+1,"fwd");
     else if(ev.key==="ArrowLeft" && F.step>0) goStep(F.step-1,"back");
   };
 }
 async function saveForm(){
+  if(S.form?.readOnly) return;
   const F=S.form; const btn=sheetEl().querySelector("#save,#savenow"); btn.disabled=true;
   const answers={}; Object.entries(F.answers).forEach(([k,v])=>{ if(v!==undefined && String(v).trim()!=="") answers[k]=typeof v==="string"?v.trim():v; });
   if(!Object.keys(answers).length){ btn.disabled=false; return toast("Answer at least one question first."); }

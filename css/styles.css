@@ -363,3 +363,10 @@ body.noscroll{overflow:hidden}
 .float-tip.below::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:var(--ink)}
 .badge.focus{border-color:var(--gold);box-shadow:0 0 0 3px color-mix(in srgb,var(--gold) 35%,transparent);animation:badgePulse 1.4s ease-out 2}
 @keyframes badgePulse{50%{transform:scale(1.04)}}
+.ro-tag{font-weight:700;color:var(--muted)}
+.scale button:disabled{cursor:default}
+.scale button:disabled:not(.on){opacity:.45}
+.scale button:disabled:hover{border-color:var(--line)}
+.scale button.on:disabled{opacity:1}
+textarea[readonly]{background:var(--card);border-style:dashed;cursor:default}
+textarea[readonly]:focus{border-color:var(--line)}
