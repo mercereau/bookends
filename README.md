@@ -36,8 +36,6 @@ Entries are saved in the browser's `localStorage` on the device. Nothing is sent
 
 Clearing site data deletes your entries, so the app suggests downloading a backup now and then.
 
-When the app runs as a Claude-hosted artifact (`window.claude` is present), it saves entries to that artifact's per-user store instead. Your entries go under `data/users/<your id>/`, and nobody else can read them. The code for this is the `CloudStore` / `LocalStore` adapter in `js/app.js`.
-
 ## Project structure
 
 ```
@@ -101,7 +99,20 @@ The site is hosted on Cloudflare and connected to this GitHub repo. Every push t
 ```
 
 - `type` is `affirmation` or `suggestion`.
-- `area` is optional. It's one of the eight wellness areas.
+- `area` is optional. Use one of the eight wellness areas:
+
+  | `area` | Covers |
+  | --- | --- |
+  | `emotional` | Feelings, stress, regulation |
+  | `physical` | Movement, rest, sleep, nourishment |
+  | `spiritual` | Values, purpose, grounding |
+  | `social` | Relationships, connection, boundaries |
+  | `intellectual` | Learning, curiosity, focus |
+  | `occupational` | Work, routines, accomplishment |
+  | `environmental` | Your space and surroundings |
+  | `financial` | Money habits and awareness |
+
+  You can also use `community`, for ways to support the people around you. It matches the morning check-in's community prompt. Leave `area` out if the affirmation fits every area.
 - `id` must be unique and must never be reused. Each person's affirmation history stores ids, so reusing one would mix up their history.
 - Everyone sees the same three affirmations each day. The daily order is shuffled with the date as the seed.
 
