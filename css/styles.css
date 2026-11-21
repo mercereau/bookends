@@ -22,7 +22,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .wrap{max-width:780px;margin:0 auto;padding:20px 16px 80px}
 header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
 header.top h1{font-size:1.6rem}
-.h1-sub{font-weight:400;color:var(--muted)}
+.h1-sub{font-weight:400;color:var(--muted);font-variation-settings:"opsz" 28} /* keep the swoopy ampersand at small sizes too */
 @media(max-width:560px){.h1-sub{display:block;font-size:1rem}.h1-sub .pipe{display:none}}
 .brand{display:flex;align-items:center;gap:12px}
 .brand .mark{width:46px;height:46px;flex:none}

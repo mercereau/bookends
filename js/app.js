@@ -80,6 +80,7 @@ const BADGES = [
   {id:"feelings-wheel", em:"🎡", name:"Name It to Tame It", desc:"Use the feelings wheel to name how you feel", test:s=>s.feelings>=1},
   {id:"backup-first", em:"💾", name:"Safe Keeping",   desc:"Download a backup of your entries", test:s=>s.backups>=1},
   {id:"home-screen",  em:"📱", name:"Right at Home",  desc:"Open Bookends from your Home Screen", test:s=>s.homeScreen>=1},
+  {id:"share-first",  em:"🤝", name:"In This Together", desc:"Download a summary to share with your provider", test:s=>s.shares>=1},
   {id:"full-picture", em:"🎯", name:"Full Picture",    desc:"Rate every wellness area in one check-in", test:s=>s.allScales>=1},
   {id:"streak-2",     em:"✨", name:"Two in a Row",    desc:"Check in two days in a row", test:s=>s.longest>=2, progress:s=>[s.longest,2]},
   {id:"entries-5",    em:"🙌", name:"High Five",       desc:"5 total check-ins", test:s=>s.total>=5, progress:s=>[s.total,5]},
@@ -260,6 +261,7 @@ function computeStats(entries, asOf=today()){
     comebacks, early,
     proud: es.filter(e=>e.kind==="night" && (e.answers.proud_text||"").trim()).length,
     backups: (S.backups||[]).filter(d=>d<=asOf).length,
+    shares: (S.shares||[]).filter(d=>d<=asOf).length,
     homeScreen: S.homeDate && S.homeDate<=asOf ? 1 : 0,
     feelings: es.filter(e=>Array.isArray(e.answers.emotional_feelings) && e.answers.emotional_feelings.length).length,
     complete: es.filter(isComplete).length,
@@ -279,7 +281,7 @@ function affStats(asOf){
 }
 function earnedBadges(entries){
   // returns {badgeId: dateEarned}
-  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.homeDate?[S.homeDate]:[]))].filter(d=>d<=today()).sort();
+  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.shares||[],S.homeDate?[S.homeDate]:[]))].filter(d=>d<=today()).sort();
   for(const d of dates){
     const s=computeStats(entries,d);
     for(const b of BADGES) if(!out[b.id] && b.test(s)) out[b.id]=d;
@@ -292,7 +294,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, backups:[], homeDate:null, prefs:{affMode:"popup",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, backups:[], homeDate:null, shares:[], prefs:{affMode:"popup",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -500,6 +502,17 @@ function noteHomeScreen(){ // returns any badges this newly earns
   const doc={key:HOME_META_KEY,kind:"meta",date:S.homeDate,updatedAt:new Date().toISOString(),v:1};
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
   const after=earnedBadges(S.entries); return badgeList().filter(b=>after[b.id]&&!before[b.id]);
+}
+/* Days a provider summary (report or data) was downloaded, for the In This Together badge. */
+const SHARES_META_KEY="meta_shares";
+function noteShare(){ // records today and celebrates any new badge; returns true if one was shown
+  const before=earnedBadges(S.entries);
+  if(!(S.shares||[]).includes(today())){ S.shares=[...(S.shares||[]),today()].sort();
+    const doc={key:SHARES_META_KEY,kind:"meta",days:S.shares,updatedAt:new Date().toISOString(),v:1};
+    affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{}); }
+  const after=earnedBadges(S.entries), fresh=badgeList().filter(b=>after[b.id]&&!before[b.id]);
+  if(fresh.length){ if(!S.form) render(); celebrate(fresh,computeStats(S.entries)); return true; }
+  return false;
 }
 function saveBackupLog(){ const doc={key:BACKUPS_META_KEY,kind:"meta",days:S.backups,updatedAt:new Date().toISOString(),v:1};
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{}); }
@@ -1272,12 +1285,12 @@ function providerSummaryJSON(days, withNotes){
 async function downloadProviderData(days,withNotes){
   if(!S.entries.length) return toast("No check-ins to share yet.");
   const ok=await saveFile(`bookends-summary-${today()}.json`, providerSummaryJSON(days,withNotes), "application/json");
-  if(ok) toast("Data saved. You decide who sees it.");
+  if(ok && !noteShare()) toast("Data saved. You decide who sees it.");
 }
 async function downloadProviderSummary(days,withNotes){
   if(!S.entries.length) return toast("No check-ins to share yet.");
   const ok=await saveFile(`bookends-summary-${today()}.html`, providerSummaryHTML(days,withNotes), "text/html");
-  if(ok) toast("Summary saved. You decide who sees it.");
+  if(ok && !noteShare()) toast("Summary saved. You decide who sees it.");
 }
 
 async function downloadBackup(){
@@ -1351,6 +1364,7 @@ function renderSettings(){
     try{ await affSaving; await S.store.remove(AFF_META_KEY); S.affLog={}; }catch(err){}
     try{ await S.store.remove(BACKUPS_META_KEY); S.backups=[]; }catch(err){}
     try{ await S.store.remove(HOME_META_KEY); S.homeDate=null; }catch(err){}
+    try{ await S.store.remove(SHARES_META_KEY); S.shares=[]; }catch(err){}
     toast(S.entries.length?`Deleted ${n}; some couldn't be removed — try again.`:"All entries deleted"); render();
   });
   const setWin=(key,kind)=>e=>{ S.prefs[key]=+e.target.value; fixWindows(S.prefs); savePrefs(); render();
@@ -1432,6 +1446,7 @@ function confetti(count){
   try{ const all = await S.store.list(); const meta=all.find(e=>e.key===AFF_META_KEY);
     S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{}; S.entries = all.filter(e=>FORMS[e.kind]);
     const hm=all.find(e=>e.key===HOME_META_KEY); S.homeDate=/^\d{4}-\d{2}-\d{2}$/.test(hm?.date||"")?hm.date:null;
+    const sh=all.find(e=>e.key===SHARES_META_KEY); S.shares=Array.isArray(sh?.days)?sh.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
     const bk=all.find(e=>e.key===BACKUPS_META_KEY); S.backups=Array.isArray(bk?.days)?bk.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
     const p=all.find(e=>e.key===PREFS_KEY); let lp=null; try{ lp=JSON.parse(localStorage.getItem("ir_prefs")||"null"); }catch(e){}
     S.prefs=normalizePrefs({...(lp||{}), ...((p&&p.prefs)||{})}); }
