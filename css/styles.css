@@ -461,3 +461,19 @@ textarea[readonly]:focus{border-color:var(--line)}
 .feel-chosen{border-top:1px dashed var(--line);padding-top:8px}
 .feel-chosen .feel{--fc:var(--dc,var(--accent))}
 @media (max-width:560px){.wheel-wrap{flex-direction:column;align-items:center}.wheel{width:190px}.wheel-side{width:100%}}
+
+/* Color-blind friendly mode (Settings → Display). Okabe & Ito based palette, plus non-color cues. */
+html.cvd{
+  --accent:#00785a; --accent-soft:#dcefe8; --morning:#c77800; --morning-soft:#fbeccc;
+  --night:#0072b2; --night-soft:#dcebf5; --gold:#a87d00; --danger:#b84a00;
+}
+@media (prefers-color-scheme:dark){html.cvd{
+  --accent:#3cc39a; --accent-soft:#183a30; --morning:#e69f00; --morning-soft:#3a2c10;
+  --night:#56b4e9; --night-soft:#16303f; --gold:#f0c43a; --danger:#f08a4b;
+}}
+/* Night marks get diagonal stripes so morning and night differ by more than color */
+html.cvd .dot.n.on,html.cvd .cell .n.on,html.cvd .book .b-n.on,html.cvd .legend .lg-n{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.38) 0 2px,transparent 2px 5px)}
+html.cvd .ln-night{stroke-dasharray:4 3}
+/* Answered steps get a check mark */
+html.cvd .stepdot{position:relative}
+html.cvd .stepdot.done::after{content:"✓";position:absolute;right:-3px;bottom:-3px;width:15px;height:15px;border-radius:50%;background:var(--ink);color:var(--card);font-size:10px;line-height:15px;text-align:center;font-weight:700}

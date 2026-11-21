@@ -22,6 +22,7 @@ The app has no accounts and no tracking, and it doesn't send your entries anywhe
 - **Share with your provider.** Download a printable report with charts (HTML), or the same ratings as structured data (JSON). You choose the time period and whether notes are included.
 - **Backup and restore** as a JSON file.
 - **Installable** on a phone's Home Screen (web app manifest and icons), with light and dark themes.
+- **Color-blind friendly mode** (Settings → Display): a palette based on Okabe & Ito, plus stripes on night marks, dashed night trend lines and check marks on answered steps, so color is never the only cue.
 
 ## Privacy
 
@@ -30,7 +31,7 @@ Entries are saved in the browser's `localStorage` on the device. Nothing is sent
 | Key | What it holds |
 | --- | --- |
 | `ir_entries_v1` | Check-ins, plus affirmation history and preferences |
-| `ir_prefs` | Preferences (check-in windows, how affirmations show up) |
+| `ir_prefs` | Preferences (check-in windows, how affirmations show up, color mode) |
 | `ir_affirm_v1` | Today's affirmation count and visit count (for the take-a-break nudge) |
 | `ir_visit` | In `sessionStorage`: keeps a reload from counting as a new visit |
 | `ir_last_backup` | When you last downloaded a backup |

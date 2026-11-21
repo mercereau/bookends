@@ -16,6 +16,20 @@ const DIMENSIONS = {
   closing:       {label:"Closing",       icon:"⭐", color:"#c99a2e"},
 };
 
+/* Color-blind friendly palette (based on Okabe & Ito), used when the Settings preference is on.
+   Icons and labels always carry the meaning too, so color is never the only cue. */
+const DIM_COLORS_STD = Object.fromEntries(Object.entries(DIMENSIONS).map(([k,d])=>[k,d.color]));
+const DIM_COLORS_CVD = {
+  emotional:"#b5578e", physical:"#c2530a", spiritual:"#6e6e9e", social:"#2b8cc4", intellectual:"#0072b2",
+  occupational:"#9a7600", environmental:"#00785a", financial:"#c77800", community:"#8a5a9e", closing:"#a87d00",
+};
+function applyColorMode(mode){
+  const cvd = mode==="cvd";
+  document.documentElement.classList.toggle("cvd", cvd);
+  for(const k in DIMENSIONS) DIMENSIONS[k].color = (cvd?DIM_COLORS_CVD:DIM_COLORS_STD)[k];
+}
+try{ applyColorMode(JSON.parse(localStorage.getItem("ir_prefs")||"{}").colorMode); }catch(e){} // before first paint
+
 const FORMS = {
   morning: {
     title: "Morning Intention", icon: "🌅",
@@ -294,7 +308,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, backups:[], homeDate:null, shares:[], prefs:{affMode:"popup",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, backups:[], homeDate:null, shares:[], prefs:{affMode:"popup",colorMode:"standard",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -338,7 +352,7 @@ function renderToday(){
     </div>
     <div class="card" style="margin-top:14px">
       <div class="shelf-head"><span class="small muted">Your week on the shelf</span>
-        <span class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i style="background:var(--night)"></i>Night</span></span></div>
+        <span class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i class="lg-n" style="background:var(--night)"></i>Night</span></span></div>
       ${shelfHTML(days,s,t)}
       ${nextBadgeHint(s,earned)}
     </div>
@@ -600,12 +614,13 @@ function maybeAutoAffirm(){ // once per day, on the first visit, unless turned o
 
 /* ---------- Preferences (kept with the user's data; synced on the Claude-hosted copy) ---------- */
 const PREFS_KEY="meta_prefs";
-const DEFAULT_PREFS={affMode:"popup", morningStart:5, morningEnd:12, nightStart:17, nightEnd:24};
+const DEFAULT_PREFS={affMode:"popup", colorMode:"standard", morningStart:5, morningEnd:12, nightStart:17, nightEnd:24};
 const AFF_MODES=["off","embedded","popup"];
 function normalizePrefs(p){ // also upgrades the earlier on/off switches
   const out={...DEFAULT_PREFS, ...p};
   if(!AFF_MODES.includes(out.affMode)) out.affMode = p.affEnabled===false ? "off" : "popup";
   if(!("affMode" in p) && p.affEnabled===false) out.affMode="off";
+  if(!["standard","cvd"].includes(out.colorMode)) out.colorMode="standard";
   for(const k of ["morningStart","morningEnd","nightStart","nightEnd"]) out[k]=Number.isInteger(+out[k])?+out[k]:DEFAULT_PREFS[k];
   fixWindows(out);
   delete out.affEnabled; delete out.affAuto; return out;
@@ -868,7 +883,7 @@ function renderHistory(){
         <button class="back" id="next">→</button>
       </div>
       <div class="cal">${"SMTWTFS".split("").map(d=>`<span class="h">${d}</span>`).join("")}${cells.join("")}</div>
-      <div class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i style="background:var(--night)"></i>Night</span><span class="muted">Tap a day to see everything you wrote</span></div>
+      <div class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i class="lg-n" style="background:var(--night)"></i>Night</span><span class="muted">Tap a day to see everything you wrote</span></div>
     </div>
     <div class="section-title"><h2>Trends</h2><span class="small muted">last 30 days · 1–5</span></div>
     <div class="card">${trendsHTML()}</div>
@@ -891,12 +906,12 @@ function trendsHTML(){
     const line=kind=>{ const pts=days.map((d,i)=>{const e=getEntry(d,kind); const v=e?.answers[id]; return v?[i,+v]:null;}).filter(Boolean);
       if(!pts.length) return {svg:"",vals:[]};
       const xy=pts.map(([i,v])=>`${(i/29*100).toFixed(1)},${(30-(v-1)/4*26-2).toFixed(1)}`);
-      return {svg:`<polyline fill="none" stroke="${kind==="morning"?"var(--morning)":"var(--night)"}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" points="${xy.join(" ")}"/>`+xy.map(p=>`<circle cx="${p.split(",")[0]}" cy="${p.split(",")[1]}" r="1.4" fill="${kind==="morning"?"var(--morning)":"var(--night)"}"/>`).join(""), vals:pts.map(p=>p[1])};
+      return {svg:`<polyline class="ln-${kind}" fill="none" stroke="${kind==="morning"?"var(--morning)":"var(--night)"}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" points="${xy.join(" ")}"/>`+xy.map(p=>`<circle cx="${p.split(",")[0]}" cy="${p.split(",")[1]}" r="1.4" fill="${kind==="morning"?"var(--morning)":"var(--night)"}"/>`).join(""), vals:pts.map(p=>p[1])};
     };
     const m=line("morning"), n=line("night"); const all=m.vals.concat(n.vals);
     const avg=all.length?(all.reduce((a,b)=>a+b,0)/all.length).toFixed(1):"–";
     return `<div class="trend"><span>${D.icon} ${D.label}</span><svg viewBox="0 0 100 32" preserveAspectRatio="none">${m.svg}${n.svg}</svg><b style="text-align:right">${avg}</b></div>`;
-  }).join("") + `<div class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i style="background:var(--night)"></i>Night</span></div>`;
+  }).join("") + `<div class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i class="lg-n" style="background:var(--night)"></i>Night</span></div>`;
 }
 /* ---------- Day view: the day's highlights and notes ---------- */
 const NOTE_BONUS=1.5; // a section with a written note outranks the same score without one
@@ -1325,6 +1340,8 @@ function renderSettings(){
         ${[["off","🚫","Off","No affirmations."],["embedded","📌","On the Today screen","Shown right on the main page."],["popup","🌤️","Pop-up","Opens once a day on your first visit. A small row on the Today screen reopens it."]]
           .map(([v,ic,t,d])=>`<label class="choice ${P.affMode===v?"on":""}"><input type="radio" name="affMode" value="${v}" ${P.affMode===v?"checked":""}><span class="c-ic">${ic}</span><span class="c-t"><b>${t}</b><span class="small muted">${d}</span></span></label>`).join("")}
       </div>
+      <div class="pref-label" style="margin-top:18px"><b>Display</b></div>
+      <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Color-blind friendly colors</b><span class="small muted">Uses colors that are easier to tell apart with color vision differences, and adds patterns and check marks where color shows meaning.</span></span><input type="checkbox" class="switch" id="pCvd" ${P.colorMode==="cvd"?"checked":""}></label>
     </div>`+`
     <div class="card" style="margin-top:14px" id="shareCard">
       <h2 style="font-size:1.15rem">Share with your provider</h2>
@@ -1373,6 +1390,10 @@ function renderSettings(){
   document.getElementById("pME").onchange=setWin("morningEnd","morning");
   document.getElementById("pNS").onchange=setWin("nightStart","night");
   document.getElementById("pNE").onchange=setWin("nightEnd","night");
+  document.getElementById("pCvd").onchange=e=>{
+    S.prefs.colorMode=e.target.checked?"cvd":"standard"; applyColorMode(S.prefs.colorMode); savePrefs(); render();
+    toast(e.target.checked?"Color-blind friendly colors on":"Standard colors on");
+  };
   document.querySelectorAll('input[name="affMode"]').forEach(r=>r.onchange=()=>{
     S.prefs.affMode=r.value; savePrefs(); render();
     toast({off:"Daily affirmations turned off",embedded:"Affirmations will show on the Today screen",popup:"Affirmations will pop up once a day"}[r.value]);
@@ -1449,7 +1470,7 @@ function confetti(count){
     const sh=all.find(e=>e.key===SHARES_META_KEY); S.shares=Array.isArray(sh?.days)?sh.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
     const bk=all.find(e=>e.key===BACKUPS_META_KEY); S.backups=Array.isArray(bk?.days)?bk.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
     const p=all.find(e=>e.key===PREFS_KEY); let lp=null; try{ lp=JSON.parse(localStorage.getItem("ir_prefs")||"null"); }catch(e){}
-    S.prefs=normalizePrefs({...(lp||{}), ...((p&&p.prefs)||{})}); }
+    S.prefs=normalizePrefs({...(lp||{}), ...((p&&p.prefs)||{})}); applyColorMode(S.prefs.colorMode); }
   catch(e){ S.entries=[]; toast("Couldn't load your entries — check your connection."); }
   if(/^#about-/.test(location.hash)){ S.view="about"; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v==="about")); }
   render();
