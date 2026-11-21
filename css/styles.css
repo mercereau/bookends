@@ -320,3 +320,19 @@ body.noscroll{overflow:hidden}
 .notes{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .notes li{display:flex;flex-direction:column;padding:10px 12px;border:1px solid var(--line);border-radius:12px}
 .notes .nl{font-size:.78rem;color:var(--muted);margin-bottom:2px}
+
+/* ---------- Full day in History ---------- */
+.full-link{display:block;margin:16px auto 0;font-size:.9rem}
+.cell.sel{outline:2px solid var(--ink);outline-offset:1px}
+.day-detail .dd-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.day-detail .dd-top h2{font-size:1.2rem}
+.dd-block{margin-top:12px;padding:12px 14px;border-radius:14px}
+.dd-block.morning{background:var(--morning-soft)} .dd-block.night{background:var(--night-soft)}
+.dd-head{display:flex;justify-content:space-between;align-items:center}
+.dd-head h3{font-size:1rem}
+.dd-list{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}
+.dd-list li{background:var(--card);border-radius:10px;padding:10px 12px;border-left:3px solid var(--dc)}
+.dd-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.dd-area{font-weight:700;font-size:.9rem;color:var(--dc)}
+.dd-q{font-size:.78rem;color:var(--muted);margin-top:6px}
+.dd-a{margin-top:2px}

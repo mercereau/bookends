@@ -286,7 +286,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { affLog:{}, prefs:{affMode:"popup",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, prefs:{affMode:"popup",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function setView(v){ S.view=v; S.form=null; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v)); render(); window.scrollTo(0,0); }
@@ -676,23 +676,46 @@ async function saveForm(){
 }
 
 /* ---------- History ---------- */
+function showDayInHistory(d){
+  S.histDay=d; S.cal=new Date(+d.slice(0,4),+d.slice(5,7)-1,1); setView("history");
+  setTimeout(()=>document.getElementById("dayDetail")?.scrollIntoView({behavior:"smooth",block:"start"}),50);
+}
+function dayDetailHTML(d){
+  const isToday=d===today(), ents=["morning","night"].map(k=>[k,getEntry(d,k)]);
+  const parts=ents.map(([k,e])=>{
+    if(!e) return "";
+    const rows=sectionsWithAnswers(e).filter(x=>x.rating||x.notes.length).map(x=>{
+      const D=DIMENSIONS[x.sec.dim];
+      return `<li style="--dc:${D.color}"><div class="dd-row"><span class="dd-area">${D.icon} ${x.sec.dim==="closing"?"Proud of":D.label}</span>${x.rating?dots(x.rating):""}</div>
+        ${x.notes.map(n=>`<div class="dd-q">${esc(n.q)}</div><div class="dd-a">${esc(n.a)}</div>`).join("")}</li>`;
+    }).join("");
+    return `<div class="dd-block ${k}"><div class="dd-head"><h3>${FORMS[k].icon} ${FORMS[k].title}</h3><button class="linkbtn" data-open-k="${k}">Open</button></div>
+      ${rows?`<ul class="dd-list">${rows}</ul>`:`<p class="muted small">Checked in, no answers recorded.</p>`}</div>`;
+  }).join("");
+  const none=!ents.some(([,e])=>e);
+  return `<section class="card day-detail" id="dayDetail">
+      <div class="dd-top"><h2>${isToday?"Today · ":""}${fmtDate(d)}</h2><button class="xbtn" id="ddClose" aria-label="Close day">✕</button></div>
+      ${none?`<p class="muted">${isToday?"Nothing logged yet today.":"No check-ins this day. That's okay. There's always tomorrow."}</p>`:parts}
+    </section>`;
+}
 function renderHistory(){
   const s=computeStats(S.entries), t=today();
   const c=S.cal, y=c.getFullYear(), mo=c.getMonth();
   const first=new Date(y,mo,1), startPad=first.getDay(), dim=new Date(y,mo+1,0).getDate();
   const cells=[]; for(let i=0;i<startPad;i++) cells.push(`<span></span>`);
   for(let d=1; d<=dim; d++){ const ds=ymd(new Date(y,mo,d)); const r=s.byDate[ds]||{};
-    cells.push(`<button class="cell ${ds>t?"future":""} ${ds===t?"today":""}" data-d="${ds}" title="${fmtDate(ds)}" ${ds>t?"disabled":""}><span class="m ${r.morning?"on":""}"></span><span class="n ${r.night?"on":""}"></span></button>`); }
+    cells.push(`<button class="cell ${ds>t?"future":""} ${ds===t?"today":""} ${ds===S.histDay?"sel":""}" data-d="${ds}" title="${fmtDate(ds)}" ${ds>t?"disabled":""}><span class="m ${r.morning?"on":""}"></span><span class="n ${r.night?"on":""}"></span></button>`); }
   const list=[...S.entries].sort((a,b)=>(b.date+b.kind).localeCompare(a.date+a.kind)).slice(0,60);
   $app.innerHTML = `
-    <div class="card">
+    ${S.histDay?dayDetailHTML(S.histDay):""}
+    <div class="card" ${S.histDay?'style="margin-top:14px"':""}>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <button class="back" id="prev">←</button>
         <h2 style="font-size:1.1rem">${c.toLocaleDateString(undefined,{month:"long",year:"numeric"})}</h2>
         <button class="back" id="next">→</button>
       </div>
       <div class="cal">${"SMTWTFS".split("").map(d=>`<span class="h">${d}</span>`).join("")}${cells.join("")}</div>
-      <div class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i style="background:var(--night)"></i>Night</span><span class="muted">Tap a day to look back</span></div>
+      <div class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i style="background:var(--night)"></i>Night</span><span class="muted">Tap a day to see everything you wrote</span></div>
     </div>
     <div class="section-title"><h2>Trends</h2><span class="small muted">last 30 days · 1–5</span></div>
     <div class="card">${trendsHTML()}</div>
@@ -701,7 +724,9 @@ function renderHistory(){
   `;
   document.getElementById("prev").onclick=()=>{S.cal=new Date(y,mo-1,1);render();};
   document.getElementById("next").onclick=()=>{S.cal=new Date(y,mo+1,1);render();};
-  $app.querySelectorAll(".cell[data-d]:not(.future)").forEach(b=>b.onclick=()=>dayPicker(b.dataset.d));
+  $app.querySelectorAll(".cell[data-d]:not(.future)").forEach(b=>b.onclick=()=>{ S.histDay=b.dataset.d; render(); document.getElementById("dayDetail")?.scrollIntoView({behavior:"smooth",block:"start"}); });
+  const ddc=document.getElementById("ddClose"); if(ddc) ddc.onclick=()=>{ S.histDay=null; render(); };
+  $app.querySelectorAll(".day-detail [data-open-k]").forEach(b=>b.onclick=()=>openForm(b.dataset.openK,S.histDay));
   $app.querySelectorAll(".entry").forEach(b=>b.onclick=()=>{const e=S.entries.find(x=>x.key===b.dataset.k); openForm(e.kind,e.date);});
 }
 function trendsHTML(){
@@ -765,14 +790,8 @@ function openDaySheet(d){
     const proud=n&&(n.answers.proud_text||"").trim();
     body+=`<div class="hls">${highlightHTML("morning",hm)}${highlightHTML("night",hn)}</div>`;
     if(proud && !(hn && hn.sec.dim==="closing")) body+=`<div class="proud">⭐ <b>Proud of:</b> ${esc(proud)}</div>`;
-    const rest=[["morning",m,hm],["night",n,hn]].map(([k,e,h])=>{
-      if(!e) return "";
-      const items=sectionsWithAnswers(e).filter(x=>x.notes.length && !(h&&x.sec===h.sec) && !(k==="night"&&x.sec.dim==="closing"))
-        .map(x=>{ const D=DIMENSIONS[x.sec.dim]; return x.notes.map(nt=>`<li><span class="nl">${D.icon} ${D.label}${x.rating?` · ${x.rating}/5`:""}</span><span>${esc(nt.a)}</span></li>`).join(""); }).join("");
-      return items?`<h4>${FORMS[k].icon} ${k==="morning"?"Morning notes":"Evening notes"}</h4><ul class="notes">${items}</ul>`:"";
-    }).join("");
-    body+= rest || (hm||hn ? "" : `<p class="muted">No notes written this day.</p>`);
     if(!hm && !hn && !proud) body=`<p class="muted">Checked in, no notes this time. Showing up counts.</p>`;
+    body+=`<button class="linkbtn full-link" id="dayFull">See the full day in History →</button>`;
   } else {
     body= isToday ? `<p class="muted">Nothing logged yet today.</p>` : `<p class="muted">No check-ins this day. That's okay. There's always tomorrow.</p>`;
   }
@@ -793,6 +812,7 @@ function openDaySheet(d){
   document.body.appendChild(dayBg); document.body.classList.add("noscroll");
   dayBg.querySelector("#dayClose").onclick=dayBg.querySelector("#dayDone").onclick=closeDaySheet;
   dayBg.querySelectorAll("[data-open-k]").forEach(bt=>bt.onclick=()=>{ const k=bt.dataset.openK; dayBg.remove(); dayBg=null; openForm(k,d); });
+  const full=dayBg.querySelector("#dayFull"); if(full) full.onclick=()=>{ closeDaySheet(); showDayInHistory(d); };
 }
 
 /* ---------- Badges ---------- */
