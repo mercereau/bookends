@@ -1,0 +1,86 @@
+{
+  "settings": {
+    "dailyLimit": 3,
+    "visitNudgeAfter": 5,
+    "_notes": "dailyLimit = how many affirmations a visitor can reveal per day. visitNudgeAfter = after this many visits in one day, show a gentle take-a-break banner. Everyone sees the same first affirmation each day. type is 'affirmation' or 'suggestion'; area matches a wellness area (optional)."
+  },
+  "affirmations": [
+    { "id": "a001", "type": "affirmation", "area": "emotional", "text": "My feelings are information, not instructions. I can notice them and still choose my next step." },
+    { "id": "a002", "type": "affirmation", "area": "emotional", "text": "I don't have to earn rest. I'm allowed to slow down today." },
+    { "id": "a003", "type": "affirmation", "area": "emotional", "text": "Progress isn't a straight line, and that's okay. I'm still moving." },
+    { "id": "a004", "type": "affirmation", "area": "emotional", "text": "I can hold a hard moment without letting it define my whole day." },
+    { "id": "a005", "type": "affirmation", "area": "emotional", "text": "Being gentle with myself is a strength, not a weakness." },
+    { "id": "a006", "type": "affirmation", "area": "emotional", "text": "I am more than my worst day." },
+    { "id": "a007", "type": "affirmation", "area": "emotional", "text": "It's okay to ask for help. Reaching out is part of taking care of myself." },
+    { "id": "a008", "type": "affirmation", "area": "emotional", "text": "Today I'll meet myself with the patience I'd give a good friend." },
+    { "id": "s001", "type": "suggestion", "area": "emotional", "text": "Try box breathing: in for 4, hold for 4, out for 4, hold for 4. Repeat four times." },
+    { "id": "s002", "type": "suggestion", "area": "emotional", "text": "Name three things you can see, two you can hear, and one you can feel right now." },
+
+    { "id": "a009", "type": "affirmation", "area": "physical", "text": "My body has carried me through every hard day so far. I'll treat it kindly today." },
+    { "id": "a010", "type": "affirmation", "area": "physical", "text": "Small movements count. A short walk is still a walk." },
+    { "id": "s003", "type": "suggestion", "area": "physical", "text": "Drink a full glass of water before your next screen session." },
+    { "id": "s004", "type": "suggestion", "area": "physical", "text": "Stand up, roll your shoulders back five times, and unclench your jaw." },
+    { "id": "s005", "type": "suggestion", "area": "physical", "text": "Step outside for five minutes and let daylight hit your face." },
+    { "id": "s006", "type": "suggestion", "area": "physical", "text": "Pick a bedtime tonight and set a gentle alarm 30 minutes before it to start winding down." },
+    { "id": "s007", "type": "suggestion", "area": "physical", "text": "Eat one meal today away from any screen. Notice the taste." },
+
+    { "id": "a011", "type": "affirmation", "area": "spiritual", "text": "I can return to what I value, no matter how far I've drifted." },
+    { "id": "a012", "type": "affirmation", "area": "spiritual", "text": "There is meaning in ordinary moments, and I'm allowed to notice it." },
+    { "id": "a013", "type": "affirmation", "area": "spiritual", "text": "I am part of something larger than today's worries." },
+    { "id": "s008", "type": "suggestion", "area": "spiritual", "text": "Write down one thing you're grateful for that you usually take for granted." },
+    { "id": "s009", "type": "suggestion", "area": "spiritual", "text": "Spend two quiet minutes doing nothing at all. Just breathe and notice." },
+    { "id": "s010", "type": "suggestion", "area": "spiritual", "text": "Watch the sky for a few minutes today: sunrise, clouds, or stars." },
+
+    { "id": "a014", "type": "affirmation", "area": "social", "text": "My boundaries protect my relationships. Saying no can be an act of care." },
+    { "id": "a015", "type": "affirmation", "area": "social", "text": "I deserve connection, and I have something to offer others." },
+    { "id": "a016", "type": "affirmation", "area": "social", "text": "I can let people in a little at a time." },
+    { "id": "s011", "type": "suggestion", "area": "social", "text": "Send a short message to someone you've been meaning to check on." },
+    { "id": "s012", "type": "suggestion", "area": "social", "text": "In your next conversation, listen for one thing you didn't know about the other person." },
+    { "id": "s013", "type": "suggestion", "area": "social", "text": "Call someone instead of texting. Hearing a voice matters." },
+
+    { "id": "a017", "type": "affirmation", "area": "intellectual", "text": "Curiosity is welcome here. I'm allowed to be a beginner." },
+    { "id": "a018", "type": "affirmation", "area": "intellectual", "text": "My mind can learn new patterns. Every day is practice." },
+    { "id": "s014", "type": "suggestion", "area": "intellectual", "text": "Read ten pages of a physical book today." },
+    { "id": "s015", "type": "suggestion", "area": "intellectual", "text": "Learn one new word, fact, or skill and tell someone about it." },
+    { "id": "s016", "type": "suggestion", "area": "intellectual", "text": "Notice a thought that keeps repeating. Write it down and ask: is this fully true?" },
+
+    { "id": "a019", "type": "affirmation", "area": "occupational", "text": "I don't need to do everything today. I need to do the next right thing." },
+    { "id": "a020", "type": "affirmation", "area": "occupational", "text": "My worth is not measured by my productivity." },
+    { "id": "a021", "type": "affirmation", "area": "occupational", "text": "Done is better than perfect. I can start small." },
+    { "id": "s017", "type": "suggestion", "area": "occupational", "text": "Pick the one task that would make today feel successful, and do it first." },
+    { "id": "s018", "type": "suggestion", "area": "occupational", "text": "Work for 25 minutes, then take a 5-minute break away from the screen." },
+
+    { "id": "a022", "type": "affirmation", "area": "environmental", "text": "I can make my space a little kinder to me, one small change at a time." },
+    { "id": "s019", "type": "suggestion", "area": "environmental", "text": "Clear one surface: a nightstand, a desk corner, a kitchen counter." },
+    { "id": "s020", "type": "suggestion", "area": "environmental", "text": "Open a window for ten minutes and let fresh air in." },
+    { "id": "s021", "type": "suggestion", "area": "environmental", "text": "Put your phone in another room for the first hour after you wake up tomorrow." },
+    { "id": "s022", "type": "suggestion", "area": "environmental", "text": "Make your bed. It's a small win you can see all day." },
+
+    { "id": "a023", "type": "affirmation", "area": "financial", "text": "I can look at my finances with curiosity instead of fear." },
+    { "id": "a024", "type": "affirmation", "area": "financial", "text": "Small, steady choices add up. I don't have to fix everything at once." },
+    { "id": "s023", "type": "suggestion", "area": "financial", "text": "Before buying something non-essential today, wait 24 hours and see if you still want it." },
+    { "id": "s024", "type": "suggestion", "area": "financial", "text": "Check one account balance calmly, just to know where you stand." },
+
+    { "id": "a025", "type": "affirmation", "area": "community", "text": "Small kindnesses ripple further than I can see." },
+    { "id": "s025", "type": "suggestion", "area": "community", "text": "Do one kind thing for a stranger today, without needing them to notice." },
+    { "id": "s026", "type": "suggestion", "area": "community", "text": "Thank someone whose work usually goes unnoticed." },
+
+    { "id": "a026", "type": "affirmation", "text": "Showing up for myself today, in any small way, is enough." },
+    { "id": "a027", "type": "affirmation", "text": "I am allowed to begin again, as many times as I need." },
+    { "id": "a028", "type": "affirmation", "text": "Rest is part of the work, not a break from it." },
+    { "id": "a029", "type": "affirmation", "text": "I can do hard things, and I don't have to do them alone." },
+    { "id": "a030", "type": "affirmation", "text": "Today doesn't have to be perfect to be good." }
+  ],
+  "breakReminders": [
+    "That's your affirmations for today. The best next step is offline: go take a walk, stretch, or look out a window.",
+    "You've had today's wisdom. Now give your eyes and mind a rest from screens. New affirmations arrive tomorrow.",
+    "Time to put the phone down. Notice something real around you: a sound, a smell, the light.",
+    "Enough screen for now. Go do one kind thing for your body: water, a stretch, fresh air.",
+    "You're all set for today. Try living one of these affirmations instead of reading another."
+  ],
+  "visitNudges": [
+    "You've stopped by quite a few times today. Maybe it's a good moment to step away from the screen for a while.",
+    "Checking in often today? That's okay. Consider a tech break: a walk, a call, or a few slow breaths.",
+    "This page will still be here tomorrow. Give yourself permission to log off for a bit."
+  ]
+}

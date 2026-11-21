@@ -80,6 +80,12 @@ const BADGES = [
   {id:"full-picture", em:"🎯", name:"Full Picture",    desc:"Rate every wellness area in one check-in", test:s=>s.allScales>=1},
   {id:"streak-2",     em:"✨", name:"Two in a Row",    desc:"Check in two days in a row", test:s=>s.longest>=2, progress:s=>[s.longest,2]},
   {id:"entries-5",    em:"🙌", name:"High Five",       desc:"5 total check-ins", test:s=>s.total>=5, progress:s=>[s.total,5]},
+  {id:"aff-first",    em:"🌤️", name:"Open Mind",       desc:"Read your first daily affirmation", test:s=>s.affDays>=1},
+  {id:"aff-3",        em:"☀️", name:"Sunny Streak",    desc:"Read affirmations 3 days in a row", test:s=>s.affLongest>=3, progress:s=>[s.affLongest,3]},
+  {id:"aff-7",        em:"🌞", name:"Week of Light",   desc:"Read affirmations 7 days in a row", test:s=>s.affLongest>=7, progress:s=>[s.affLongest,7]},
+  {id:"aff-30",       em:"🌈", name:"Daily Light",     desc:"Read affirmations 30 days in a row", test:s=>s.affLongest>=30, progress:s=>[s.affLongest,30]},
+  {id:"aff-50",       em:"📖", name:"Well Read",       desc:"Read affirmations on 50 different days", test:s=>s.affDays>=50, progress:s=>[s.affDays,50]},
+  {id:"aff-suggest",  em:"🌱", name:"Gentle Nudges",   desc:"Discover 10 different wellness suggestions", test:s=>s.affSuggest>=10, progress:s=>[s.affSuggest,10]},
   {id:"full-3",       em:"🎩", name:"Hat Trick",       desc:"3 full days with both check-ins", test:s=>s.fullDays>=3, progress:s=>[s.fullDays,3]},
   {id:"streak-3",     em:"🌱", name:"Sprouting",       desc:"3-day logging streak",   test:s=>s.longest>=3,   progress:s=>[s.longest,3]},
   {id:"streak-7",     em:"🌿", name:"Rooted",          desc:"7-day logging streak",   test:s=>s.longest>=7,   progress:s=>[s.longest,7]},
@@ -96,6 +102,31 @@ const BADGES = [
   {id:"thorough",     em:"🔍", name:"Leave No Stone",  desc:"Answer every question in a check-in", test:s=>s.complete>=1},
   {id:"entries-25",   em:"✍️", name:"Journaler",       desc:"25 total check-ins",  test:s=>s.total>=25,  progress:s=>[s.total,25]},
   {id:"entries-100",  em:"📚", name:"Devoted",         desc:"100 total check-ins", test:s=>s.total>=100, progress:s=>[s.total,100]},
+  {id:"holiday-spirit", em:"🎁", name:"Holiday Spirit", desc:"Check in on 5 different holidays", test:s=>s.holidays>=5, progress:s=>[s.holidays,5]},
+];
+
+/* ---------- Monthly badges: one per calendar month with enough check-in days ---------- */
+const MONTHLY_MIN_DAYS = 15;
+const MONTH_EMOJI = ["❄️","💗","🍀","🌷","🌼","☀️","🏖️","🌻","🍎","🍂","🍁","⛄"];
+
+/* ---------- Holiday badges: earned the first time you check in on each holiday ----------
+   rule: {m,d} fixed date · {m,wd,n} nth weekday of month (wd 0=Sun, n=-1 last) · {easter:true} */
+const HOLIDAYS = [
+  {id:"new-year",          em:"🎆", name:"New Year's Day",          rule:{m:1,d:1}},
+  {id:"valentines",        em:"💝", name:"Valentine's Day",         rule:{m:2,d:14}},
+  {id:"easter",            em:"🐣", name:"Easter",                  rule:{easter:true}},
+  {id:"mothers-day",       em:"💐", name:"Mother's Day",            rule:{m:5,wd:0,n:2}},
+  {id:"memorial-day",      em:"🎗️", name:"Memorial Day",            rule:{m:5,wd:1,n:-1}},
+  {id:"fathers-day",       em:"👔", name:"Father's Day",            rule:{m:6,wd:0,n:3}},
+  {id:"independence-day",  em:"🎇", name:"Independence Day",        rule:{m:7,d:4}},
+  {id:"labor-day",         em:"🛠️", name:"Labor Day",               rule:{m:9,wd:1,n:1}},
+  {id:"mental-health-day", em:"💚", name:"World Mental Health Day", rule:{m:10,d:10}},
+  {id:"halloween",         em:"🎃", name:"Halloween",               rule:{m:10,d:31}},
+  {id:"veterans-day",      em:"🎖️", name:"Veterans Day",            rule:{m:11,d:11}},
+  {id:"thanksgiving",      em:"🦃", name:"Thanksgiving",            rule:{m:11,wd:4,n:4}},
+  {id:"christmas-eve",     em:"🕯️", name:"Christmas Eve",           rule:{m:12,d:24}},
+  {id:"christmas",         em:"🎄", name:"Christmas",               rule:{m:12,d:25}},
+  {id:"new-years-eve",     em:"🥂", name:"New Year's Eve",          rule:{m:12,d:31}},
 ];
 
 /* =========================================================
@@ -159,6 +190,54 @@ function longestRun(dates){ // dates sorted asc unique
   for(const d of dates){ cur = (prev && addDays(prev,1)===d) ? cur+1 : 1; best=Math.max(best,cur); prev=d; }
   return best;
 }
+function easterDate(y){ // Anonymous Gregorian algorithm
+  const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),
+        h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),
+        mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;
+  return new Date(y,mo-1,da);
+}
+function nthWeekday(y,m,wd,n){
+  if(n>0){ const d=new Date(y,m-1,1); d.setDate(1+((wd-d.getDay()+7)%7)+7*(n-1)); return d; }
+  const d=new Date(y,m,0); d.setDate(d.getDate()-((d.getDay()-wd+7)%7)); return d;
+}
+const _holidayCache={};
+function holidayMap(y){
+  if(_holidayCache[y]) return _holidayCache[y];
+  const map={};
+  for(const h of HOLIDAYS){ const r=h.rule; const d=r.easter?easterDate(y):r.d?new Date(y,r.m-1,r.d):nthWeekday(y,r.m,r.wd,r.n); (map[ymd(d)] ||= []).push(h); }
+  return (_holidayCache[y]=map);
+}
+const holidaysOn=ds=>holidayMap(+ds.slice(0,4))[ds]||[];
+
+// Badges generated from your data (monthly + holidays). Defined as they're earned.
+const DYN_BADGES={};
+const badgeList=()=>BADGES.concat(Object.values(DYN_BADGES));
+function dynamicBadges(entries, out){
+  const days=[...new Set(entries.map(e=>e.date))].filter(d=>d<=today()).sort();
+  const byMonth={}; days.forEach(d=>(byMonth[d.slice(0,7)] ||= []).push(d));
+  for(const [ym,ds] of Object.entries(byMonth)){
+    if(ds.length<MONTHLY_MIN_DAYS) continue;
+    const label=parse(ym+"-01").toLocaleDateString(undefined,{month:"long",year:"numeric"}), id="month-"+ym;
+    DYN_BADGES[id]={id, em:MONTH_EMOJI[+ym.slice(5)-1], name:label, desc:`Checked in on ${MONTHLY_MIN_DAYS}+ days in ${label}`};
+    out[id]=ds[MONTHLY_MIN_DAYS-1];
+  }
+  for(const d of days) for(const h of holidaysOn(d)){
+    const id="holiday-"+h.id; if(out[id]) continue;
+    DYN_BADGES[id]={id, em:h.em, name:h.name, desc:`You checked in on ${h.name}. Holidays can be a lot, and you still made time for yourself.`};
+    out[id]=d;
+  }
+}
+function monthProgress(){ // this month's progress toward its badge, for "next up" hints
+  const ym=today().slice(0,7), n=new Set(S.entries.filter(e=>e.date.startsWith(ym)).map(e=>e.date)).size;
+  if(n>=MONTHLY_MIN_DAYS) return null;
+  const label=parse(ym+"-01").toLocaleDateString(undefined,{month:"long",year:"numeric"});
+  return {b:{em:MONTH_EMOJI[+ym.slice(5)-1],name:label,desc:`Check in on ${MONTHLY_MIN_DAYS} days in ${label}`},c:n,g:MONTHLY_MIN_DAYS,r:n/MONTHLY_MIN_DAYS};
+}
+function nextUp(s,earned){
+  const c=BADGES.filter(b=>!earned[b.id]&&b.progress).map(b=>{const [c,g]=b.progress(s);return {b,c,g,r:c/g};});
+  const m=monthProgress(); if(m && m.c>0) c.push(m);
+  return c.sort((a,b)=>b.r-a.r)[0];
+}
 function computeStats(entries, asOf=today()){
   const es = entries.filter(e=>e.date<=asOf);
   const byDate = {};
@@ -178,25 +257,36 @@ function computeStats(entries, asOf=today()){
     comebacks, early,
     proud: es.filter(e=>e.kind==="night" && (e.answers.proud_text||"").trim()).length,
     complete: es.filter(isComplete).length,
+    holidays: new Set(dates.flatMap(d=>holidaysOn(d).map(h=>h.id))).size,
     allScales: es.filter(e=>FORMS[e.kind].sections.filter(x=>x.scale).every(x=>e.answers[x.scale.id])).length,
+    ...affStats(asOf),
     byDate, dates,
   };
 }
+/* Affirmation reading history: S.affLog = { "YYYY-MM-DD": [ids revealed] } */
+function affStats(asOf){
+  const days=Object.keys(S.affLog||{}).filter(d=>d<=asOf && S.affLog[d].length).sort();
+  const set=new Set(days), types={}; (AFF.data?.affirmations||[]).forEach(a=>types[a.id]=a.type);
+  const sugg=new Set(); days.forEach(d=>S.affLog[d].forEach(id=>{ if(types[id]==="suggestion") sugg.add(id); }));
+  return { affDays:days.length, affLongest:longestRun(days), affSuggest:sugg.size,
+           affCurrent: set.has(asOf)?runLength(set,asOf):runLength(set,addDays(asOf,-1)) };
+}
 function earnedBadges(entries){
   // returns {badgeId: dateEarned}
-  const out={}; const dates=[...new Set(entries.map(e=>e.date))].sort();
+  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{})))].filter(d=>d<=today()).sort();
   for(const d of dates){
     const s=computeStats(entries,d);
     for(const b of BADGES) if(!out[b.id] && b.test(s)) out[b.id]=d;
     if(Object.keys(out).length===BADGES.length) break;
   }
+  dynamicBadges(entries,out);
   return out;
 }
 
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { affLog:{}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function setView(v){ S.view=v; S.form=null; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v)); render(); window.scrollTo(0,0); }
@@ -221,8 +311,11 @@ function renderToday(){
       <div class="card stat streak"><div class="n">${s.current}🔥</div><div class="l">day streak</div></div>
       <div class="card stat"><div class="n">${s.longest}</div><div class="l">longest streak</div></div>
       <div class="card stat"><div class="n">${s.total}</div><div class="l">check-ins</div></div>
-      <div class="card stat"><div class="n">${Object.keys(earned).length}<span class="muted" style="font-size:1rem">/${BADGES.length}</span></div><div class="l">badges</div></div>
+      <div class="card stat"><div class="n">${Object.keys(earned).length}🏅</div><div class="l">${Object.keys(earned).length===1?"badge":"badges"} earned</div></div>
     </div>
+    ${holidayBannerHTML(earned)}
+    ${visitNudgeHTML()}
+    ${affirmCardHTML()}
     <div class="grid checkins">
       ${ciCard("morning",m,morningOpen,"Set the tone for your day","Start check-in →",`Morning window closed at ${hourLabel(CUTOFF_HOUR)}`)}
       ${ciCard("night",n,!morningOpen,"Look back on how today went","Start reflection →",`Opens at ${hourLabel(CUTOFF_HOUR)}`)}
@@ -239,6 +332,8 @@ function renderToday(){
   `;
   $app.querySelectorAll("[data-open]:not([disabled])").forEach(b=>b.onclick=()=>openForm(b.dataset.open,t));
   scheduleWindowFlip();
+  bindAffirm();
+  const qb=document.getElementById("quickBackup"); if(qb) qb.onclick=downloadBackup;
 }
 /* Time windows: midnight–noon = morning only, noon–midnight = night only.
    Change CUTOFF_HOUR to move the switch-over (24h clock). */
@@ -263,14 +358,101 @@ function scheduleWindowFlip(){
   if(now.getHours()<CUTOFF_HOUR) next.setHours(CUTOFF_HOUR,0,5,0); else { next.setDate(next.getDate()+1); next.setHours(0,0,5,0); }
   flipTimer=setTimeout(()=>{ if(!S.form && S.view==="today") render(); }, next-now);
 }
+function holidayBannerHTML(earned){
+  const hs=holidaysOn(today()); if(!hs.length) return "";
+  const h=hs[0], got=earned["holiday-"+h.id] && S.entries.some(e=>e.date===today());
+  return `<div class="note holiday">${h.em} <b>Happy ${h.name}.</b> ${got?"You checked in today. Be gentle with yourself and enjoy the day.":"Holidays can be a lot. A few minutes for yourself today earns a holiday badge."}</div>`;
+}
 function nextBadgeHint(s,earned){
-  const next = BADGES.filter(b=>!earned[b.id] && b.progress).map(b=>{const [c,g]=b.progress(s);return {b,c,g,r:c/g};}).sort((a,b)=>b.r-a.r)[0];
+  const next = nextUp(s,earned);
   if(!next) return "";
   return `<div class="note">Next up: <b>${next.b.em} ${next.b.name}</b> — ${next.b.desc.toLowerCase()} (${Math.min(next.c,next.g)}/${next.g})</div>`;
 }
 function storeNote(){
   if(S.store.kind==="cloud") return "";
-  return `<div class="note warn">Entries are being saved in this browser only. Use the <b>Data</b> tab to back them up.</div>`;
+  const d=lastBackup(), days=d?Math.round((parse(today())-parse(d.slice(0,10)))/864e5):null;
+  if(!S.entries.length || (days!==null && days<14)) return "";
+  return `<div class="note warn backup-note">Entries are saved in this browser only. ${d?`Your last backup was ${days} days ago.`:"You haven't downloaded a backup yet."} <button class="linkbtn" id="quickBackup">Download backup</button></div>`;
+}
+
+/* =========================================================
+   DAILY AFFIRMATIONS — content lives in data/affirmations.json.
+   Counts are kept per visitor in their own browser (no server):
+   how many affirmations they've revealed today and how many
+   visits they've made today. Both reset at local midnight.
+   ========================================================= */
+const AFF_KEY="ir_affirm_v1";
+const AFF={data:null};
+const AFF_FALLBACK={ settings:{dailyLimit:3,visitNudgeAfter:5},
+  affirmations:[{id:"f1",type:"affirmation",text:"Showing up for myself today, in any small way, is enough."},
+                {id:"f2",type:"suggestion",text:"Step outside for five minutes and let daylight hit your face."},
+                {id:"f3",type:"affirmation",text:"I am allowed to begin again, as many times as I need."}],
+  breakReminders:["That's your affirmations for today. Time for a screen break."],
+  visitNudges:["You've stopped by quite a few times today. Maybe step away from the screen for a while."] };
+async function loadAffirmations(){
+  try{ const r=await fetch("data/affirmations.json",{cache:"no-cache"}); if(!r.ok) throw 0; const d=await r.json(); if(!Array.isArray(d.affirmations)||!d.affirmations.length) throw 0; AFF.data=d; }
+  catch(e){ AFF.data=AFF_FALLBACK; }
+}
+function affState(){
+  let st=null; try{ st=JSON.parse(localStorage.getItem(AFF_KEY)||"null"); }catch(e){}
+  if(!st||st.date!==today()) st={date:today(),shown:[],visits:0};
+  return st;
+}
+function affSave(st){ try{ localStorage.setItem(AFF_KEY,JSON.stringify(st)); }catch(e){} }
+function countVisit(){ // once per browser tab per day; reloading the same tab doesn't count again
+  try{ if(sessionStorage.getItem("ir_visit")===today()) return; sessionStorage.setItem("ir_visit",today()); }catch(e){}
+  const st=affState(); st.visits++; affSave(st);
+}
+function seeded(str){ let h=1779033703^str.length; for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}
+  return ()=>{ h=Math.imul(h^h>>>16,2246822507); h=Math.imul(h^h>>>13,3266489909); h^=h>>>16; return (h>>>0)/4294967296; }; }
+function dailyOrder(){ // everyone gets the same order on the same day
+  const list=AFF.data.affirmations, rnd=seeded("bookends-"+today()), idx=list.map((_,i)=>i);
+  for(let i=idx.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [idx[i],idx[j]]=[idx[j],idx[i]]; }
+  return idx.map(i=>list[i]);
+}
+const pickByDay=(arr,salt=0)=>arr[(parseInt(today().replace(/-/g,""),10)+salt)%arr.length];
+function untilTomorrow(){ const n=new Date(), m=new Date(n); m.setHours(24,0,0,0); const mins=Math.round((m-n)/6e4); return mins>=60?`${Math.floor(mins/60)}h ${mins%60}m`:`${mins}m`; }
+function affLimit(){ return Math.max(1, +AFF.data.settings?.dailyLimit || 3); }
+function visitNudgeHTML(){
+  if(!AFF.data) return "";
+  const st=affState(), after=+AFF.data.settings?.visitNudgeAfter||0;
+  if(!after || st.visits<=after) return "";
+  return `<div class="note nudge">🌿 ${esc(pickByDay(AFF.data.visitNudges||AFF_FALLBACK.visitNudges))} <span class="muted">(${st.visits} visits today)</span></div>`;
+}
+function affirmCardHTML(){
+  if(!AFF.data) return "";
+  const st=affState(), lim=affLimit(), order=dailyOrder(), n=Math.min(st.shown.length,lim);
+  const dots=[...Array(lim)].map((_,i)=>`<i class="${i<n?"on":""}"></i>`).join("");
+  const foot=`<div class="aff-foot"><span class="aff-dots" aria-label="${n} of ${lim} today">${dots}</span><span>${n} of ${lim} today · ${st.visits} visit${st.visits===1?"":"s"} today${(()=>{const c=affStats(today()).affCurrent;return c>1?` · ☀️ ${c}-day reading streak`:"";})()}</span></div>`;
+  if(n===0) return `<section class="card aff" id="aff">
+      <div class="aff-label">🌤️ Today's affirmation</div>
+      <p class="aff-hint">A thought for your day is waiting. You get ${lim} a day, then it's time for a screen break.</p>
+      <button class="btn" id="affReveal">Reveal today's affirmation</button>${foot}</section>`;
+  const a=order[(n-1)%order.length], D=a.area&&DIMENSIONS[a.area];
+  const more = n<lim
+    ? `<button class="btn ghost" id="affMore">One more <span class="muted">(${lim-n} left)</span></button>`
+    : `<div class="aff-break"><b>📵 Time for a tech break</b><p>${esc(pickByDay(AFF.data.breakReminders||AFF_FALLBACK.breakReminders,n))}</p><span class="small muted">New affirmations in ${untilTomorrow()}</span></div>`;
+  return `<section class="card aff ${a.type==="suggestion"?"sugg":""}" id="aff">
+      <div class="aff-label">${a.type==="suggestion"?"🌱 Wellness suggestion":"🌤️ Today's affirmation"}${D?` <span class="aff-area" style="--dc:${D.color}">${D.icon} ${D.label}</span>`:""}</div>
+      <blockquote class="aff-text">${esc(a.text)}</blockquote>
+      ${more}${foot}</section>`;
+}
+const AFF_META_KEY="meta_affirmations";
+let affSaving=Promise.resolve();
+function saveAffLog(){ // one write at a time; kept with the user's entries (synced on the Claude-hosted copy)
+  const doc={key:AFF_META_KEY,kind:"meta",days:S.affLog,updatedAt:new Date().toISOString(),v:1};
+  affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
+}
+function bindAffirm(){
+  const reveal=()=>{ const st=affState(), lim=affLimit(); if(st.shown.length>=lim) return;
+    const order=dailyOrder(), id=order[st.shown.length%order.length].id; st.shown.push(id); affSave(st);
+    const before=earnedBadges(S.entries);
+    const day=today(); S.affLog[day]=[...new Set([...(S.affLog[day]||[]),id])]; saveAffLog();
+    const now=earnedBadges(S.entries), fresh=badgeList().filter(b=>now[b.id] && !before[b.id]);
+    if(fresh.length) setTimeout(()=>{ if(!S.form && S.view==="today"){ const y=scrollY; render(); scrollTo(0,y); } celebrate(fresh,computeStats(S.entries)); },450);
+    const el=document.getElementById("aff"); el.outerHTML=affirmCardHTML(); const ne=document.getElementById("aff"); ne.classList.add("aff-in"); bindAffirm(); };
+  const r=document.getElementById("affReveal"); if(r) r.onclick=reveal;
+  const m=document.getElementById("affMore"); if(m) m.onclick=reveal;
 }
 
 /* ---------- Form: a pop-up window, one wellness area per step ---------- */
@@ -379,7 +561,7 @@ async function saveForm(){
   catch(e){ btn.disabled=false; return toast(e?.code==="quota_exceeded"?"Storage is full — export and clear old data.":"Couldn't save — check your connection and try again."); }
   S.entries=S.entries.filter(e=>e.key!==key).concat(entry);
   const after=earnedBadges(S.entries);
-  const fresh=BADGES.filter(b=>after[b.id] && !before[b.id]);
+  const fresh=badgeList().filter(b=>after[b.id] && !before[b.id]);
   S.form=null; S.view="today"; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v==="today"));
   render(); window.scrollTo(0,0);
   const s=computeStats(S.entries);
@@ -449,21 +631,51 @@ function dayPicker(d){
 
 /* ---------- Badges ---------- */
 function renderBadges(){
-  const s=computeStats(S.entries), earned=earnedBadges(S.entries);
+  // Only earned badges are shown, newest first: no totals or locked slots to "complete".
+  const earned=earnedBadges(S.entries), n=Object.keys(earned).length;
+  const got=badgeList().filter(x=>earned[x.id]).sort((x,y)=>earned[y.id].localeCompare(earned[x.id]));
   $app.innerHTML = `
     <div class="card" style="display:flex;gap:16px;align-items:center">
-      <div style="font-size:2.4rem">🏆</div>
-      <div><h2 style="font-size:1.2rem">${Object.keys(earned).length} of ${BADGES.length} badges</h2>
-      <div class="small muted">Badges reward showing up — never your ratings. A hard day logged honestly counts just as much.</div></div>
+      <div style="font-size:2.4rem">🏅</div>
+      <div><h2 style="font-size:1.2rem">${n?`You've earned ${n} ${n===1?"badge":"badges"}`:"Your badges will show up here"}</h2>
+      <div class="small muted">${n?"Every one of these is a time you showed up for yourself. ":""}Badges reward showing up, never your ratings. A hard day logged honestly counts just as much.</div></div>
     </div>
-    <div class="grid badges" style="margin-top:14px">${BADGES.map(b=>{
-      const got=earned[b.id]; const pr=!got&&b.progress?b.progress(s):null;
-      return `<div class="card badge ${got?"":"locked"}"><div class="em">${b.em}</div><h4>${b.name}</h4><p>${b.desc}</p>
-        ${got?`<p class="when">Earned ${fmtDate(got)}</p>`:pr?`<div class="bar"><i style="width:${Math.min(100,pr[0]/pr[1]*100)}%"></i></div><p>${Math.min(pr[0],pr[1])} / ${pr[1]}</p>`:""}</div>`;}).join("")}
-    </div>`;
+    ${n?`<div class="grid badges" style="margin-top:14px">${got.map(b=>`<div class="card badge"><div class="em">${b.em}</div><h4>${b.name}</h4><p>${b.desc}</p><p class="when">Earned ${fmtDate(earned[b.id])}</p></div>`).join("")}</div>
+      <p class="small muted" style="text-align:center;margin-top:18px">More badges appear as you keep checking in. There's no list to finish.</p>`
+    :`<div class="card muted" style="margin-top:14px;text-align:center">Your first badge is one check-in or affirmation away.</div>`}`;
 }
 
 /* ---------- Data (export / import) ---------- */
+/* ---------- Backup export ---------- */
+const BACKUP_KEY="ir_last_backup";
+const hasData=()=>S.entries.length>0 || Object.keys(S.affLog).length>0;
+function backupJSON(){
+  const all=[...S.entries].sort((a,b)=>a.key.localeCompare(b.key));
+  if(Object.keys(S.affLog).length) all.push({key:AFF_META_KEY,kind:"meta",days:S.affLog,v:1});
+  return JSON.stringify(all,null,2);
+}
+function lastBackup(){ try{ return localStorage.getItem(BACKUP_KEY); }catch(e){ return null; } }
+function lastBackupText(){
+  const d=lastBackup(); if(!d) return "No backup downloaded yet on this device.";
+  const days=Math.round((parse(today())-parse(d.slice(0,10)))/864e5);
+  return `Last backup: ${days===0?"today":days===1?"yesterday":days+" days ago"}.`;
+}
+async function downloadBackup(){
+  if(!hasData()) return toast("Nothing to back up yet.");
+  const filename=`bookends-backup-${today()}.json`, json=backupJSON();
+  const done=()=>{ try{ localStorage.setItem(BACKUP_KEY,new Date().toISOString()); }catch(e){} toast(`Saved ${filename}`); if(!S.form) render(); };
+  // Inside Claude, files go through its download prompt; on your own site, a normal browser download.
+  const dl = window.claude?.use ? await claude.use("downloads").catch(()=>null) : null;
+  if(dl){
+    try{ await dl.save({filename,data:json}); return done(); }
+    catch(e){ if(e?.code==="declined") return toast("Download cancelled"); if(e?.code==="rate_limited") return toast("A download prompt is already open"); }
+  }
+  try{
+    const url=URL.createObjectURL(new Blob([json],{type:"application/json"}));
+    const a=Object.assign(document.createElement("a"),{href:url,download:filename}); document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000); done();
+  }catch(e){ toast("Download isn't available here — use Copy JSON instead."); }
+}
 function renderSettings(){
   $app.innerHTML = `
     <div class="card">
@@ -474,8 +686,8 @@ function renderSettings(){
     </div>
     <div class="card" style="margin-top:14px">
       <h2 style="font-size:1.15rem">Back up</h2>
-      <p class="small muted">Copy all ${S.entries.length} entries as JSON and paste them somewhere safe.</p>
-      <div class="actions" style="justify-content:flex-start"><button class="btn" id="copy">Copy JSON</button></div>
+      <p class="small muted">Save all ${S.entries.length} check-ins${Object.keys(S.affLog).length?` and ${Object.keys(S.affLog).length} days of affirmation history`:""} as a file you can keep somewhere safe and restore below. ${lastBackupText()}</p>
+      <div class="actions" style="justify-content:flex-start"><button class="btn" id="export" ${hasData()?"":"disabled"}>⬇ Download backup</button><button class="btn ghost" id="copy" ${hasData()?"":"disabled"}>Copy JSON</button></div>
     </div>
     <div class="card" style="margin-top:14px">
       <h2 style="font-size:1.15rem">Restore / import</h2>
@@ -486,15 +698,17 @@ function renderSettings(){
     <div class="card" style="margin-top:14px">
       <h2 style="font-size:1.15rem">Start over</h2>
       <p class="small muted">Permanently delete all ${S.entries.length} entries and badges. Back up first if you want to keep them.</p>
-      <div class="actions" style="justify-content:flex-start"><button class="btn danger" id="wipe" ${S.entries.length?"":"disabled"}>Delete all entries</button></div>
+      <div class="actions" style="justify-content:flex-start"><button class="btn danger" id="wipe" ${hasData()?"":"disabled"}>Delete all entries</button></div>
     </div>`;
   document.getElementById("impfile").onchange=async e=>{ const f=e.target.files[0]; if(!f) return; document.getElementById("imp").value=await f.text(); document.getElementById("doimp").click(); };
   document.getElementById("wipe").onclick=()=>confirmBox("Delete everything?",`All ${S.entries.length} check-ins and your badges will be gone. This can't be undone.`,"Delete all",async()=>{
     let n=0; for(const e of [...S.entries]){ try{ await S.store.remove(e.key); S.entries=S.entries.filter(x=>x.key!==e.key); n++; }catch(err){ break; } }
+    try{ await affSaving; await S.store.remove(AFF_META_KEY); S.affLog={}; }catch(err){}
     toast(S.entries.length?`Deleted ${n}; some couldn't be removed — try again.`:"All entries deleted"); render();
   });
+  document.getElementById("export").onclick=downloadBackup;
   document.getElementById("copy").onclick=async()=>{
-    const json=JSON.stringify([...S.entries].sort((a,b)=>a.key.localeCompare(b.key)),null,2);
+    const json=backupJSON();
     try{ await navigator.clipboard.writeText(json); toast("Copied to clipboard"); }
     catch(e){ const t=document.getElementById("imp"); t.value=json; t.select(); toast("Couldn't copy automatically — it's selected below, copy it manually"); }
   };
@@ -503,7 +717,9 @@ function renderSettings(){
     const ok=arr.filter(e=>e&&/^\d{4}-\d{2}-\d{2}$/.test(e.date)&&FORMS[e.kind]&&e.answers&&typeof e.answers==="object")
       .map(e=>({key:`${e.date}_${e.kind}`,date:e.date,kind:e.kind,answers:e.answers,createdAt:e.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),v:1}));
     let n=0; for(const e of ok){ try{ await S.store.save(e); S.entries=S.entries.filter(x=>x.key!==e.key).concat(e); n++; }catch(err){ break; } }
-    toast(`Imported ${n} of ${arr.length} entries`); render();
+    const meta=arr.find(e=>e&&e.key===AFF_META_KEY&&e.days&&typeof e.days==="object");
+    if(meta){ for(const [d,ids] of Object.entries(meta.days)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(ids)) S.affLog[d]=[...new Set([...(S.affLog[d]||[]),...ids.map(String)])]; saveAffLog(); await affSaving; }
+    toast(`Imported ${n} check-ins${meta?" + affirmation history":""}`); render();
   };
 }
 
@@ -522,7 +738,7 @@ const AFFIRMATIONS = {
 };
 function winCard(kind,s){
   const earned=earnedBadges(S.entries);
-  const next=BADGES.filter(b=>!earned[b.id]&&b.progress).map(b=>{const [c,g]=b.progress(s);return {b,c,g,r:c/g};}).sort((a,b)=>b.r-a.r)[0];
+  const next=nextUp(s,earned);
   const lines=AFFIRMATIONS[kind]; const msg=lines[(s.total+new Date().getDate())%lines.length];
   const full=s.byDate[today()]?.morning && s.byDate[today()]?.night;
   document.querySelectorAll(".win").forEach(w=>w.remove());
@@ -535,7 +751,7 @@ function toast(msg){ document.querySelectorAll(".toast").forEach(t=>t.remove());
 function celebrate(badges,s){
   confetti(160);
   modal(`<div class="big">${badges[0].em}</div><h2>${badges.length>1?"New badges!":"Badge unlocked!"}</h2>
-    <p class="muted">You're on a ${s.current}-day streak. Keep showing up for yourself.</p>
+    <p class="muted">${s.current>0?`You're on a ${s.current}-day check-in streak. `:""}Keep showing up for yourself.</p>
     <div class="list">${badges.map(b=>`<div><span class="em">${b.em}</span><span><b>${b.name}</b><br><span class="small muted">${b.desc}</span></span></div>`).join("")}</div>
     <button class="btn" data-close>Thanks!</button>`);
 }
@@ -550,8 +766,12 @@ function confetti(count){
 
 /* ---------- Boot ---------- */
 (async function boot(){
+  countVisit();
+  const affReady = loadAffirmations();
   S.store = await pickStore();
-  try{ S.entries = await S.store.list(); }
+  await affReady;
+  try{ const all = await S.store.list(); const meta=all.find(e=>e.key===AFF_META_KEY);
+    S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{}; S.entries = all.filter(e=>FORMS[e.kind]); }
   catch(e){ S.entries=[]; toast("Couldn't load your entries — check your connection."); }
   render();
 })();

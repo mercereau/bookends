@@ -185,3 +185,20 @@ body.noscroll{overflow:hidden}
 @keyframes slideUp{from{transform:translateY(100%)}}
 @keyframes slideDown{to{transform:translateY(100%)}}
 @media (prefers-reduced-motion:reduce){.sheet,.sheet-bg{animation:none!important}}
+
+/* ---------- Daily affirmation ---------- */
+.aff{margin-top:14px;text-align:center;padding:22px 20px 14px;border-top:4px solid var(--gold)}
+.aff.sugg{border-top-color:var(--accent)}
+.aff-label{font-size:.82rem;font-weight:700;letter-spacing:.02em;color:var(--muted);display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap}
+.aff-area{font-weight:500;color:var(--dc);background:color-mix(in srgb,var(--dc) 12%,transparent);padding:2px 8px;border-radius:999px}
+.aff-text{font-family:Fraunces,Georgia,serif;font-size:1.35rem;line-height:1.4;margin:14px auto 16px;max-width:30ch}
+.aff-hint{color:var(--muted);font-size:.92rem;margin:10px auto 14px;max-width:40ch}
+.aff-foot{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:14px;font-size:.78rem;color:var(--muted)}
+.aff-dots{display:inline-flex;gap:4px}
+.aff-dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.aff-dots i.on{background:var(--gold)}
+.aff-break{background:var(--accent-soft);border-radius:14px;padding:14px 16px;max-width:44ch;margin:0 auto}
+.aff-break p{margin:6px 0}
+.aff-in .aff-text,.aff-in .aff-break{animation:fade .5s}
+.note.nudge{margin:14px 0 0;background:var(--accent-soft);color:var(--ink)}
+.note.holiday{margin:14px 0 0;background:var(--morning-soft);color:var(--ink)}
