@@ -289,7 +289,15 @@ function earnedBadges(entries){
 const S = { histDay:null, affLog:{}, prefs:{affMode:"popup",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
-function setView(v){ S.view=v; S.form=null; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v)); render(); window.scrollTo(0,0); }
+function scrollToHash(){
+  const h=decodeURIComponent((location.hash||"").slice(1)); if(!/^about-[a-z-]+$/.test(h)) return false;
+  if(S.view!=="about"){ S.view="about"; S.form=null; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v==="about")); render(); }
+  const el=document.getElementById(h); if(el){ el.scrollIntoView({behavior:"smooth",block:"start"}); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+  return true;
+}
+window.addEventListener("hashchange",scrollToHash);
+function setView(v){ if(v!=="about" && /^#about-/.test(location.hash)){ try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} }
+  S.view=v; S.form=null; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v)); render(); window.scrollTo(0,0); }
 document.getElementById("tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b) setView(b.dataset.v); });
 
 function getEntry(date,kind){ return S.entries.find(e=>e.date===date && e.kind===kind); }
@@ -880,31 +888,34 @@ function renderBadges(){
 
 /* ---------- Data (export / import) ---------- */
 /* ---------- About ---------- */
+const ABOUT_SECTIONS=[["about-why","Why I made this"],["about-name","Why \"Bookends\"?"],["about-how","How it works"],["about-privacy","Your privacy"],["about-free","Free, on purpose"],["about-providers","For providers"],["about-sharing","Sharing with your provider"],["about-note","A quick note"]];
 function renderAbout(){
   const privacy = S.store.kind==="cloud"
     ? "Your check-ins are saved to your own private space. Only you can read them. Nobody else who opens this page can see them."
     : "Your check-ins never leave this device. There's no account and no server storing them, so nobody else can read them, including me. That also means if you clear your browser data, they're gone, so use the <b>Settings</b> tab to download a backup now and then.";
   $app.innerHTML = `
     <article class="about">
-      <section class="card about-hero">
+      <nav class="card about-toc" aria-label="On this page"><span class="small muted">On this page</span>
+        <div class="toc-links">${ABOUT_SECTIONS.map(([id,t])=>`<a href="#${id}">${t}</a>`).join("")}</div></nav>
+      <section class="card about-hero" id="about-why">
         <svg class="mark" viewBox="60 50 120 120" aria-hidden="true">
           <path d="M90 62H70V158H90" fill="none" stroke="var(--morning)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M150 62H170V158H150" fill="none" stroke="var(--night)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M120 80A30 30 0 0 0 120 140Z" fill="var(--morning)"/><path d="M120 80A30 30 0 0 1 120 140Z" fill="var(--night)"/>
         </svg>
-        <h2>Why I made this</h2>
+        <h2>Why I made this<a class="anchor" href="#about-why" aria-label="Link to this section">#</a></h2>
         <p>A while back I started doing two short check-ins every day. One in the morning to set an intention, and one at night to look back on how the day actually went. A few quick questions for each part of my life: how I'm feeling, how my body's doing, the people around me, my work, my space, my money, and what gives me purpose.</p>
         <p>It sounds simple. It helped a lot.</p>
         <p>I was doing it on paper, and I kept losing track of the sheets. So I built Bookends: the same check-ins, a place to keep them, and a few badges to make showing up feel good. If it helps you even a little, that's a win.</p>
       </section>
 
-      <section class="card about-name">
-        <h3>Why "Bookends"?</h3>
+      <section class="card about-name" id="about-name">
+        <h3>Why "Bookends"?<a class="anchor" href="#about-name" aria-label="Link to this section">#</a></h3>
         <p>A morning intention and a nightly reflection hold the day between them, like bookends on a shelf. Whatever happens in the middle, you start with purpose and end with honesty.</p>
       </section>
 
-      <section class="card about-how">
-        <h3>How it works</h3>
+      <section class="card about-how" id="about-how">
+        <h3>How it works<a class="anchor" href="#about-how" aria-label="Link to this section">#</a></h3>
         <ul>
           <li><b>🌅 Morning intention</b> is open from ${hourLabel(win("morning")[0])} to ${hourLabel(win("morning")[1])}. <b>🌙 Nightly reflection</b> is open from ${hourLabel(win("night")[0])} to ${hourLabel(win("night")[1])}. You can change both windows in <b>Settings</b>.</li>
           <li>Each check-in walks through the eight areas of wellness, one at a time. Rate each one from 1 to 5 and write as much or as little as you want. Skipping is fine.</li>
@@ -915,20 +926,20 @@ function renderAbout(){
         <p class="small muted">The eight areas come from <a href="https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness" target="_blank" rel="noopener noreferrer">SAMHSA's Eight Dimensions of Wellness</a>. The affirmations are inspired by guidance from public health and mental health organizations, and each one links to its source.</p>
       </section>
 
-      <section class="card about-privacy">
-        <h3>Your privacy</h3>
+      <section class="card about-privacy" id="about-privacy">
+        <h3>Your privacy<a class="anchor" href="#about-privacy" aria-label="Link to this section">#</a></h3>
         <p>${privacy}</p>
       </section>
 
-      <section class="card about-free">
-        <h3>Free, on purpose</h3>
+      <section class="card about-free" id="about-free">
+        <h3>Free, on purpose<a class="anchor" href="#about-free" aria-label="Link to this section">#</a></h3>
         <p>Bookends is free. No ads, no premium tier, and nothing to sell you.</p>
         <p>The check-ins that helped me were simple: a sheet of paper and a few good questions that someone took the time to share. That kind of help shouldn't come with a price tag. Hard stretches often come with tight budgets, and reaching for support is already hard enough without a paywall in the way.</p>
         <p>So it's free, and it's going to stay that way. If it helps you, pass it on to someone who might need it too. That's the only payment I'm looking for.</p>
       </section>
 
-      <section class="card about-pro">
-        <h3>For mental health providers</h3>
+      <section class="card about-pro" id="about-providers">
+        <h3>For mental health providers<a class="anchor" href="#about-providers" aria-label="Link to this section">#</a></h3>
         <p>If you work with clients and think Bookends could help, please share it. It's free, and there's nothing to sign up for.</p>
         <ul>
           <li><b>Sharing it is easy:</b> send your clients to <b>bookends.day</b>. It works in any browser on a phone or computer. On a phone, they can add it to their Home Screen so it opens like an app.</li>
@@ -939,8 +950,8 @@ function renderAbout(){
         </ul>
       </section>
 
-      <section class="card about-share">
-        <h3>Sharing your check-ins with your provider</h3>
+      <section class="card about-share" id="about-sharing">
+        <h3>Sharing your check-ins with your provider<a class="anchor" href="#about-sharing" aria-label="Link to this section">#</a></h3>
         <p>Your check-ins are private. Nothing is shared unless you decide to share it.</p>
         <ol>
           <li>Go to <b>Settings</b> and find <b>Share with your provider</b>.</li>
@@ -951,8 +962,8 @@ function renderAbout(){
         <p class="small muted">Tip: regular email and text messages aren't very private. If your provider has a secure portal, use that instead. You can also just open <b>History</b> together and walk through a day.</p>
       </section>
 
-      <section class="card about-care">
-        <h3>A quick note</h3>
+      <section class="card about-care" id="about-note">
+        <h3>A quick note<a class="anchor" href="#about-note" aria-label="Link to this section">#</a></h3>
         <p>Bookends is a self-care tool. It's not therapy or medical care. If you're having a hard time, please reach out to a professional or someone you trust. In the US, you can call or text <b>988</b> any time to reach the Suicide &amp; Crisis Lifeline.</p>
       </section>
     </article>`;
@@ -1170,6 +1181,7 @@ function confetti(count){
     const p=all.find(e=>e.key===PREFS_KEY); let lp=null; try{ lp=JSON.parse(localStorage.getItem("ir_prefs")||"null"); }catch(e){}
     S.prefs=normalizePrefs({...(lp||{}), ...((p&&p.prefs)||{})}); }
   catch(e){ S.entries=[]; toast("Couldn't load your entries — check your connection."); }
+  if(/^#about-/.test(location.hash)){ S.view="about"; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v==="about")); }
   render();
-  maybeAutoAffirm();
+  if(S.view==="about") setTimeout(scrollToHash,60); else maybeAutoAffirm();
 })();

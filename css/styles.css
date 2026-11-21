@@ -412,3 +412,15 @@ textarea[readonly]:focus{border-color:var(--line)}
 .about-privacy{--ac:#a0607a}
 .about-care{--ac:var(--accent);border-color:transparent;border-left-color:var(--accent)}
 @media (prefers-color-scheme:dark){.about-name{--ac:#b49ae0}.about-how{--ac:#6cc0cc}.about-privacy{--ac:#d89ab4}.about-share{--ac:#e8907e}}
+
+/* About: jump links + section anchors */
+.about .card{scroll-margin-top:16px}
+.about-toc{display:flex;flex-direction:column;gap:8px;border-left-color:var(--line) !important}
+.toc-links{display:flex;flex-wrap:wrap;gap:6px}
+.toc-links a{font-size:.82rem;text-decoration:none;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+.toc-links a:hover{border-color:var(--accent);color:var(--accent)}
+.about .anchor{margin-left:8px;font-family:"DM Sans",system-ui,sans-serif;font-weight:500;font-size:.85em;color:var(--muted);text-decoration:none;opacity:0;transition:opacity .15s}
+.about h2:hover .anchor,.about h3:hover .anchor,.about .anchor:focus{opacity:1}
+@media(hover:none){.about .anchor{opacity:.5}}
+.about .card.flash{animation:flash 1.2s ease-out}
+@keyframes flash{0%{box-shadow:0 0 0 4px color-mix(in srgb,var(--ac,var(--accent)) 45%,transparent)}100%{box-shadow:var(--shadow)}}
