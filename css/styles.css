@@ -410,8 +410,9 @@ textarea[readonly]:focus{border-color:var(--line)}
 .about-pro{--ac:var(--night)}
 .about-share{--ac:#c0604d}
 .about-privacy{--ac:#a0607a}
+.about-home{--ac:#4a6fb5}
 .about-care{--ac:var(--accent);border-color:transparent;border-left-color:var(--accent)}
-@media (prefers-color-scheme:dark){.about-name{--ac:#b49ae0}.about-how{--ac:#6cc0cc}.about-privacy{--ac:#d89ab4}.about-share{--ac:#e8907e}}
+@media (prefers-color-scheme:dark){.about-name{--ac:#b49ae0}.about-how{--ac:#6cc0cc}.about-privacy{--ac:#d89ab4}.about-share{--ac:#e8907e}.about-home{--ac:#8fa7e0}}
 
 /* About: jump links + section anchors */
 .about .card{scroll-margin-top:16px}
@@ -424,3 +425,8 @@ textarea[readonly]:focus{border-color:var(--line)}
 @media(hover:none){.about .anchor{opacity:.5}}
 .about .card.flash{animation:flash 1.2s ease-out}
 @keyframes flash{0%{box-shadow:0 0 0 4px color-mix(in srgb,var(--ac,var(--accent)) 45%,transparent)}100%{box-shadow:var(--shadow)}}
+.howto{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:6px 0 12px}
+.howto-col{background:var(--bg);border-radius:12px;padding:12px 14px}
+.howto-col h4{margin:0 0 6px;font-size:.92rem}
+.howto-col ol{margin:0;padding-left:20px;font-size:.92rem}
+@media(max-width:560px){.howto{grid-template-columns:1fr}}

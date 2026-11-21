@@ -888,7 +888,7 @@ function renderBadges(){
 
 /* ---------- Data (export / import) ---------- */
 /* ---------- About ---------- */
-const ABOUT_SECTIONS=[["about-why","Why I made this"],["about-name","Why \"Bookends\"?"],["about-how","How it works"],["about-privacy","Your privacy"],["about-free","Free, on purpose"],["about-providers","For providers"],["about-sharing","Sharing with your provider"],["about-note","A quick note"]];
+const ABOUT_SECTIONS=[["about-why","Why I made this"],["about-name","Why \"Bookends\"?"],["about-how","How it works"],["about-homescreen","Home Screen"],["about-privacy","Your privacy"],["about-free","Free, on purpose"],["about-providers","For providers"],["about-sharing","Sharing with your provider"],["about-note","A quick note"]];
 function renderAbout(){
   const privacy = S.store.kind==="cloud"
     ? "Your check-ins are saved to your own private space. Only you can read them. Nobody else who opens this page can see them."
@@ -926,6 +926,32 @@ function renderAbout(){
         <p class="small muted">The eight areas come from <a href="https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness" target="_blank" rel="noopener noreferrer">SAMHSA's Eight Dimensions of Wellness</a>. The affirmations are inspired by guidance from public health and mental health organizations, and each one links to its source.</p>
       </section>
 
+      <section class="card about-home" id="about-homescreen">
+        <h3>Add Bookends to your Home Screen<a class="anchor" href="#about-homescreen" aria-label="Link to this section">#</a></h3>
+        <p>Bookends works great as a Home Screen icon. It opens like an app, without the browser bar, and it's one tap away when it's time to check in.</p>
+        <div class="howto">
+          <div class="howto-col">
+            <h4>📱 iPhone or iPad (Safari)</h4>
+            <ol>
+              <li>Open <b>bookends.day</b> in Safari.</li>
+              <li>Tap the <b>Share</b> button. On iOS 26, tap the <b>•••</b> next to the address bar first, then <b>Share</b>. On older versions, it's the square with an arrow in the toolbar.</li>
+              <li>Scroll down and tap <b>Add to Home Screen</b> (you may need to tap <b>View More</b>).</li>
+              <li>Leave <b>Open as Web App</b> on, then tap <b>Add</b>.</li>
+            </ol>
+          </div>
+          <div class="howto-col">
+            <h4>🤖 Android (Chrome)</h4>
+            <ol>
+              <li>Open <b>bookends.day</b> in Chrome.</li>
+              <li>Tap the <b>⋮</b> menu in the top-right corner.</li>
+              <li>Tap <b>Add to Home screen</b> or <b>Install app</b>.</li>
+              <li>Tap <b>Install</b> (or <b>Add</b>) to confirm.</li>
+            </ol>
+          </div>
+        </div>
+        <p class="small muted"><b>Heads up for iPhone:</b> the Home Screen app keeps its own storage, separate from Safari. If you've already been checking in from Safari, download a backup in <b>Settings</b> first, then restore it in the Home Screen app. Adding Bookends to your Home Screen also keeps Safari from clearing your entries if you haven't visited in a while.</p>
+      </section>
+
       <section class="card about-privacy" id="about-privacy">
         <h3>Your privacy<a class="anchor" href="#about-privacy" aria-label="Link to this section">#</a></h3>
         <p>${privacy}</p>
@@ -942,7 +968,7 @@ function renderAbout(){
         <h3>For mental health providers<a class="anchor" href="#about-providers" aria-label="Link to this section">#</a></h3>
         <p>If you work with clients and think Bookends could help, please share it. It's free, and there's nothing to sign up for.</p>
         <ul>
-          <li><b>Sharing it is easy:</b> send your clients to <b>bookends.day</b>. It works in any browser on a phone or computer. On a phone, they can add it to their Home Screen so it opens like an app.</li>
+          <li><b>Sharing it is easy:</b> send your clients to <b>bookends.day</b>. It works in any browser on a phone or computer. On a phone, they can <a href="#about-homescreen">add it to their Home Screen</a> so it opens like an app.</li>
           <li><b>It fits their routine:</b> clients can set their own morning and evening check-in windows, and choose how affirmations show up (or turn them off), in <b>Settings</b>.</li>
           <li><b>It's private by design:</b> ${S.store.kind==="cloud"?"each person's check-ins are private to them. There's no way for you, or me, to see anyone's entries.":"Bookends doesn't collect or store anyone's check-ins. Entries stay on the client's own device, so there's no account for you to manage and nothing on my end to access."}</li>
           <li><b>Clients choose what to share:</b> they can make a printable summary for you anytime (see below).</li>
