@@ -296,7 +296,7 @@ function getEntry(date,kind){ return S.entries.find(e=>e.date===date && e.kind==
 function avgRating(e){ const v=Object.entries(e.answers).filter(([k])=>k.endsWith("_scale")).map(([,v])=>+v).filter(Boolean); return v.length?(v.reduce((a,b)=>a+b,0)/v.length):null; }
 
 function render(){
-  ({today:renderToday, history:renderHistory, badges:renderBadges, settings:renderSettings})[S.view]();
+  ({today:renderToday, history:renderHistory, badges:renderBadges, settings:renderSettings, about:renderAbout})[S.view]();
   if(S.form) renderForm(); else closeSheet();
 }
 
@@ -647,6 +647,53 @@ function renderBadges(){
 }
 
 /* ---------- Data (export / import) ---------- */
+/* ---------- About ---------- */
+function renderAbout(){
+  const privacy = S.store.kind==="cloud"
+    ? "Your check-ins are saved to your own private space. Only you can read them. Nobody else who opens this page can see them."
+    : "Your check-ins never leave this device. There's no account and no server storing them, so nobody else can read them, including me. That also means if you clear your browser data, they're gone, so use the <b>Data</b> tab to download a backup now and then.";
+  $app.innerHTML = `
+    <article class="about">
+      <section class="card about-hero">
+        <svg class="mark" viewBox="60 50 120 120" aria-hidden="true">
+          <path d="M90 62H70V158H90" fill="none" stroke="var(--morning)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M150 62H170V158H150" fill="none" stroke="var(--night)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M120 80A30 30 0 0 0 120 140Z" fill="var(--morning)"/><path d="M120 80A30 30 0 0 1 120 140Z" fill="var(--night)"/>
+        </svg>
+        <h2>Why I made this</h2>
+        <p>A while back I started doing two short check-ins every day. One in the morning to set an intention, and one at night to look back on how the day actually went. A few quick questions for each part of my life: how I'm feeling, how my body's doing, the people around me, my work, my space, my money, and what gives me purpose.</p>
+        <p>It sounds simple. It helped a lot.</p>
+        <p>I was doing it on paper, and I kept losing track of the sheets. So I built Bookends: the same check-ins, a place to keep them, and a few badges to make showing up feel good. If it helps you even a little, that's a win.</p>
+      </section>
+
+      <section class="card">
+        <h3>Why "Bookends"?</h3>
+        <p>A morning intention and a nightly reflection hold the day between them, like bookends on a shelf. Whatever happens in the middle, you start with purpose and end with honesty.</p>
+      </section>
+
+      <section class="card">
+        <h3>How it works</h3>
+        <ul>
+          <li><b>🌅 Morning intention</b> is open until noon. <b>🌙 Nightly reflection</b> opens after noon.</li>
+          <li>Each check-in walks through the eight areas of wellness, one at a time. Rate each one from 1 to 5 and write as much or as little as you want. Skipping is fine.</li>
+          <li><b>Badges reward showing up, never your ratings.</b> A hard day logged honestly counts just as much as a great one. There's no list to finish.</li>
+          <li><b>Daily affirmations:</b> you get three a day, then a nudge to put the phone down. That's on purpose. The goal is to live your day, not stare at this page.</li>
+        </ul>
+        <p class="small muted">The eight areas come from <a href="https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness" target="_blank" rel="noopener noreferrer">SAMHSA's Eight Dimensions of Wellness</a>. The affirmations are inspired by guidance from public health and mental health organizations, and each one links to its source.</p>
+      </section>
+
+      <section class="card">
+        <h3>Your privacy</h3>
+        <p>${privacy}</p>
+      </section>
+
+      <section class="card about-care">
+        <h3>A quick note</h3>
+        <p>Bookends is a self-care tool. It's not therapy or medical care. If you're having a hard time, please reach out to a professional or someone you trust. In the US, you can call or text <b>988</b> any time to reach the Suicide &amp; Crisis Lifeline.</p>
+      </section>
+    </article>`;
+}
+
 /* ---------- Backup export ---------- */
 const BACKUP_KEY="ir_last_backup";
 const hasData=()=>S.entries.length>0 || Object.keys(S.affLog).length>0;

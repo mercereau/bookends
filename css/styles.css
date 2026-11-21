@@ -202,5 +202,19 @@ body.noscroll{overflow:hidden}
 .aff-in .aff-text,.aff-in .aff-break{animation:fade .5s}
 .note.nudge{margin:14px 0 0;background:var(--accent-soft);color:var(--ink)}
 .note.holiday{margin:14px 0 0;background:var(--morning-soft);color:var(--ink)}
-.aff-src{display:inline-block;margin:-6px 0 14px;font-size:.75rem;color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--line)}
+.aff-src{display:block;width:fit-content;margin:-6px auto 14px;font-size:.75rem;color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--line)}
 .aff-src:hover{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ---------- About ---------- */
+.about{display:grid;gap:14px}
+.about h2{font-size:1.4rem;margin:6px 0 10px}
+.about h3{font-size:1.1rem;margin-bottom:8px}
+.about p{margin:0 0 10px;line-height:1.65}
+.about p:last-child{margin-bottom:0}
+.about ul{margin:0 0 12px;padding-left:20px;line-height:1.65}
+.about li{margin-bottom:6px}
+.about a{color:var(--accent)}
+.about-hero{text-align:left}
+.about-hero .mark{width:54px;height:54px;display:block}
+.about-care{background:var(--accent-soft);border-color:transparent}
+@media(max-width:560px){nav.tabs button{padding:8px 4px;font-size:.88rem}}
