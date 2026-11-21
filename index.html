@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Intentions & Reflections</title>
+<title>Bookends · Morning Intentions & Nightly Reflections</title>
+<meta name="description" content="Bookends: morning intentions and nightly reflections, one wellness check-in at a time.">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -34,7 +35,9 @@ h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:600;margin:0;letter-spac
 button{font:inherit;color:inherit;cursor:pointer}
 .wrap{max-width:780px;margin:0 auto;padding:20px 16px 80px}
 header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
-header.top h1{font-size:1.5rem}
+header.top h1{font-size:1.6rem}
+.brand{display:flex;align-items:center;gap:12px}
+.brand .mark{width:46px;height:46px;flex:none}
 header.top .sub{color:var(--muted);font-size:.9rem}
 nav.tabs{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px;margin-bottom:20px;box-shadow:var(--shadow)}
 nav.tabs button{flex:1;border:0;background:none;padding:8px 10px;border-radius:999px;font-weight:500;color:var(--muted)}
@@ -163,9 +166,16 @@ footer.help{margin-top:40px;font-size:.8rem;color:var(--muted);text-align:center
 <canvas id="confetti"></canvas>
 <div class="wrap">
   <header class="top">
-    <div>
-      <h1>Intentions &amp; Reflections</h1>
+    <div class="brand">
+      <svg class="mark" viewBox="60 50 120 120" role="img" aria-label="Bookends logo">
+        <path d="M90 62H70V158H90" fill="none" stroke="var(--morning)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M150 62H170V158H150" fill="none" stroke="var(--night)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M120 80A30 30 0 0 0 120 140Z" fill="var(--morning)"/><path d="M120 80A30 30 0 0 1 120 140Z" fill="var(--night)"/>
+      </svg>
+      <div>
+      <h1>Bookends</h1>
       <div class="sub" id="greeting">Wellness check-ins, morning and night</div>
+      </div>
     </div>
   </header>
   <nav class="tabs" id="tabs">
