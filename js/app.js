@@ -286,7 +286,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { affLog:{}, prefs:{affMode:"popup"}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { affLog:{}, prefs:{affMode:"popup",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function setView(v){ S.view=v; S.form=null; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v)); render(); window.scrollTo(0,0); }
@@ -302,7 +302,7 @@ function render(){
 
 function renderToday(){
   const t=today(), s=computeStats(S.entries), m=getEntry(t,"morning"), n=getEntry(t,"night");
-  const h=new Date().getHours(), morningOpen=h<CUTOFF_HOUR;
+  const h=new Date().getHours(), morningOpen=isOpen("morning",h), nightOpen=isOpen("night",h);
   document.getElementById("greeting").textContent = h<12?"Good morning. What's your intention today?": h<18?"Good afternoon. Checking in with yourself?":"Good evening. Time to reflect on the day.";
   const earned=earnedBadges(S.entries);
   const days=[...Array(7)].map((_,i)=>addDays(t,i-6));
@@ -317,8 +317,8 @@ function renderToday(){
     ${visitNudgeHTML()}
     ${S.prefs.affMode==="embedded"?affirmCardHTML():affEntryHTML()}
     <div class="grid checkins">
-      ${ciCard("morning",m,morningOpen,"Set the tone for your day","Start check-in →",`Morning window closed at ${hourLabel(CUTOFF_HOUR)}`)}
-      ${ciCard("night",n,!morningOpen,"Look back on how today went","Start reflection →",`Opens at ${hourLabel(CUTOFF_HOUR)}`)}
+      ${ciCard("morning",m,morningOpen,"Set the tone for your day","Start check-in →",closedMsg("morning"))}
+      ${ciCard("night",n,nightOpen,"Look back on how today went","Start reflection →",closedMsg("night"))}
     </div>
     <div class="card" style="margin-top:14px">
       <div class="small muted">Last 7 days</div>
@@ -336,10 +336,24 @@ function renderToday(){
   if(S.prefs.affMode==="embedded") bindAffirm();
   const qb=document.getElementById("quickBackup"); if(qb) qb.onclick=downloadBackup;
 }
-/* Time windows: midnight–noon = morning only, noon–midnight = night only.
-   Change CUTOFF_HOUR to move the switch-over (24h clock). */
-const CUTOFF_HOUR = 12;
-const hourLabel=h=>new Date(2000,0,1,h).toLocaleTimeString(undefined,{hour:"numeric"});
+/* Time windows (each person can change these in Settings):
+   morning intention: midnight until prefs.morningEnd · nightly reflection: prefs.nightStart until midnight. 24h clock. */
+/* Each check-in has its own window: start ≤ hour < end, 1–8 hours long, no overlap, ending by midnight (24). */
+const WIN_MIN = 1, WIN_MAX = 8;
+function win(kind){ const P=S.prefs; return kind==="morning" ? [P.morningStart,P.morningEnd] : [P.nightStart,P.nightEnd]; }
+function isOpen(kind,h=new Date().getHours()){ const [a,b]=win(kind); return h>=a && h<b; }
+function closedMsg(kind,h=new Date().getHours()){
+  const [a,b]=win(kind); return h<a ? `Opens at ${hourLabel(a)}` : `Closed at ${hourLabel(b)} · back tomorrow`;
+}
+function fixWindows(p){ // keep every window valid: 1–8 hours, morning before night, night ends by midnight
+  const cl=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
+  p.morningStart=cl(p.morningStart,0,22);
+  p.morningEnd=cl(p.morningEnd,p.morningStart+WIN_MIN,Math.min(p.morningStart+WIN_MAX,23));
+  p.nightStart=cl(p.nightStart,p.morningEnd,23);
+  p.nightEnd=cl(p.nightEnd,p.nightStart+WIN_MIN,Math.min(p.nightStart+WIN_MAX,24));
+  return p;
+}
+const hourLabel=h=>h===12?"noon":h%24===0&&h?"midnight":new Date(2000,0,1,h).toLocaleTimeString(undefined,{hour:"numeric"});
 function ciCard(kind,entry,open,blurb,cta,closedMsg){
   const F=FORMS[kind];
   if(entry) return `<button class="card ci ${kind} done ${open?"":"past"}" data-open="${kind}">
@@ -349,14 +363,15 @@ function ciCard(kind,entry,open,blurb,cta,closedMsg){
   return `<button class="card ci ${kind} ${open?"":"closed"}" data-open="${kind}" ${open?"":"disabled aria-disabled=\"true\""}>
       <span class="ico">${F.icon}</span><h3>${F.title}</h3>
       <span class="st">${open?blurb:closedMsg}</span>
-      <span class="go">${open?cta:"🔒 Not available now"}</span></button>`;
+      ${open?`<span class="go">${cta}</span>`:""}</button>`;
 }
 // Re-render Today when the clock crosses midnight or the cutoff
 let flipTimer=null;
 function scheduleWindowFlip(){
   clearTimeout(flipTimer);
   const now=new Date(), next=new Date(now);
-  if(now.getHours()<CUTOFF_HOUR) next.setHours(CUTOFF_HOUR,0,5,0); else { next.setDate(next.getDate()+1); next.setHours(0,0,5,0); }
+  const h=now.getHours(), b=[...win("morning"),...win("night")].filter(x=>x>h&&x<24).sort((a,c)=>a-c)[0];
+  if(b!==undefined) next.setHours(b,0,5,0); else { next.setDate(next.getDate()+1); next.setHours(0,0,5,0); }
   flipTimer=setTimeout(()=>{ if(!S.form && S.view==="today") render(); }, next-now);
 }
 function holidayBannerHTML(earned){
@@ -517,12 +532,14 @@ function maybeAutoAffirm(){ // once per day, on the first visit, unless turned o
 
 /* ---------- Preferences (kept with the user's data; synced on the Claude-hosted copy) ---------- */
 const PREFS_KEY="meta_prefs";
-const DEFAULT_PREFS={affMode:"popup"};
+const DEFAULT_PREFS={affMode:"popup", morningStart:5, morningEnd:12, nightStart:17, nightEnd:24};
 const AFF_MODES=["off","embedded","popup"];
 function normalizePrefs(p){ // also upgrades the earlier on/off switches
   const out={...DEFAULT_PREFS, ...p};
   if(!AFF_MODES.includes(out.affMode)) out.affMode = p.affEnabled===false ? "off" : "popup";
   if(!("affMode" in p) && p.affEnabled===false) out.affMode="off";
+  for(const k of ["morningStart","morningEnd","nightStart","nightEnd"]) out[k]=Number.isInteger(+out[k])?+out[k]:DEFAULT_PREFS[k];
+  fixWindows(out);
   delete out.affEnabled; delete out.affAuto; return out;
 }
 function savePrefs(){
@@ -698,8 +715,8 @@ function dayPicker(d){
     <div style="cursor:pointer" data-k="night"><span class="em">🌙</span><span><b>Nightly Reflection</b><br><span class="small muted">${n?"Logged — tap to view":"Not logged — tap to add"}</span></span></div>
   </div><button class="btn ghost" data-close>Close</button>`, el=>{
     el.querySelectorAll("[data-k]").forEach(x=>{
-      const k=x.dataset.k, locked = d===today() && !getEntry(d,k) && ((k==="morning") !== (new Date().getHours()<CUTOFF_HOUR));
-      if(locked){ x.style.opacity=.45; x.style.cursor="not-allowed"; x.querySelector(".small").textContent = k==="morning"?`Closed after ${hourLabel(CUTOFF_HOUR)}`:`Opens at ${hourLabel(CUTOFF_HOUR)}`; return; }
+      const k=x.dataset.k, locked = d===today() && !getEntry(d,k) && !isOpen(k);
+      if(locked){ x.style.opacity=.45; x.style.cursor="not-allowed"; x.querySelector(".small").textContent = closedMsg(k); return; }
       x.onclick=()=>{closeModal(); openForm(k,d);};
     });
   });
@@ -749,7 +766,7 @@ function renderAbout(){
       <section class="card">
         <h3>How it works</h3>
         <ul>
-          <li><b>🌅 Morning intention</b> is open until noon. <b>🌙 Nightly reflection</b> opens after noon.</li>
+          <li><b>🌅 Morning intention</b> is open from ${hourLabel(win("morning")[0])} to ${hourLabel(win("morning")[1])}. <b>🌙 Nightly reflection</b> is open from ${hourLabel(win("night")[0])} to ${hourLabel(win("night")[1])}. You can change both windows in <b>Settings</b>.</li>
           <li>Each check-in walks through the eight areas of wellness, one at a time. Rate each one from 1 to 5 and write as much or as little as you want. Skipping is fine.</li>
           <li><b>Badges reward showing up, never your ratings.</b> A hard day logged honestly counts just as much as a great one. There's no list to finish.</li>
           <li><b>Daily affirmations:</b> you get three a day, then a nudge to put the phone down. That's on purpose. The goal is to live your day, not stare at this page. Choose how they show up, or turn them off, in <b>Settings</b>.</li>
@@ -799,12 +816,22 @@ async function downloadBackup(){
     setTimeout(()=>URL.revokeObjectURL(url),2000); done();
   }catch(e){ toast("Download isn't available here — use Copy JSON instead."); }
 }
+const hourOptions=(lo,hi,sel)=>{ let o=""; for(let h=lo;h<=hi;h++) o+=`<option value="${h}" ${h===sel?"selected":""}>${h===24?"Midnight":h===12?"Noon":hourLabel(h)}</option>`; return o; };
 function renderSettings(){
   const P=S.prefs;
   $app.innerHTML = `
     <div class="card">
       <h2 style="font-size:1.15rem">Preferences</h2>
-      <div class="pref-label"><b>Daily affirmations</b><span class="small muted">Choose how they show up.</span></div>
+      <div class="pref-label"><b>Check-in windows</b><span class="small muted">When each check-in is open. Each window can be 1 to 8 hours.</span></div>
+      <div class="times">
+        <div class="time-row"><span>🌅 Morning intention</span>
+          <span class="range"><select id="pMS" aria-label="Morning opens">${hourOptions(0,22,P.morningStart)}</select><span class="muted">to</span>
+          <select id="pME" aria-label="Morning closes">${hourOptions(P.morningStart+1,Math.min(P.morningStart+8,23),P.morningEnd)}</select></span></div>
+        <div class="time-row"><span>🌙 Nightly reflection</span>
+          <span class="range"><select id="pNS" aria-label="Night opens">${hourOptions(P.morningEnd,23,P.nightStart)}</select><span class="muted">to</span>
+          <select id="pNE" aria-label="Night closes">${hourOptions(P.nightStart+1,Math.min(P.nightStart+8,24),P.nightEnd)}</select></span></div>
+      </div>
+      <div class="pref-label" style="margin-top:18px"><b>Daily affirmations</b><span class="small muted">Choose how they show up.</span></div>
       <div class="choices" role="radiogroup" aria-label="Daily affirmations">
         ${[["off","🚫","Off","No affirmations."],["embedded","📌","On the Today screen","Shown right on the main page."],["popup","🌤️","Pop-up","Opens once a day on your first visit. A small row on the Today screen reopens it."]]
           .map(([v,ic,t,d])=>`<label class="choice ${P.affMode===v?"on":""}"><input type="radio" name="affMode" value="${v}" ${P.affMode===v?"checked":""}><span class="c-ic">${ic}</span><span class="c-t"><b>${t}</b><span class="small muted">${d}</span></span></label>`).join("")}
@@ -838,6 +865,12 @@ function renderSettings(){
     try{ await affSaving; await S.store.remove(AFF_META_KEY); S.affLog={}; }catch(err){}
     toast(S.entries.length?`Deleted ${n}; some couldn't be removed — try again.`:"All entries deleted"); render();
   });
+  const setWin=(key,kind)=>e=>{ S.prefs[key]=+e.target.value; fixWindows(S.prefs); savePrefs(); render();
+    const [a,b]=win(kind); toast(`${kind==="morning"?"Morning intention":"Nightly reflection"}: ${hourLabel(a)} to ${hourLabel(b)}`); };
+  document.getElementById("pMS").onchange=setWin("morningStart","morning");
+  document.getElementById("pME").onchange=setWin("morningEnd","morning");
+  document.getElementById("pNS").onchange=setWin("nightStart","night");
+  document.getElementById("pNE").onchange=setWin("nightEnd","night");
   document.querySelectorAll('input[name="affMode"]').forEach(r=>r.onchange=()=>{
     S.prefs.affMode=r.value; savePrefs(); render();
     toast({off:"Daily affirmations turned off",embedded:"Affirmations will show on the Today screen",popup:"Affirmations will pop up once a day"}[r.value]);

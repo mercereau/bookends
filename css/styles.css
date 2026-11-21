@@ -250,3 +250,10 @@ body.noscroll{overflow:hidden}
 .choice input{accent-color:var(--accent);width:18px;height:18px;margin:0;flex:none}
 .choice .c-ic{font-size:1.3rem}
 .choice .c-t{display:flex;flex-direction:column}
+.times{display:grid;gap:8px}
+.time-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1.5px solid var(--line);border-radius:14px;background:var(--bg)}
+.time-row select{font:inherit;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:6px 10px;cursor:pointer}
+.time-row select:focus{outline:none;border-color:var(--accent)}
+.time-row .range{display:flex;align-items:center;gap:8px}
+@media(max-width:560px){.time-row{flex-direction:column;align-items:flex-start}}
+.time-row select{min-width:112px}
