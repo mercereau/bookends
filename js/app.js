@@ -19,9 +19,9 @@ const DIMENSIONS = {
 /* Color-blind friendly palette (based on Okabe & Ito), used when the Settings preference is on.
    Icons and labels always carry the meaning too, so color is never the only cue. */
 const DIM_COLORS_STD = Object.fromEntries(Object.entries(DIMENSIONS).map(([k,d])=>[k,d.color]));
-const DIM_COLORS_CVD = {
-  emotional:"#b5578e", physical:"#c2530a", spiritual:"#6e6e9e", social:"#2b8cc4", intellectual:"#0072b2",
-  occupational:"#9a7600", environmental:"#00785a", financial:"#c77800", community:"#8a5a9e", closing:"#a87d00",
+const DIM_COLORS_CVD = {  // chosen so every pair stays distinct under typical vision, deuteranopia, protanopia and tritanopia
+  emotional:"#992288", physical:"#993300", spiritual:"#8811cc", social:"#5588cc", intellectual:"#1122ff",
+  occupational:"#997744", environmental:"#006655", financial:"#bb7722", community:"#dd3388", closing:"#a87d00",
 };
 function applyColorMode(mode){
   const cvd = mode==="cvd";
@@ -341,7 +341,7 @@ function renderToday(){
       <div class="card stat streak"><div class="n">${s.current}🔥</div><div class="l">day streak</div></div>
       <div class="card stat"><div class="n">${s.longest}</div><div class="l">longest<span class="hide-sm"> streak</span></div></div>
       <div class="card stat"><div class="n">${s.total}</div><div class="l">check-ins</div></div>
-      <button class="card stat stat-link" id="toBadges" aria-label="See your badges"><div class="n">${Object.keys(earned).length}🏅</div><div class="l">${Object.keys(earned).length===1?"badge":"badges"}<span class="hide-sm"> earned</span> <span class="go-arrow">→</span></div></button>
+      <button class="card stat stat-link" id="toBadges"><div class="n">${Object.keys(earned).length}🏅</div><div class="l">${Object.keys(earned).length===1?"badge":"badges"}<span class="hide-sm"> earned</span> <span class="go-arrow">→</span></div></button>
     </div>
     ${holidayBannerHTML(earned)}
     ${visitNudgeHTML()}
@@ -387,11 +387,11 @@ const hourLabel=h=>h===12?"noon":h%24===0&&h?"midnight":new Date(2000,0,1,h).toL
 function ciCard(kind,entry,open,blurb,cta,closedMsg){
   const F=FORMS[kind];
   if(entry) return `<button class="card ci ${kind} done ${open?"":"past"}" data-open="${kind}">
-      <span class="ico">${F.icon}</span><h3>${F.title}</h3>
+      <span class="ico">${F.icon}</span><span class="ci-title">${F.title}</span>
       <span class="st">Logged · avg ${avgRating(entry)?.toFixed(1)??"–"}/5</span>
       <span class="go">${open?"Review / edit →":"Review →"}</span></button>`;
   return `<button class="card ci ${kind} ${open?"":"closed"}" data-open="${kind}" ${open?"":"disabled aria-disabled=\"true\""}>
-      <span class="ico">${F.icon}</span><h3>${F.title}</h3>
+      <span class="ico">${F.icon}</span><span class="ci-title">${F.title}</span>
       <span class="st">${open?blurb:closedMsg}</span>
       ${open?`<span class="go">${cta}</span>`:""}</button>`;
 }
@@ -488,7 +488,7 @@ function affirmCardHTML(){
       : `<i></i>`).join("");
   const nav = n>1
     ? `<span class="aff-nav"><button class="aff-arrow" data-step="-1" ${idx===0?"disabled":""} aria-label="Previous affirmation">‹</button><span class="aff-dots">${dots}</span><button class="aff-arrow" data-step="1" ${idx===n-1?"disabled":""} aria-label="Next affirmation">›</button></span>`
-    : `<span class="aff-dots" aria-label="${n} of ${lim} today">${dots}</span>`;
+    : `<span class="aff-dots" role="img" aria-label="${n} of ${lim} today">${dots}</span>`;
   const foot=`<div class="aff-foot">${nav}<span>${n} of ${lim} today · ${st.visits} visit${st.visits===1?"":"s"} today${(()=>{const c=affStats(today()).affCurrent;return c>1?` · ☀️ ${c}-day reading streak`:"";})()}</span></div>`;
   if(n===0) return `<section class="card aff" id="aff">
       <div class="aff-label">🌤️ Today's affirmation</div>
@@ -582,10 +582,10 @@ function openAffSheet(autoReveal){
   closeAffSheet(true);
   affBg=document.createElement("div"); affBg.className="sheet-bg aff-bg";
   affBg.innerHTML=`<div class="sheet aff-sheet" role="dialog" aria-modal="true" aria-labelledby="aff-title">
-      <header class="sheet-head"><div class="sheet-title"><span class="sheet-ico">🌤️</span><div><h2 id="aff-title">Today's affirmation</h2></div></div>
-        <button class="xbtn" id="affClose" aria-label="Close">✕</button></header>
+      <div class="sheet-head"><div class="sheet-title"><span class="sheet-ico">🌤️</span><div><h2 id="aff-title">Today's affirmation</h2></div></div>
+        <button class="xbtn" id="affClose" aria-label="Close">✕</button></div>
       <div class="sheet-body">${affirmCardHTML()}</div>
-      <footer class="sheet-foot"><span class="small muted" style="margin-right:auto">Pops up once a day. <button class="linkbtn" id="affPrefs">Change</button></span><button class="btn" id="affDone">Close</button></footer>
+      <div class="sheet-foot"><span class="small muted" style="margin-right:auto">Pops up once a day. <button class="linkbtn" id="affPrefs">Change</button></span><button class="btn" id="affDone">Close</button></div>
     </div>`;
   affBg.addEventListener("mousedown",e=>{ if(e.target===affBg) closeAffSheet(); });
   document.body.appendChild(affBg); document.body.classList.add("noscroll");
@@ -682,7 +682,7 @@ function ideasHTML(F,pid){
   const val=F.answers[pid]||"";
   return `<div class="ideas" data-for="${pid}"><span class="ideas-label">Ideas</span>${shown.map(t=>{ const on=val.includes(t);
     return `<button type="button" class="idea ${on?"on":""}" data-t="${esc(t)}" aria-pressed="${on}">${on?"✓":"+"} ${esc(t)}</button>`; }).join("")}
-    <button type="button" class="idea-more" data-more="${pid}" aria-label="Show different ideas">↻ More</button></div>`;
+    <button type="button" class="idea-more" data-more="${pid}" aria-label="More ideas">↻ More</button></div>`;
 }
 function addIdea(F,v,t){
   v=v.replace(/\s+$/,""); if(!v) return t;
@@ -726,14 +726,14 @@ function renderForm(){
   const last=F.step===N-1, $s=sheetEl();
   $s.className=`sheet ${F.kind}`;
   $s.innerHTML = `
-    <header class="sheet-head">
+    <div class="sheet-head">
       <div class="sheet-title"><span class="sheet-ico">${def.icon}</span>
         <div><h2 id="sheet-title">${def.title}</h2>
         <span class="sheet-date">${F.date===today()?"Today · ":""}${fmtDate(F.date)}${F.readOnly?` · <span class="ro-tag">🔒 Read only</span>`:""}</span></div></div>
       <button class="xbtn" id="back" aria-label="Close">✕</button>
-    </header>
-    <div class="steps" role="tablist">${def.sections.map((x,i)=>{const XD=DIMENSIONS[x.dim]; const done=sectionIds(x).some(id=>hasVal(F.answers[id]));
-      return `<button class="stepdot ${i===F.step?"cur":""} ${done?"done":""}" style="--dc:${XD.color}" data-step="${i}" title="${XD.label}" aria-label="${XD.label}">${XD.icon}</button>`;}).join("")}</div>
+    </div>
+    <div class="steps" role="group" aria-label="Steps">${def.sections.map((x,i)=>{const XD=DIMENSIONS[x.dim]; const done=sectionIds(x).some(id=>hasVal(F.answers[id]));
+      return `<button class="stepdot ${i===F.step?"cur":""} ${done?"done":""}" style="--dc:${XD.color}" data-step="${i}" title="${XD.label}" aria-label="${XD.label}${done?", answered":""}" ${i===F.step?'aria-current="step"':""}>${XD.icon}</button>`;}).join("")}</div>
     <div class="sheet-body">
       <div class="stepcount">Step ${F.step+1} of ${N}</div>
       <section class="dim step-in ${F.dir==="back"?"from-left":""}" style="--dc:${D.color}">
@@ -751,14 +751,15 @@ function renderForm(){
       </section>
       ${F.existing&&!last&&!F.readOnly?`<div style="text-align:right;margin-top:10px"><button class="linkbtn" id="savenow">Save changes now</button></div>`:""}
     </div>
-    <footer class="sheet-foot">
+    <div class="sheet-foot">
       ${F.existing&&last&&!F.readOnly?`<button class="btn danger" id="del" style="margin-right:auto">Delete</button>`:""}
       <button class="btn ghost" id="prev" ${F.step===0?"disabled":""}>← Back</button>
       ${last
         ?(F.readOnly?`<button class="btn" id="roClose">Close</button>`:`<button class="btn" id="save">${F.existing?"Save changes":"Complete ✓"}</button>`)
         :`<button class="btn" id="next">Next: ${DIMENSIONS[def.sections[F.step+1].dim].label} →</button>`}
-    </footer>`;
+    </div>`;
   $s.querySelector(".sheet-body").scrollTop=0;
+  if(!$s.contains(document.activeElement)) setTimeout(()=>{ if(sheetBg && !$s.contains(document.activeElement)) $s.focus({preventScroll:true}); },0);
   const rc=$s.querySelector("#roClose"); if(rc) rc.onclick=()=>{ S.form=null; render(); };
   const refreshDot=()=>{ if(F.readOnly) return; F.dirty=true; const dot=$s.querySelector(`.stepdot[data-step="${F.step}"]`); dot.classList.toggle("done",sectionIds(sec).some(id=>hasVal(F.answers[id]))); };
   $s.querySelectorAll(".scale").forEach(el=>el.onclick=e=>{
@@ -991,11 +992,11 @@ function openDaySheet(d){
   }).join("");
   dayBg=document.createElement("div"); dayBg.className="sheet-bg day-bg";
   dayBg.innerHTML=`<div class="sheet day-sheet" role="dialog" aria-modal="true" aria-labelledby="day-title">
-      <header class="sheet-head"><div class="sheet-title"><span class="sheet-ico">📖</span><div><h2 id="day-title">${isToday?"Today":fmtDate(d)}</h2>
+      <div class="sheet-head"><div class="sheet-title"><span class="sheet-ico">📖</span><div><h2 id="day-title">${isToday?"Today":fmtDate(d)}</h2>
         <span class="sheet-date">${isToday?fmtDate(d):(m&&n?"Morning and night":m?"Morning intention":n?"Nightly reflection":"No check-ins")}</span></div></div>
-        <button class="xbtn" id="dayClose" aria-label="Close">✕</button></header>
+        <button class="xbtn" id="dayClose" aria-label="Close">✕</button></div>
       <div class="sheet-body">${body}</div>
-      <footer class="sheet-foot">${btns}<button class="btn ${btns?"ghost":""}" id="dayDone">Close</button></footer></div>`;
+      <div class="sheet-foot">${btns}<button class="btn ${btns?"ghost":""}" id="dayDone">Close</button></div></div>`;
   dayBg.addEventListener("mousedown",e=>{ if(e.target===dayBg) closeDaySheet(); });
   document.body.appendChild(dayBg); document.body.classList.add("noscroll");
   dayBg.querySelector("#dayClose").onclick=dayBg.querySelector("#dayDone").onclick=closeDaySheet;
@@ -1023,7 +1024,7 @@ function renderBadges(){
       <div><h2 style="font-size:1.2rem">${n?`You've earned ${n} ${n===1?"badge":"badges"}`:"Your badges will show up here"}</h2>
       <div class="small muted">${n?"Every one of these is a time you showed up for yourself. ":""}Badges reward showing up, never your ratings. A hard day logged honestly counts just as much.</div></div>
     </div>
-    ${n?`<div class="grid badges" style="margin-top:14px">${got.map(b=>`<div class="card badge ${S.focusBadge===b.id?"focus":""}" id="badge-${esc(b.id)}"><div class="em">${b.em}</div><h4>${b.name}</h4><p>${b.desc}</p><p class="when">Earned ${fmtDate(earned[b.id])}</p></div>`).join("")}</div>
+    ${n?`<div class="grid badges" style="margin-top:14px">${got.map(b=>`<div class="card badge ${S.focusBadge===b.id?"focus":""}" id="badge-${esc(b.id)}"><div class="em">${b.em}</div><h3>${b.name}</h3><p>${b.desc}</p><p class="when">Earned ${fmtDate(earned[b.id])}</p></div>`).join("")}</div>
       <p class="small muted" style="text-align:center;margin-top:18px">More badges appear as you keep checking in. There's no list to finish.</p>`
     :`<div class="card muted" style="margin-top:14px;text-align:center">Your first badge is one check-in or affirmation away.</div>`}`;
   focusBadgeAfterRender();
@@ -1041,7 +1042,7 @@ function renderAbout(){
       <nav class="card about-toc" aria-label="On this page"><span class="small muted">On this page</span>
         <div class="toc-links">${ABOUT_SECTIONS.map(([id,t])=>`<a href="#${id}">${t}</a>`).join("")}</div></nav>
       <section class="card about-care" id="about-note">
-        <h3>A quick note<a class="anchor" href="#about-note" aria-label="Link to this section">#</a></h3>
+        <h2 class="sec">A quick note<a class="anchor" href="#about-note" aria-label="Link to this section">#</a></h2>
         <p>Bookends is a self-care tool. It's not therapy or medical care. If you're having a hard time, please reach out to a professional or someone you trust. In the US, you can call or text <b>988</b> any time to reach the Suicide &amp; Crisis Lifeline.</p>
       </section>
       <section class="card about-hero" id="about-why">
@@ -1057,12 +1058,12 @@ function renderAbout(){
       </section>
 
       <section class="card about-name" id="about-name">
-        <h3>Why "Bookends"?<a class="anchor" href="#about-name" aria-label="Link to this section">#</a></h3>
+        <h2 class="sec">Why "Bookends"?<a class="anchor" href="#about-name" aria-label="Link to this section">#</a></h2>
         <p>A morning intention and a nightly reflection hold the day between them, like bookends on a shelf. Whatever happens in the middle, you start with purpose and end with honesty.</p>
       </section>
 
       <section class="card about-how" id="about-how">
-        <h3>How it works<a class="anchor" href="#about-how" aria-label="Link to this section">#</a></h3>
+        <h2 class="sec">How it works<a class="anchor" href="#about-how" aria-label="Link to this section">#</a></h2>
         <ul>
           <li><b>🌅 Morning intention</b> is open from ${hourLabel(win("morning")[0])} to ${hourLabel(win("morning")[1])}. <b>🌙 Nightly reflection</b> is open from ${hourLabel(win("night")[0])} to ${hourLabel(win("night")[1])}. You can change both windows in <b>Settings</b>.</li>
           <li>Each check-in walks through the eight areas of wellness, one at a time. Rate each one from 1 to 5 and write as much or as little as you want. Skipping is fine.</li>
@@ -1074,11 +1075,11 @@ function renderAbout(){
       </section>
 
       <section class="card about-home" id="about-homescreen">
-        <h3>Add Bookends to your Home Screen<a class="anchor" href="#about-homescreen" aria-label="Link to this section">#</a></h3>
+        <h2 class="sec">Add Bookends to your Home Screen<a class="anchor" href="#about-homescreen" aria-label="Link to this section">#</a></h2>
         <p>Bookends works great as a Home Screen icon. It opens like an app, without the browser bar, and it's one tap away when it's time to check in.</p>
         <div class="howto">
           <div class="howto-col">
-            <h4>📱 iPhone or iPad (Safari)</h4>
+            <h3>📱 iPhone or iPad (Safari)</h3>
             <ol>
               <li>Open <b>bookends.day</b> in Safari.</li>
               <li>Tap the <b>Share</b> button. On iOS 26, tap the <b>•••</b> next to the address bar first, then <b>Share</b>. On older versions, it's the square with an arrow in the toolbar.</li>
@@ -1087,7 +1088,7 @@ function renderAbout(){
             </ol>
           </div>
           <div class="howto-col">
-            <h4>🤖 Android (Chrome)</h4>
+            <h3>🤖 Android (Chrome)</h3>
             <ol>
               <li>Open <b>bookends.day</b> in Chrome.</li>
               <li>Tap the <b>⋮</b> menu in the top-right corner.</li>
@@ -1101,19 +1102,19 @@ function renderAbout(){
       </section>
 
       <section class="card about-privacy" id="about-privacy">
-        <h3>Your privacy<a class="anchor" href="#about-privacy" aria-label="Link to this section">#</a></h3>
+        <h2 class="sec">Your privacy<a class="anchor" href="#about-privacy" aria-label="Link to this section">#</a></h2>
         <p>${privacy}</p>
       </section>
 
       <section class="card about-free" id="about-free">
-        <h3>Free, on purpose<a class="anchor" href="#about-free" aria-label="Link to this section">#</a></h3>
+        <h2 class="sec">Free, on purpose<a class="anchor" href="#about-free" aria-label="Link to this section">#</a></h2>
         <p>Bookends is free. No ads, no premium tier, and nothing to sell you.</p>
         <p>The check-ins that helped me were simple: a sheet of paper and a few good questions that someone took the time to share. That kind of help shouldn't come with a price tag. Hard stretches often come with tight budgets, and reaching for support is already hard enough without a paywall in the way.</p>
         <p>So it's free, and it's going to stay that way. If it helps you, pass it on to someone who might need it too. That's the only payment I'm looking for.</p>
       </section>
 
       <section class="card about-pro" id="about-providers">
-        <h3>For mental health providers<a class="anchor" href="#about-providers" aria-label="Link to this section">#</a></h3>
+        <h2 class="sec">For mental health providers<a class="anchor" href="#about-providers" aria-label="Link to this section">#</a></h2>
         <p>If you work with clients and think Bookends could help, please share it. It's free, and there's nothing to sign up for.</p>
         <ul>
           <li><b>Sharing it is easy:</b> send your clients to <b>bookends.day</b>. It works in any browser on a phone or computer. On a phone, they can <a href="#about-homescreen">add it to their Home Screen</a> so it opens like an app.</li>
@@ -1125,7 +1126,7 @@ function renderAbout(){
       </section>
 
       <section class="card about-share" id="about-sharing">
-        <h3>Sharing your check-ins with your provider<a class="anchor" href="#about-sharing" aria-label="Link to this section">#</a></h3>
+        <h2 class="sec">Sharing your check-ins with your provider<a class="anchor" href="#about-sharing" aria-label="Link to this section">#</a></h2>
         <p>Your check-ins are private. Nothing is shared unless you decide to share it.</p>
         <ol>
           <li>Go to <b>Settings</b> and find <b>Share with your provider</b>.</li>
@@ -1137,7 +1138,7 @@ function renderAbout(){
       </section>
 
       <section class="card about-source" id="about-source">
-        <h3>Open source<a class="anchor" href="#about-source" aria-label="Link to this section">#</a></h3>
+        <h2 class="sec">Open source<a class="anchor" href="#about-source" aria-label="Link to this section">#</a></h2>
         <p>Bookends is open source. You can read every line of code, see exactly how your entries are stored, or suggest an idea or report a bug.</p>
         <p><a class="btn ghost src-link" href="https://github.com/mercereau/bookends" target="_blank" rel="noopener">View Bookends on GitHub ↗</a></p>
       </section>
@@ -1417,9 +1418,49 @@ function renderSettings(){
   };
 }
 
+/* ---------- Dialog focus: move focus into any pop-up that opens, keep Tab inside it, Esc closes it, and focus returns afterwards ---------- */
+(function(){
+  let returnTo=null, returnSel=null;
+  const selFor=el=>!el||el===document.body?null:el.id?"#"+CSS.escape(el.id):el.dataset?.open?`[data-open="${el.dataset.open}"]`:el.dataset?.v?`#tabs [data-v="${el.dataset.v}"]`:null;
+  const isDlgBg=n=>n.nodeType===1 && (n.classList.contains("modal-bg")||n.classList.contains("sheet-bg"));
+  const topDialog=()=>{ const ds=[...document.querySelectorAll(".sheet-bg:not(.closing) .sheet, .modal-bg .modal")]; return ds[ds.length-1]||null; };
+  new MutationObserver(muts=>{
+    for(const m of muts){
+      m.addedNodes.forEach(n=>{ if(!isDlgBg(n)) return;
+        if(document.querySelectorAll(".sheet-bg,.modal-bg").length===1){ returnTo=document.activeElement; returnSel=selFor(returnTo); }
+        const d=n.querySelector(".sheet,.modal"); if(!d) return;
+        d.setAttribute("tabindex","-1"); if(!d.getAttribute("role")) d.setAttribute("role","dialog"); d.setAttribute("aria-modal","true");
+        setTimeout(()=>{ if(!d.contains(document.activeElement)) d.focus({preventScroll:true}); },30);
+      });
+      m.removedNodes.forEach(n=>{ if(!isDlgBg(n)) return;
+        const t=topDialog();
+        if(t) t.focus({preventScroll:true});
+        else { const el=returnTo && document.body.contains(returnTo) ? returnTo : returnSel && document.querySelector(returnSel); if(el) el.focus({preventScroll:true}); }
+        if(!t){ returnTo=null; returnSel=null; }
+      });
+    }
+  }).observe(document.body,{childList:true});
+  document.addEventListener("keydown",e=>{
+    const d=topDialog(); if(!d) return;
+    if(e.key==="Escape"){
+      if(modalEl && d.closest(".modal-bg")){ e.preventDefault(); closeModal(); }
+      else if(affBg && d.closest(".aff-bg")){ e.preventDefault(); closeAffSheet(); }
+      else if(dayBg && d.closest(".sheet-bg")===dayBg){ e.preventDefault(); closeDaySheet(); }
+      return; // the check-in form handles its own Esc
+    }
+    if(e.key!=="Tab") return;
+    const f=[...d.querySelectorAll('button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea,[tabindex]:not([tabindex="-1"])')].filter(x=>x.offsetParent!==null);
+    if(!f.length){ e.preventDefault(); return; }
+    const first=f[0], last=f[f.length-1];
+    if(e.shiftKey && (document.activeElement===first||document.activeElement===d)){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  });
+})();
+
 /* ---------- UI helpers ---------- */
 let modalEl=null;
-function modal(html,bind){ closeModal(); modalEl=document.createElement("div"); modalEl.className="modal-bg"; modalEl.innerHTML=`<div class="card modal">${html}</div>`;
+function modal(html,bind){ closeModal(); modalEl=document.createElement("div"); modalEl.className="modal-bg"; modalEl.innerHTML=`<div class="card modal" role="dialog" aria-modal="true">${html}</div>`;
+  const mh=modalEl.querySelector("h2"); if(mh){ mh.id="modal-title"; modalEl.firstElementChild.setAttribute("aria-labelledby","modal-title"); }
   modalEl.onclick=e=>{ if(e.target===modalEl||e.target.closest("[data-close]")) closeModal(); }; document.body.appendChild(modalEl); bind&&bind(modalEl); }
 function closeModal(){ modalEl?.remove(); modalEl=null; }
 function confirmBox(title,body,label,fn){ modal(`<h2>${title}</h2><p class="muted">${body}</p><div class="actions" style="justify-content:center"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="ok" style="background:var(--danger)">${label}</button></div>`,el=>{el.querySelector("#ok").onclick=()=>{closeModal();fn();};}); }

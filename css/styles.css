@@ -3,7 +3,7 @@
    ========================================================= */
 :root{
   --wood:#b98a5e; --wood-dark:#8f6440;
-  --bg:#f6f1e9; --card:#fffdf9; --ink:#23302a; --muted:#6b7570; --line:#e6ddd0;
+  --bg:#f6f1e9; --card:#fffdf9; --ink:#23302a; --muted:#58625d; --line:#e6ddd0;
   --accent:#2f6b52; --accent-soft:#e3efe8; --morning:#d98b3a; --morning-soft:#fbeedd;
   --night:#4a5b9b; --night-soft:#e6e9f6; --gold:#c99a2e; --danger:#b4493c;
   --radius:16px; --shadow:0 1px 2px rgba(35,48,42,.06),0 4px 16px rgba(35,48,42,.06);
@@ -42,7 +42,7 @@ nav.tabs button.on{background:var(--accent);color:#fff}
 .ci{border:0;text-align:left;display:flex;flex-direction:column;gap:6px;min-height:150px;position:relative;overflow:hidden}
 .ci.morning{background:var(--morning-soft)} .ci.night{background:var(--night-soft)}
 .ci .ico{font-size:1.8rem}
-.ci h3{font-size:1.2rem}
+.ci .ci-title{font-family:Fraunces,Georgia,serif;font-weight:600;letter-spacing:-.01em;font-size:1.2rem;line-height:1.25;color:var(--ink)}
 .ci .st{font-size:.88rem;color:var(--muted)}
 .ci .go{margin-top:auto;font-weight:700;font-size:.9rem}
 .ci.morning .go{color:var(--morning)} .ci.night .go{color:var(--night)}
@@ -110,7 +110,7 @@ textarea:focus{outline:none;border-color:var(--dc,var(--accent))}
 .badge .em{font-size:2.2rem;width:64px;height:64px;margin:0 auto 8px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft)}
 .badge.locked{opacity:.55}
 .badge.locked .em{filter:grayscale(1);background:var(--line)}
-.badge h4{margin:0;font-size:.95rem}
+.badge h3{margin:0;font-size:.95rem}
 .badge p{margin:4px 0 0;font-size:.78rem;color:var(--muted)}
 .badge .when{color:var(--accent);font-weight:500}
 .bar{height:5px;border-radius:3px;background:var(--line);margin-top:8px;overflow:hidden}
@@ -211,6 +211,7 @@ body.noscroll{overflow:hidden}
 .about{display:grid;gap:14px}
 .about h2{font-size:1.4rem;margin:6px 0 10px}
 .about h3{font-size:1.1rem;margin-bottom:8px}
+.about h2.sec{font-size:1.1rem;margin:0 0 8px}
 .about p{margin:0 0 10px;line-height:1.65}
 .about p:last-child{margin-bottom:0}
 .about ul{margin:0 0 12px;padding-left:20px;line-height:1.65}
@@ -386,7 +387,7 @@ textarea[readonly]:focus{border-color:var(--line)}
   .checkins{grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
   .ci{min-height:0;padding:12px;gap:3px;border-radius:14px}
   .ci .ico{font-size:1.25rem}
-  .ci h3{font-size:.95rem;line-height:1.2}
+  .ci .ci-title{font-size:.95rem;line-height:1.2}
   .ci .st{font-size:.74rem;line-height:1.3}
   .ci .go{font-size:.78rem;margin-top:4px}
   .ci.done::after{top:10px;right:10px;width:22px;height:22px;font-size:.8rem}
@@ -429,7 +430,7 @@ textarea[readonly]:focus{border-color:var(--line)}
 @keyframes flash{0%{box-shadow:0 0 0 4px color-mix(in srgb,var(--ac,var(--accent)) 45%,transparent)}100%{box-shadow:var(--shadow)}}
 .howto{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:6px 0 12px}
 .howto-col{background:var(--bg);border-radius:12px;padding:12px 14px}
-.howto-col h4{margin:0 0 6px;font-size:.92rem}
+.howto-col h3{margin:0 0 6px;font-size:.92rem;color:var(--ink)!important}
 .howto-col ol{margin:0;padding-left:20px;font-size:.92rem}
 @media(max-width:560px){.howto{grid-template-columns:1fr}}
 
@@ -477,3 +478,22 @@ html.cvd .ln-night{stroke-dasharray:4 3}
 /* Answered steps get a check mark */
 html.cvd .stepdot{position:relative}
 html.cvd .stepdot.done::after{content:"✓";position:absolute;right:-3px;bottom:-3px;width:15px;height:15px;border-radius:50%;background:var(--ink);color:var(--card);font-size:10px;line-height:15px;text-align:center;font-weight:700}
+
+/* ---------- Accessibility ---------- */
+/* Colored text is mixed toward the ink color so it keeps enough contrast in light and dark mode */
+.sheet .dim h3{color:color-mix(in srgb,var(--dc) 60%,var(--ink))}
+.about .card h2,.about .card h3{color:color-mix(in srgb,var(--ac,var(--ink)) 60%,var(--ink))}
+.stat.streak .n{color:color-mix(in srgb,var(--morning) 60%,var(--ink))}
+.ci.morning .go{color:color-mix(in srgb,var(--morning) 52%,var(--ink))} .ci.night .go{color:color-mix(in srgb,var(--night) 70%,var(--ink))}
+.badge .when{color:color-mix(in srgb,var(--accent) 80%,var(--ink))}
+/* In dark mode the accent is light, so text on it is dark */
+@media (prefers-color-scheme:dark){
+  nav.tabs button.on,.btn,.ci.done::after{color:#0f1f18}
+  .btn.ghost{color:var(--ink)} .btn.danger{color:var(--danger)}
+}
+/* Visible keyboard focus everywhere */
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.sheet:focus,.modal:focus{outline:none}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}.wedge,.idea,.stepdot{transition:none!important}}
+.feel.on{background:color-mix(in srgb,var(--fc,var(--dc,var(--accent))) 72%,#111);border-color:color-mix(in srgb,var(--fc,var(--dc,var(--accent))) 72%,#111)}
