@@ -393,3 +393,22 @@ textarea[readonly]:focus{border-color:var(--line)}
   .checkins + .card{margin-top:10px !important;padding:14px}
   .shelf{margin-top:10px}
 }
+.about-free{border-left:4px solid var(--gold)}
+.about ol{margin:0 0 12px;padding-left:22px;line-height:1.65}
+.about ol li{margin-bottom:6px}
+.about-pro{border-left:4px solid var(--night)}
+.about-share{border-left:4px solid var(--accent)}
+.share-opts{display:grid;gap:8px;margin:10px 0 4px}
+
+/* About cards: each gets its own accent color */
+.about .card{border-left:4px solid var(--ac,var(--line))}
+.about .card h2,.about .card h3{color:var(--ac,var(--ink))}
+.about-hero{--ac:var(--morning)}
+.about-name{--ac:#8a6bb8}
+.about-how{--ac:#3f8f9b}
+.about-free{--ac:var(--gold)}
+.about-pro{--ac:var(--night)}
+.about-share{--ac:#c0604d}
+.about-privacy{--ac:#a0607a}
+.about-care{--ac:var(--accent);border-color:transparent;border-left-color:var(--accent)}
+@media (prefers-color-scheme:dark){.about-name{--ac:#b49ae0}.about-how{--ac:#6cc0cc}.about-privacy{--ac:#d89ab4}.about-share{--ac:#e8907e}}

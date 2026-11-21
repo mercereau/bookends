@@ -898,12 +898,12 @@ function renderAbout(){
         <p>I was doing it on paper, and I kept losing track of the sheets. So I built Bookends: the same check-ins, a place to keep them, and a few badges to make showing up feel good. If it helps you even a little, that's a win.</p>
       </section>
 
-      <section class="card">
+      <section class="card about-name">
         <h3>Why "Bookends"?</h3>
         <p>A morning intention and a nightly reflection hold the day between them, like bookends on a shelf. Whatever happens in the middle, you start with purpose and end with honesty.</p>
       </section>
 
-      <section class="card">
+      <section class="card about-how">
         <h3>How it works</h3>
         <ul>
           <li><b>🌅 Morning intention</b> is open from ${hourLabel(win("morning")[0])} to ${hourLabel(win("morning")[1])}. <b>🌙 Nightly reflection</b> is open from ${hourLabel(win("night")[0])} to ${hourLabel(win("night")[1])}. You can change both windows in <b>Settings</b>.</li>
@@ -915,9 +915,40 @@ function renderAbout(){
         <p class="small muted">The eight areas come from <a href="https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness" target="_blank" rel="noopener noreferrer">SAMHSA's Eight Dimensions of Wellness</a>. The affirmations are inspired by guidance from public health and mental health organizations, and each one links to its source.</p>
       </section>
 
-      <section class="card">
+      <section class="card about-privacy">
         <h3>Your privacy</h3>
         <p>${privacy}</p>
+      </section>
+
+      <section class="card about-free">
+        <h3>Free, on purpose</h3>
+        <p>Bookends is free. No ads, no premium tier, and nothing to sell you.</p>
+        <p>The check-ins that helped me were simple: a sheet of paper and a few good questions that someone took the time to share. That kind of help shouldn't come with a price tag. Hard stretches often come with tight budgets, and reaching for support is already hard enough without a paywall in the way.</p>
+        <p>So it's free, and it's going to stay that way. If it helps you, pass it on to someone who might need it too. That's the only payment I'm looking for.</p>
+      </section>
+
+      <section class="card about-pro">
+        <h3>For mental health providers</h3>
+        <p>If you work with clients and think Bookends could help, please share it. It's free, and there's nothing to sign up for.</p>
+        <ul>
+          <li><b>Sharing it is easy:</b> send your clients to <b>bookends.day</b>. It works in any browser on a phone or computer. On a phone, they can add it to their Home Screen so it opens like an app.</li>
+          <li><b>It fits their routine:</b> clients can set their own morning and evening check-in windows, and choose how affirmations show up (or turn them off), in <b>Settings</b>.</li>
+          <li><b>It's private by design:</b> ${S.store.kind==="cloud"?"each person's check-ins are private to them. There's no way for you, or me, to see anyone's entries.":"Bookends doesn't collect or store anyone's check-ins. Entries stay on the client's own device, so there's no account for you to manage and nothing on my end to access."}</li>
+          <li><b>Clients choose what to share:</b> they can make a printable summary for you anytime (see below).</li>
+          <li><b>It's a self-care tool, not a clinical one.</b> Bookends doesn't monitor entries or send alerts to anyone, so it's not a substitute for your own check-ins or a safety plan.</li>
+        </ul>
+      </section>
+
+      <section class="card about-share">
+        <h3>Sharing your check-ins with your provider</h3>
+        <p>Your check-ins are private. Nothing is shared unless you decide to share it.</p>
+        <ol>
+          <li>Go to <b>Settings</b> and find <b>Share with your provider</b>.</li>
+          <li>Pick a time period (7, 14, 30, or 90 days) and choose whether to include your written notes or just your ratings.</li>
+          <li>Tap <b>Download summary</b>. You'll get a simple page you can open, print, or save as a PDF.</li>
+          <li>Share it the way you and your provider prefer: show it during a session, bring a printed copy, or upload it through your provider's secure patient portal.</li>
+        </ol>
+        <p class="small muted">Tip: regular email and text messages aren't very private. If your provider has a secure portal, use that instead. You can also just open <b>History</b> together and walk through a day.</p>
       </section>
 
       <section class="card about-care">
@@ -941,21 +972,65 @@ function lastBackupText(){
   const days=Math.round((parse(today())-parse(d.slice(0,10)))/864e5);
   return `Last backup: ${days===0?"today":days===1?"yesterday":days+" days ago"}.`;
 }
+/* Save a file: through Claude's download prompt when hosted there, otherwise a normal browser download. */
+async function saveFile(filename,data,mime){
+  const dl = window.claude?.use ? await claude.use("downloads").catch(()=>null) : null;
+  if(dl){
+    try{ await dl.save({filename,data}); return true; }
+    catch(e){ if(e?.code==="declined"){ toast("Download cancelled"); return false; } if(e?.code==="rate_limited"){ toast("A download prompt is already open"); return false; } }
+  }
+  try{
+    const url=URL.createObjectURL(new Blob([data],{type:mime}));
+    const a=Object.assign(document.createElement("a"),{href:url,download:filename}); document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000); return true;
+  }catch(e){ toast("Download isn't available here."); return false; }
+}
+
+/* ---------- Provider summary: a readable, printable page the client chooses to share ---------- */
+function providerSummaryHTML(days, withNotes){
+  const end=today(), start=addDays(end,-(days-1));
+  const ents=S.entries.filter(e=>e.date>=start && e.date<=end).sort((a,b)=>(a.date+a.kind).localeCompare(b.date+b.kind));
+  const dates=[...new Set(ents.map(e=>e.date))];
+  const dims=Object.keys(DIMENSIONS).filter(k=>FORMS.morning.sections.concat(FORMS.night.sections).some(x=>x.dim===k&&x.scale));
+  const avg=(kind,dim)=>{ const v=ents.filter(e=>e.kind===kind).map(e=>+e.answers[dim+"_scale"]).filter(Boolean); return v.length?(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):"–"; };
+  const e2=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const dayBlocks=[...dates].reverse().map(d=>{
+    const parts=["morning","night"].map(k=>{
+      const e=getEntry(d,k); if(!e) return "";
+      const rows=sectionsWithAnswers(e).filter(x=>x.rating||(withNotes&&x.notes.length)).map(x=>{
+        const D=DIMENSIONS[x.sec.dim], label=x.sec.dim==="closing"?"Proud of":D.label;
+        return `<tr><td class="a">${label}</td><td class="r">${x.rating?x.rating+"/5":""}</td><td>${withNotes?x.notes.map(n=>e2(n.a)).join("<br>"):""}</td></tr>`;
+      }).join("");
+      return rows?`<h4>${k==="morning"?"Morning intention":"Nightly reflection"}</h4><table>${rows}</table>`:"";
+    }).join("");
+    return `<section><h3>${e2(fmtDate(d))}</h3>${parts}</section>`;
+  }).join("");
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bookends check-in summary · ${e2(fmtDate(start))} to ${e2(fmtDate(end))}</title>
+<style>body{font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#23302a;max-width:760px;margin:24px auto;padding:0 16px}
+h1{font-size:1.4rem;margin:0}h2{font-size:1.1rem;margin:24px 0 8px;border-bottom:1px solid #ddd;padding-bottom:4px}h3{font-size:1rem;margin:18px 0 4px}h4{font-size:.85rem;margin:8px 0 4px;color:#6b7570;text-transform:uppercase;letter-spacing:.03em}
+.meta{color:#6b7570;font-size:.85rem}.note{background:#f6f1e9;border-radius:8px;padding:10px 12px;font-size:.85rem;margin:14px 0}
+table{border-collapse:collapse;width:100%;margin-bottom:6px}td{border-top:1px solid #eee;padding:5px 6px;vertical-align:top}td.a{width:130px;font-weight:600}td.r{width:44px;color:#2f6b52;font-weight:600}
+.avg td{text-align:left}@media print{.note{border:1px solid #ccc}section{break-inside:avoid}}</style></head><body>
+<h1>Bookends check-in summary</h1>
+<div class="meta">${e2(fmtDate(start))} to ${e2(fmtDate(end))} (${days} days) · created ${e2(new Date().toLocaleString())}</div>
+<div class="note">Shared by the person who wrote it. Bookends doesn't send or store this summary anywhere. Ratings are 1 to 5, where 5 is the most positive end of each scale.${withNotes?"":" Written notes were left out by choice."}</div>
+<h2>At a glance</h2>
+<p>Checked in on <b>${dates.length}</b> of ${days} days · ${(c=>`${c} morning intention${c===1?"":"s"}`)(ents.filter(e=>e.kind==="morning").length)} · ${(c=>`${c} nightly reflection${c===1?"":"s"}`)(ents.filter(e=>e.kind==="night").length)}</p>
+<table class="avg"><tr><td class="a"></td><td><b>Morning avg</b></td><td><b>Night avg</b></td></tr>${dims.map(k=>`<tr><td class="a">${DIMENSIONS[k].label}</td><td>${avg("morning",k)}</td><td>${avg("night",k)}</td></tr>`).join("")}</table>
+<h2>Day by day</h2>${dayBlocks||"<p>No check-ins in this range.</p>"}
+</body></html>`;
+}
+async function downloadProviderSummary(days,withNotes){
+  if(!S.entries.length) return toast("No check-ins to share yet.");
+  const ok=await saveFile(`bookends-summary-${today()}.html`, providerSummaryHTML(days,withNotes), "text/html");
+  if(ok) toast("Summary saved. You decide who sees it.");
+}
+
 async function downloadBackup(){
   if(!hasData()) return toast("Nothing to back up yet.");
   const filename=`bookends-backup-${today()}.json`, json=backupJSON();
-  const done=()=>{ try{ localStorage.setItem(BACKUP_KEY,new Date().toISOString()); }catch(e){} toast(`Saved ${filename}`); if(!S.form) render(); };
-  // Inside Claude, files go through its download prompt; on your own site, a normal browser download.
-  const dl = window.claude?.use ? await claude.use("downloads").catch(()=>null) : null;
-  if(dl){
-    try{ await dl.save({filename,data:json}); return done(); }
-    catch(e){ if(e?.code==="declined") return toast("Download cancelled"); if(e?.code==="rate_limited") return toast("A download prompt is already open"); }
-  }
-  try{
-    const url=URL.createObjectURL(new Blob([json],{type:"application/json"}));
-    const a=Object.assign(document.createElement("a"),{href:url,download:filename}); document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),2000); done();
-  }catch(e){ toast("Download isn't available here — use Copy JSON instead."); }
+  if(await saveFile(filename,json,"application/json")){ try{ localStorage.setItem(BACKUP_KEY,new Date().toISOString()); }catch(e){} toast(`Saved ${filename}`); if(!S.form) render(); }
 }
 const hourOptions=(lo,hi,sel)=>{ let o=""; for(let h=lo;h<=hi;h++) o+=`<option value="${h}" ${h===sel?"selected":""}>${h===24?"Midnight":h===12?"Noon":hourLabel(h)}</option>`; return o; };
 function renderSettings(){
@@ -978,6 +1053,15 @@ function renderSettings(){
           .map(([v,ic,t,d])=>`<label class="choice ${P.affMode===v?"on":""}"><input type="radio" name="affMode" value="${v}" ${P.affMode===v?"checked":""}><span class="c-ic">${ic}</span><span class="c-t"><b>${t}</b><span class="small muted">${d}</span></span></label>`).join("")}
       </div>
     </div>`+`
+    <div class="card" style="margin-top:14px" id="shareCard">
+      <h2 style="font-size:1.15rem">Share with your provider</h2>
+      <p class="small muted">Make a simple, printable summary of your check-ins to share with a therapist or counselor. Nothing is sent anywhere. You download it and decide who sees it.</p>
+      <div class="share-opts">
+        <label class="time-row"><span>Time period</span><select id="shDays">${[7,14,30,90].map(n=>`<option value="${n}" ${n===14?"selected":""}>Last ${n} days</option>`).join("")}</select></label>
+        <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Include my written notes</b><span class="small muted">Turn off to share ratings only.</span></span><input type="checkbox" class="switch" id="shNotes" checked></label>
+      </div>
+      <div class="actions" style="justify-content:flex-start"><button class="btn" id="shGo" ${S.entries.length?"":"disabled"}>⬇ Download summary</button></div>
+    </div>
     <div class="card" style="margin-top:14px">
       <h2 style="font-size:1.15rem">Where your entries live</h2>
       <p class="small muted">${S.store.kind==="cloud"
@@ -1017,6 +1101,7 @@ function renderSettings(){
     toast({off:"Daily affirmations turned off",embedded:"Affirmations will show on the Today screen",popup:"Affirmations will pop up once a day"}[r.value]);
   });
   document.getElementById("export").onclick=downloadBackup;
+  document.getElementById("shGo").onclick=()=>downloadProviderSummary(+document.getElementById("shDays").value, document.getElementById("shNotes").checked);
   document.getElementById("copy").onclick=async()=>{
     const json=backupJSON();
     try{ await navigator.clipboard.writeText(json); toast("Copied to clipboard"); }
