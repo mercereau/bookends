@@ -452,18 +452,24 @@ function visitNudgeHTML(){
 function affirmCardHTML(){
   if(!AFF.data) return "";
   const st=affState(), lim=affLimit(), order=dailyOrder(), n=Math.min(st.shown.length,lim);
-  const dots=[...Array(lim)].map((_,i)=>`<i class="${i<n?"on":""}"></i>`).join("");
-  const foot=`<div class="aff-foot"><span class="aff-dots" aria-label="${n} of ${lim} today">${dots}</span><span>${n} of ${lim} today · ${st.visits} visit${st.visits===1?"":"s"} today${(()=>{const c=affStats(today()).affCurrent;return c>1?` · ☀️ ${c}-day reading streak`:"";})()}</span></div>`;
+  const idx=(AFF.viewIdx!=null && AFF.viewIdx<n) ? AFF.viewIdx : n-1;   // which of today's affirmations is on screen
+  const dots=[...Array(lim)].map((_,i)=> i<n
+      ? `<button class="aff-dot on ${i===idx?"cur":""}" data-i="${i}" aria-label="Show affirmation ${i+1}" ${i===idx?'aria-current="true"':""}></button>`
+      : `<i></i>`).join("");
+  const nav = n>1
+    ? `<span class="aff-nav"><button class="aff-arrow" data-step="-1" ${idx===0?"disabled":""} aria-label="Previous affirmation">‹</button><span class="aff-dots">${dots}</span><button class="aff-arrow" data-step="1" ${idx===n-1?"disabled":""} aria-label="Next affirmation">›</button></span>`
+    : `<span class="aff-dots" aria-label="${n} of ${lim} today">${dots}</span>`;
+  const foot=`<div class="aff-foot">${nav}<span>${n} of ${lim} today · ${st.visits} visit${st.visits===1?"":"s"} today${(()=>{const c=affStats(today()).affCurrent;return c>1?` · ☀️ ${c}-day reading streak`:"";})()}</span></div>`;
   if(n===0) return `<section class="card aff" id="aff">
       <div class="aff-label">🌤️ Today's affirmation</div>
       <p class="aff-hint">A thought for your day is waiting. You get ${lim} a day, then it's time for a screen break.</p>
       <button class="btn" id="affReveal">Reveal today's affirmation</button>${foot}</section>`;
-  const a=order[(n-1)%order.length], D=a.area&&DIMENSIONS[a.area];
+  const a=order[idx%order.length], D=a.area&&DIMENSIONS[a.area];
   const more = n<lim
     ? `<button class="btn ghost" id="affMore">One more <span class="muted">(${lim-n} left)</span></button>`
     : `<div class="aff-break"><b>📵 Time for a tech break</b><p>${esc(pickByDay(AFF.data.breakReminders||AFF_FALLBACK.breakReminders,n))}</p><span class="small muted">New affirmations in ${untilTomorrow()}</span></div>`;
   return `<section class="card aff ${a.type==="suggestion"?"sugg":""}" id="aff">
-      <div class="aff-label">${a.type==="suggestion"?"🌱 Wellness suggestion":"🌤️ Today's affirmation"}${D?` <span class="aff-area" style="--dc:${D.color}">${D.icon} ${D.label}</span>`:""}</div>
+      <div class="aff-label">${a.type==="suggestion"?"🌱 Wellness suggestion":"🌤️ Today's affirmation"}${D?` <span class="aff-area" style="--dc:${D.color}">${D.icon} ${D.label}</span>`:""}${n>1?` <span class="aff-pos">${idx+1} of ${n}</span>`:""}</div>
       <blockquote class="aff-text">${esc(a.text)}</blockquote>
       ${a.source?.url&&/^https:\/\//.test(a.source.url)?`<a class="aff-src" href="${esc(a.source.url)}" target="_blank" rel="noopener noreferrer">Inspired by ${esc(a.source.name||"source")} ↗</a>`:""}
       ${more}${foot}</section>`;
@@ -476,7 +482,7 @@ function saveAffLog(){ // one write at a time; kept with the user's entries (syn
 }
 function revealAffirmation(){
   const st=affState(), lim=affLimit(); if(st.shown.length>=lim) return;
-  const order=dailyOrder(), id=order[st.shown.length%order.length].id; st.shown.push(id); affSave(st);
+  const order=dailyOrder(), id=order[st.shown.length%order.length].id; st.shown.push(id); affSave(st); AFF.viewIdx=null;
   const before=earnedBadges(S.entries);
   const day=today(); S.affLog[day]=[...new Set([...(S.affLog[day]||[]),id])]; saveAffLog();
   const now=earnedBadges(S.entries), fresh=badgeList().filter(b=>now[b.id] && !before[b.id]);
@@ -490,6 +496,12 @@ let affPendingBadges=[];
 function bindAffirm(){
   const r=document.getElementById("affReveal"); if(r) r.onclick=revealAffirmation;
   const m=document.getElementById("affMore"); if(m) m.onclick=revealAffirmation;
+  const show=i=>{ AFF.viewIdx=i; const el=document.getElementById("aff"); if(!el) return; el.outerHTML=affirmCardHTML(); document.getElementById("aff").classList.add("aff-in"); bindAffirm(); };
+  document.querySelectorAll("#aff .aff-dot[data-i]").forEach(b=>b.onclick=()=>show(+b.dataset.i));
+  document.querySelectorAll("#aff .aff-arrow[data-step]").forEach(b=>b.onclick=()=>{
+    const st=affState(), n=Math.min(st.shown.length,affLimit()); const cur=(AFF.viewIdx!=null&&AFF.viewIdx<n)?AFF.viewIdx:n-1;
+    show(Math.max(0,Math.min(n-1,cur+(+b.dataset.step))));
+  });
 }
 
 /* Compact row on the Today screen; the affirmation itself opens in a pop-up */
@@ -511,6 +523,7 @@ function refreshAffEntry(){
 let affBg=null;
 function openAffSheet(autoReveal){
   if(!AFF.data || S.prefs.affMode!=="popup") return;
+  AFF.viewIdx=null;
   closeAffSheet(true);
   affBg=document.createElement("div"); affBg.className="sheet-bg aff-bg";
   affBg.innerHTML=`<div class="sheet aff-sheet" role="dialog" aria-modal="true" aria-labelledby="aff-title">

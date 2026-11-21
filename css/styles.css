@@ -339,3 +339,11 @@ body.noscroll{overflow:hidden}
 .stat-link{text-align:left;cursor:pointer;font:inherit;color:inherit;transition:transform .15s,border-color .15s}
 .stat-link:hover{transform:translateY(-2px);border-color:var(--gold)}
 .stat-link .go-arrow{color:var(--gold);font-weight:700;margin-left:2px}
+.aff-nav{display:inline-flex;align-items:center;gap:6px}
+.aff-dots .aff-dot{width:10px;height:10px;border-radius:50%;border:0;padding:0;background:var(--gold);opacity:.45;cursor:pointer;transition:transform .15s,opacity .15s}
+.aff-dots .aff-dot.cur{opacity:1;transform:scale(1.25)}
+.aff-dots .aff-dot:hover{opacity:.85}
+.aff-arrow{border:1px solid var(--line);background:var(--card);width:26px;height:26px;border-radius:50%;line-height:1;font-size:1rem;color:var(--ink);padding:0}
+.aff-arrow:disabled{opacity:.35;cursor:default}
+.aff-pos{font-weight:500;color:var(--muted)}
+.aff-foot{flex-wrap:wrap}
