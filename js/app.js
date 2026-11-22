@@ -23,6 +23,17 @@ const DIM_COLORS_CVD = {  // chosen so every pair stays distinct under typical v
   emotional:"#992288", physical:"#993300", spiritual:"#8811cc", social:"#5588cc", intellectual:"#1122ff",
   occupational:"#997744", environmental:"#006655", financial:"#bb7722", community:"#dd3388", closing:"#a87d00",
 };
+/* Large text: the phone's text size can make the root font much bigger than 16px. Width-based media queries don't see that,
+   so mark the page and let CSS stack tight layouts instead of clipping text. */
+function applyTextSize(){
+  const px=parseFloat(getComputedStyle(document.documentElement).fontSize)||16, w=window.innerWidth/px; // viewport width in root ems
+  const de=document.documentElement;
+  de.classList.toggle("text-l", w<20);   // e.g. a phone with larger text (about 20px+ on a 390px screen)
+  de.classList.toggle("text-xl", w<14);  // accessibility sizes (about 28px+)
+}
+applyTextSize(); addEventListener("resize",applyTextSize); addEventListener("pageshow",applyTextSize);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) applyTextSize(); });
+
 function applyColorMode(mode){
   const cvd = mode==="cvd";
   document.documentElement.classList.toggle("cvd", cvd);
@@ -798,6 +809,7 @@ function renderForm(){
         :`<button class="btn" id="next">Next: ${DIMENSIONS[def.sections[F.step+1].dim].label} →</button>`}
     </div>`;
   $s.querySelector(".sheet-body").scrollTop=0;
+  $s.querySelector(".stepdot.cur")?.scrollIntoView({block:"nearest",inline:"nearest"});
   if(!$s.contains(document.activeElement)) setTimeout(()=>{ if(sheetBg && !$s.contains(document.activeElement)) $s.focus({preventScroll:true}); },0);
   const rc=$s.querySelector("#roClose"); if(rc) rc.onclick=()=>{ S.form=null; render(); };
   const refreshDot=()=>{ if(F.readOnly) return; F.dirty=true; const dot=$s.querySelector(`.stepdot[data-step="${F.step}"]`); dot.classList.toggle("done",sectionIds(sec).some(id=>hasVal(F.answers[id]))); };

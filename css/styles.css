@@ -16,7 +16,12 @@
   --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25);
 }}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "DM Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+/* Text size follows the person's device setting: rem everywhere, root left at the browser's size
+   (Chrome on Android scales it via <meta name="text-scale">; Firefox does it on its own). */
+:root{font-size:100%}
+/* iPhone and iPad: use the Dynamic Type size from Settings → Display & Brightness → Text Size */
+@supports (font:-apple-system-body) and (-webkit-touch-callout:default){:root{font:-apple-system-body}}
+body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.5 "DM Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:600;margin:0;letter-spacing:-.01em}
 button{font:inherit;color:inherit;cursor:pointer}
 .wrap{max-width:780px;margin:0 auto;padding:20px 16px 80px}
@@ -376,7 +381,7 @@ textarea[readonly]:focus{border-color:var(--line)}
 @media(max-width:560px){
   .stats{grid-template-columns:repeat(4,1fr);gap:6px}
   .stat{padding:9px 4px 8px;text-align:center;border-radius:12px}
-  .stat .n{font-size:1.3rem}
+  .stat .n{font-size:1.3rem;white-space:nowrap}
   .stat .l{font-size:.68rem;margin-top:3px;line-height:1.2}
   .stat-link{text-align:center}
   .stat-link:hover{transform:none}
@@ -446,7 +451,7 @@ textarea[readonly]:focus{border-color:var(--line)}
 .wheel-toggle{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--dc,var(--accent));background:color-mix(in srgb,var(--dc,var(--accent)) 10%,var(--card));color:var(--ink);border-radius:999px;padding:7px 14px;font:inherit;font-size:.9rem;font-weight:600;margin:2px 0 10px;cursor:pointer}
 .wheel-panel{border:1.5px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;background:var(--bg)}
 .wheel-wrap{display:flex;gap:14px;align-items:flex-start}
-.wheel{width:200px;flex:none}
+.wheel{width:12.5rem;max-width:100%;flex:none}
 .wedge{cursor:pointer;transition:transform .15s}
 .wedge path{stroke:var(--bg);stroke-width:2}
 .wedge text{fill:#fff;font:700 11px "DM Sans",system-ui,sans-serif;pointer-events:none}
@@ -461,7 +466,7 @@ textarea[readonly]:focus{border-color:var(--line)}
 .feel.on{background:var(--fc,var(--dc,var(--accent)));border-color:var(--fc,var(--dc,var(--accent)));color:#fff}
 .feel-chosen{border-top:1px dashed var(--line);padding-top:8px}
 .feel-chosen .feel{--fc:var(--dc,var(--accent))}
-@media (max-width:560px){.wheel-wrap{flex-direction:column;align-items:center}.wheel{width:190px}.wheel-side{width:100%}}
+@media (max-width:560px){.wheel-wrap{flex-direction:column;align-items:center}.wheel{width:12rem}.wheel-side{width:100%}}
 
 /* Color-blind friendly mode (Settings → Display). Okabe & Ito based palette, plus non-color cues. */
 html.cvd{
@@ -477,7 +482,7 @@ html.cvd .dot.n.on,html.cvd .cell .n.on,html.cvd .book .b-n.on,html.cvd .legend 
 html.cvd .ln-night{stroke-dasharray:4 3}
 /* Answered steps get a check mark */
 html.cvd .stepdot{position:relative}
-html.cvd .stepdot.done::after{content:"✓";position:absolute;right:-3px;bottom:-3px;width:15px;height:15px;border-radius:50%;background:var(--ink);color:var(--card);font-size:10px;line-height:15px;text-align:center;font-weight:700}
+html.cvd .stepdot.done::after{content:"✓";position:absolute;right:-3px;bottom:-3px;width:.95rem;height:.95rem;border-radius:50%;background:var(--ink);color:var(--card);font-size:.62rem;line-height:.95rem;text-align:center;font-weight:700}
 
 /* ---------- Accessibility ---------- */
 /* Colored text is mixed toward the ink color so it keeps enough contrast in light and dark mode */
@@ -502,3 +507,42 @@ html.cvd .stepdot.done::after{content:"✓";position:absolute;right:-3px;bottom:
 .rem-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .rem-row .btn{flex:none}
 .rem-row .small{flex:1;min-width:180px}
+
+/* ---------- Larger text sizes (html.text-l / html.text-xl are set in app.js from the root font size) ---------- */
+/* Display headings grow less than body text, like large titles on iPhone */
+header.top h1{font-size:min(1.6rem,9vw)}
+.sheet-title h2{font-size:min(1.25rem,7.5vw)}
+@media(min-width:561px){.stat .n{font-size:min(2rem,10vw)}}
+.xbtn{width:max(36px,2.2rem);height:max(36px,2.2rem)}
+html.text-l nav.tabs{flex-wrap:wrap;border-radius:20px}
+html.text-l nav.tabs button{flex:1 1 auto;padding:6px 10px}
+html.text-l .stats{grid-template-columns:repeat(2,1fr)!important}
+html.text-l .stat .n{font-size:min(1.6rem,9vw);white-space:nowrap}
+html.text-l .checkins{grid-template-columns:1fr!important}
+html.text-l .btn{white-space:normal;border-radius:18px;text-align:center}
+html.text-l .sheet-foot{flex-wrap:wrap}
+html.text-l .sheet-foot .btn{flex:1 1 auto}
+html.text-l .sheet .steps{overflow-x:auto;justify-content:flex-start;scrollbar-width:none}
+html.text-l .stepdot{flex:none}
+html.text-l .time-row{flex-direction:column;align-items:stretch}
+html.text-l .time-row select{max-width:100%}
+html.text-l .rem-row .btn{flex:1 1 100%}
+html.text-xl header.top{flex-wrap:wrap}
+html.text-xl .sheet-ico{display:none}
+html.text-xl .stats{grid-template-columns:1fr!important}
+html.text-xl .stat{display:flex;align-items:center;gap:10px;text-align:left}
+html.text-xl .sheet-foot .btn{flex:1 1 100%}
+html.text-xl .shelf .book{min-width:0}
+html.text-xl .time-row .range{flex-wrap:wrap}
+.h1-sub{font-size:min(1rem,6vw)}
+.sheet .steps{flex:none}
+.legend{flex-wrap:wrap;row-gap:4px}
+.grid>*,.card{min-width:0}
+html.text-xl body{overflow-wrap:anywhere;hyphens:auto}
+html.text-xl .time-row .range{width:100%}
+html.text-xl .time-row select{min-width:0;width:100%;flex:none}
+html.text-xl .time-row .range select{width:auto;flex:1 1 5rem}
+html.text-xl .pref{flex-wrap:wrap}
+html.text-l .badges{grid-template-columns:1fr!important}
+.badge .em{max-width:100%}
+.badge .em{font-size:min(2.2rem,12vw);width:min(4rem,22vw);height:min(4rem,22vw)}

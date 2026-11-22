@@ -12,6 +12,7 @@ Every change should keep these intact:
 - **Private by default.** No analytics, no third-party scripts, and no network requests that carry someone's entries.
 - **Plain JavaScript.** No build step, no framework and no dependencies.
 - **Works on a phone**, in both light and dark mode.
+- **Accessible to everyone.** Bookends should work for people with different vision, abilities and ways of using their phone. That's why it has a color-blind friendly mode, why it's checked for contrast, keyboard use and screen readers, and why it follows each person's phone settings, like text size and reduced motion, instead of overriding them. New features should do the same.
 
 ## 1. Get the code and create a branch
 

@@ -38,6 +38,19 @@ Entries are saved in the browser's `localStorage` on the device. Nothing is sent
 
 Clearing site data deletes your entries, so the app suggests downloading a backup now and then.
 
+## Accessibility
+
+Bookends aims for WCAG 2.1 AA:
+
+- Text and controls meet contrast minimums in light mode, dark mode and color-blind friendly mode.
+- Pop-ups move keyboard focus inside, keep Tab within them, close with Esc and return focus to where you were.
+- Focus is always visible, every control has a label, and headings follow a logical order.
+- Text follows the phone's text size setting: iPhone's Text Size (Dynamic Type, via `-apple-system-body`), Android Chrome's font size (via `<meta name="text-scale">`) and Firefox's. Sizes use `rem`, and layouts stack instead of clipping at large sizes (the `text-l` and `text-xl` classes).
+- Animations and confetti turn off when the device asks for reduced motion.
+- Color is never the only way information is shown: icons, labels, stripes and check marks back it up.
+
+Before a release, run an automated check such as [axe](https://www.deque.com/axe/) on each tab, open a check-in and a badge pop-up, and try the app with only a keyboard.
+
 ## Project structure
 
 ```
