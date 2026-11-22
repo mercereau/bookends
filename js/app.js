@@ -1010,11 +1010,12 @@ function cleanSkillLog(log){
   return out;
 }
 function skillsDayHTML(d){
-  const list=S.skillLog[d]; if(!list||!list.length) return "";
-  const rows=list.map(r=>{ const k=skillById(r.id); const tm=r.at?new Date(r.at):null;
-    const time=tm&&!isNaN(tm)?tm.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"";
-    return `<li><span class="sk-name">${esc(k?k.name:r.id)}</span><span class="sk-meta muted">${r.helped?HELPED_LABEL[r.helped]:"Used"}${time?" · "+time:""}</span></li>`; }).join("");
-  return `<div class="dd-block skills-used"><div class="dd-head"><h3>🧰 Skills I used</h3></div><ul class="sk-used">${rows}</ul></div>`;
+  // only skills that helped, once each, as small tags ("a little" gets a lighter tag)
+  const best={}; for(const r of S.skillLog[d]||[]) if(r.helped==="yes"||r.helped==="little") best[r.id]=best[r.id]==="yes"?"yes":r.helped;
+  const ids=Object.keys(best); if(!ids.length) return "";
+  const tags=ids.map(id=>{ const k=skillById(id); const lab=esc(k?k.name:id);
+    return `<li class="sk-tag ${best[id]}" title="${best[id]==="yes"?"Helped":"Helped a little"}">${lab}${best[id]==="little"?'<span class="sr-only"> (helped a little)</span>':""}</li>`; }).join("");
+  return `<div class="dd-block skills-used"><div class="dd-head"><h3>🧰 Skills that helped</h3></div><ul class="sk-tags">${tags}</ul></div>`;
 }
 /* A gentle link on Today. After a low Emotional rating today, it gets a warmer message (can be turned off in Settings). */
 function skillLinkHTML(){
