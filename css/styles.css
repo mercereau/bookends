@@ -573,6 +573,8 @@ html.text-l .badges{grid-template-columns:1fr!important}
 .skill-card .go{font-weight:700;color:color-mix(in srgb,var(--accent) 80%,var(--ink));flex:none;transition:transform .15s}
 .skill-card:hover .go,.skill-card:focus-visible .go{transform:translateX(3px)}
 @media (prefers-reduced-motion:reduce){.skill-card .go{transition:none}}
+.helped-chip{align-self:flex-start;margin-top:4px;font-size:.8rem;font-weight:700;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--ink)}
+.helped-group > p{margin:-4px 0 8px}
 .skills-more{margin-top:18px}
 .skills-more a{color:inherit}
 .skill-sheet .sheet-head{background:color-mix(in srgb,var(--accent) 12%,var(--card))}

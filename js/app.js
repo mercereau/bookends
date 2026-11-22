@@ -910,15 +910,33 @@ async function loadSkills(){
 const skillById=id=>SKILLS.data?.skills.find(x=>x.id===id);
 const groupOfSkill=id=>SKILLS.data?.groups.find(g=>g.skills.includes(id));
 const CRISIS_LINE=`<p class="small muted skill-crisis">If you're in crisis or thinking about hurting yourself, call or text <b>988</b> (US) any time.</p>`;
+/* Which skills have helped: counts from the skill log, best first ("yes" counts fully, "a little" counts half) */
+function helpedSkills(){
+  const m={};
+  for(const [d,list] of Object.entries(S.skillLog)) for(const r of list){
+    if(r.helped!=="yes"&&r.helped!=="little") continue;
+    const x=m[r.id] ||= {id:r.id,yes:0,little:0,last:""}; x[r.helped]++; if(d>x.last) x.last=d; }
+  return Object.values(m).filter(x=>skillById(x.id)).sort((a,b)=>(b.yes+b.little/2)-(a.yes+a.little/2)||b.last.localeCompare(a.last));
+}
+const helpedText=x=>{ const n=x.yes+x.little; return x.yes? (n===1?"Helped once":`Helped ${n} times`) : (n===1?"Helped a little once":`Helped a little ${n} times`); };
+function skillCardHTML(k,h){
+  return `<button class="card skill-card${h?" helped":""}" data-skill="${k.id}">
+        <span class="skill-name">${esc(k.name)}<span class="go" aria-hidden="true">→</span></span><span class="small muted">${esc(k.tagline)}</span>${h?`<span class="helped-chip">💛 ${helpedText(h)}</span>`:""}</button>`;
+}
 function renderSkills(){
   const D=SKILLS.data;
+  const hl=helpedSkills(), hm=Object.fromEntries(hl.map(x=>[x.id,x]));
   if(!D){ document.getElementById("app").innerHTML=`<div class="card"><h2>Skills</h2><p class="muted">Skills couldn't load right now. Check your connection and try again.</p>${CRISIS_LINE}</div>`; return; }
   document.getElementById("app").innerHTML=`
     <div class="card skills-intro"><h2>🧰 Skills</h2><p>${esc(D.intro)}</p>${CRISIS_LINE}</div>
+    ${hl.length?`<section class="skill-group helped-group" aria-labelledby="sg-helped">
+      <h3 id="sg-helped"><span aria-hidden="true">💛</span> What's helped me</h3>
+      <p class="small muted">Skills you said helped, with the ones that helped most first.</p>
+      <div class="grid skill-grid">${hl.slice(0,6).map(x=>skillCardHTML(skillById(x.id),x)).join("")}</div>
+    </section>`:""}
     ${D.groups.map(g=>`<section class="skill-group" aria-labelledby="sg-${g.id}">
       <h3 id="sg-${g.id}"><span aria-hidden="true">${g.icon}</span> ${esc(g.title)}</h3>
-      <div class="grid skill-grid">${g.skills.map(id=>{ const k=skillById(id); return k?`<button class="card skill-card" data-skill="${k.id}">
-        <span class="skill-name">${esc(k.name)}<span class="go" aria-hidden="true">→</span></span><span class="small muted">${esc(k.tagline)}</span></button>`:""; }).join("")}</div>
+      <div class="grid skill-grid">${g.skills.map(id=>{ const k=skillById(id); return k?skillCardHTML(k,hm[id]):""; }).join("")}</div>
     </section>`).join("")}
     <div class="card skills-more"><p class="small muted">${esc(D.learnMore.text)}</p>
       <p class="small">${D.learnMore.links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ↗</a>`).join(" · ")}</p></div>`;
@@ -1022,12 +1040,14 @@ function skillLinkHTML(){
   if(!SKILLS.data) return "";
   const t=today(), low=S.prefs.skillNudge && ["morning","night"].some(k=>{ const e=getEntry(t,k); const v=+e?.answers?.emotional_scale; return v && v<=2; });
   let hidden=false; try{ hidden=localStorage.getItem(SKILL_NUDGE_KEY)===t; }catch(e){}
-  if(low && !hidden) return `<div class="card skill-nudge"><div><b>Rough day?</b> <span class="muted">A quick coping skill might help.</span></div>
-      <div class="skill-nudge-actions"><button class="btn" id="toSkills">🧰 Try a skill</button><button class="linkbtn" id="hideNudge">Not now</button></div></div>`;
+  const top=helpedSkills()[0], tk=top&&skillById(top.id);
+  if(low && !hidden) return `<div class="card skill-nudge"><div><b>Rough day?</b> <span class="muted">${tk?`<b>${esc(tk.name)}</b> has helped you before.`:"A quick coping skill might help."}</span></div>
+      <div class="skill-nudge-actions">${tk?`<button class="btn" id="tryTop" data-top="${tk.id}">💛 Try ${esc(tk.name)}</button><button class="linkbtn" id="toSkills">All skills</button>`:`<button class="btn" id="toSkills">🧰 Try a skill</button>`}<button class="linkbtn" id="hideNudge">Not now</button></div></div>`;
   return `<button class="skill-link" id="toSkills">🧰 Feeling overwhelmed? Try a coping skill →</button>`;
 }
 function bindSkillLink(){
   const b=document.getElementById("toSkills"); if(b) b.onclick=()=>setView("skills");
+  const tt=document.getElementById("tryTop"); if(tt) tt.onclick=()=>openSkill(tt.dataset.top);
   const h=document.getElementById("hideNudge"); if(h) h.onclick=()=>{ try{ localStorage.setItem(SKILL_NUDGE_KEY,today()); }catch(e){} render(); };
 }
 
