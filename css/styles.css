@@ -607,3 +607,5 @@ html.text-l .badges{grid-template-columns:1fr!important}
 .skill-nudge-actions{display:flex;align-items:center;gap:12px}
 @media(max-width:560px){.skill-link{margin-top:10px;padding:9px 12px;font-size:.92rem}}
 .skill-sheet a,.skills-more a{color:inherit;text-decoration:underline}
+#badges{scroll-margin-top:14px}
+.trend.overall{font-weight:700;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:4px}
