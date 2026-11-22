@@ -258,6 +258,35 @@ function dynamicBadges(entries, out){
     out[id]=d;
   }
 }
+/* Skill badges: one for each skill group, the first time you use a skill from it, plus a few for practicing */
+const SKILL_GROUP_BADGES={
+  pause:{em:"✋",name:"Paused",desc:"Used a skill to pause before reacting"},
+  ground:{em:"🌱",name:"Grounded",desc:"Used a skill to come back to the here and now"},
+  calm:{em:"🌬️",name:"Calm Body",desc:"Used a skill to calm your body"},
+  ride:{em:"🌊",name:"Wave Rider",desc:"Used a skill to get through a hard moment"},
+  kind:{em:"💛",name:"Kind to Me",desc:"Used a skill to be kind to yourself"},
+  ask:{em:"🗣️",name:"Spoke Up",desc:"Used a skill for asking for what you need"},
+  think:{em:"🧭",name:"Clear Head",desc:"Used a skill to check your thinking"},
+  unstuck:{em:"🪜",name:"Unstuck",desc:"Used a skill to take a next step"},
+  base:{em:"🛡️",name:"Baseline Keeper",desc:"Used a skill to protect your baseline"}
+};
+function skillBadges(out){
+  const G=SKILLS.data?.groups; if(!G) return;
+  const uses=Object.entries(S.skillLog||{}).filter(([d])=>d<=today()).sort(([a],[b])=>a.localeCompare(b)).flatMap(([d,list])=>list.map(r=>({...r,d})));
+  if(!uses.length) return;
+  const add=(id,b,d)=>{ DYN_BADGES[id]={id,...b}; if(!out[id]) out[id]=d; };
+  const groupOf={}; G.forEach(g=>g.skills.forEach(id=>groupOf[id]=g.id));
+  const seen={}; uses.forEach(u=>{ const g=groupOf[u.id]; if(g && !seen[g]) seen[g]=u.d; });
+  for(const g of G){ if(!seen[g.id]) continue;
+    add("skillgroup-"+g.id, SKILL_GROUP_BADGES[g.id]||{em:g.icon||"🧰",name:g.title,desc:`Used a skill from “${g.title}”`}, seen[g.id]); }
+  if(G.every(g=>seen[g.id])) add("skill-all-groups",{em:"🗃️",name:"Full Toolbox",desc:"Used a skill from every group"}, Object.values(seen).sort().pop());
+  const firstHelp=uses.find(u=>u.helped==="yes"||u.helped==="little");
+  if(firstHelp) add("skill-helped",{em:"🔑",name:"Found What Works",desc:"A skill helped you"}, firstHelp.d);
+  const distinct=[]; uses.forEach(u=>{ if(!distinct.find(x=>x.id===u.id)) distinct.push(u); });
+  if(distinct.length>=5) add("skill-5",{em:"🎒",name:"Skill Explorer",desc:"Tried 5 different skills"}, distinct[4].d);
+  if(distinct.length>=10) add("skill-10",{em:"🧳",name:"Skill Collector",desc:"Tried 10 different skills"}, distinct[9].d);
+  if(uses.length>=10) add("skill-uses-10",{em:"🔁",name:"Practice Makes Progress",desc:"Used skills 10 times"}, uses[9].d);
+}
 function monthProgress(){ // this month's progress toward its badge, for "next up" hints
   const ym=today().slice(0,7), n=new Set(S.entries.filter(e=>e.date.startsWith(ym)).map(e=>e.date)).size;
   if(n>=MONTHLY_MIN_DAYS) return null;
@@ -317,6 +346,7 @@ function earnedBadges(entries){
     if(Object.keys(out).length===BADGES.length) break;
   }
   dynamicBadges(entries,out);
+  skillBadges(out);
   return out;
 }
 
@@ -334,6 +364,7 @@ function scrollToHash(){
 }
 window.addEventListener("hashchange",scrollToHash);
 function setView(v){ if(v!=="about" && /^#about-/.test(location.hash)){ try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} }
+  if(v==="badges") return showBadges();
   S.view=v; S.form=null; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v)); render(); window.scrollTo(0,0); }
 document.getElementById("tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b) setView(b.dataset.v); });
 
@@ -341,7 +372,7 @@ function getEntry(date,kind){ return S.entries.find(e=>e.date===date && e.kind==
 function avgRating(e){ const v=Object.entries(e.answers).filter(([k])=>k.endsWith("_scale")).map(([,v])=>+v).filter(Boolean); return v.length?(v.reduce((a,b)=>a+b,0)/v.length):null; }
 
 function render(){
-  ({today:renderToday, skills:renderSkills, history:renderHistory, badges:renderBadges, settings:renderSettings, about:renderAbout})[S.view]();
+  ({today:renderToday, skills:renderSkills, history:renderHistory, settings:renderSettings, about:renderAbout})[S.view]();
   if(S.view==="today" && pendingCelebration.length && !S.form){ const b=pendingCelebration; pendingCelebration=[]; setTimeout(()=>celebrate(b,computeStats(S.entries)),250); }
   if(S.form) renderForm(); else closeSheet();
 }
@@ -378,7 +409,7 @@ function renderToday(){
   $app.querySelectorAll("[data-open]:not([disabled])").forEach(b=>b.onclick=()=>openForm(b.dataset.open,t));
   scheduleWindowFlip();
   $app.querySelectorAll(".book[data-d]").forEach(b=>b.onclick=()=>dayPicker(b.dataset.d));
-  document.getElementById("toBadges").onclick=()=>setView("badges");
+  document.getElementById("toBadges").onclick=()=>showBadges();
   const ae=document.getElementById("affEntry"); if(ae) ae.onclick=()=>openAffSheet(false);
   if(S.prefs.affMode==="embedded") bindAffirm();
   const qb=document.getElementById("quickBackup"); if(qb) qb.onclick=downloadBackup;
@@ -1001,7 +1032,9 @@ function openSkill(id){
   };
   const answer=h=>{
     const t=skillBg.querySelector("#skNote")?.value.trim(); if(t) rec.note=t;
+    const before=earnedBadges(S.entries);
     rec.helped=h; saveSkillLog();
+    const after=earnedBadges(S.entries); skillPendingBadges=skillPendingBadges.concat(badgeList().filter(b=>after[b.id]&&!before[b.id]&&!skillPendingBadges.includes(b)));
     const msg={yes:["💛","Glad it helped.","It's in today's log. Come back to it anytime."],
       little:["🌱","A little still counts.","It's in today's log. Skills get stronger the more you practice them."],
       no:["🤍","That's okay.","Not every skill fits every moment. It's in today's log, and there are plenty of others to try."]}[h];
@@ -1105,6 +1138,7 @@ function renderHistory(){
       <div class="cal">${"SMTWTFS".split("").map(d=>`<span class="h">${d}</span>`).join("")}${cells.join("")}</div>
       <div class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i class="lg-n" style="background:var(--night)"></i>Night</span><span class="muted">Tap a day to see everything you wrote</span></div>
     </div>
+    ${badgesSectionHTML()}
     <div class="section-title"><h2>Trends</h2><span class="small muted">last 30 days · 1–5</span></div>
     <div class="card">${trendsHTML()}</div>
     <div class="section-title"><h2>Entries</h2><span class="small muted">${days.length} day${days.length===1?"":"s"}</span></div>
@@ -1115,6 +1149,8 @@ function renderHistory(){
   $app.querySelectorAll(".cell[data-d]:not(.future)").forEach(b=>b.onclick=()=>{ S.histDay=b.dataset.d; render(); document.getElementById("dayDetail")?.scrollIntoView({behavior:"smooth",block:"start"}); });
   const ddc=document.getElementById("ddClose"); if(ddc) ddc.onclick=()=>{ S.histDay=null; render(); };
   $app.querySelectorAll(".day-detail [data-open-k]").forEach(b=>b.onclick=()=>openForm(b.dataset.openK,S.histDay));
+  const ba=document.getElementById("badgesAll"); if(ba) ba.onclick=()=>{ S.badgesAll=!S.badgesAll; const y=scrollY; render(); scrollTo(0,y); document.getElementById("badgesAll")?.focus(); };
+  focusBadgeAfterRender();
   $app.querySelectorAll(".entry[data-k]").forEach(b=>b.onclick=()=>{const e=S.entries.find(x=>x.key===b.dataset.k); openForm(e.kind,e.date);});
   $app.querySelectorAll("[data-day-open]").forEach(b=>b.onclick=()=>{ S.histDay=b.dataset.dayOpen; render(); document.getElementById("dayDetail")?.scrollIntoView({behavior:"smooth",block:"start"}); });
 }
@@ -1137,16 +1173,17 @@ function trendsHTML(){
   const t=today(), days=[...Array(30)].map((_,i)=>addDays(t,i-29));
   const dims=Object.keys(DIMENSIONS).filter(k=>FORMS.morning.sections.concat(FORMS.night.sections).some(s=>s.dim===k && s.scale));
   if(!S.entries.length) return `<div class="muted small">Trends appear once you've logged a few check-ins.</div>`;
-  return dims.map(k=>{
-    const D=DIMENSIONS[k], id=k+"_scale";
-    const line=kind=>{ const pts=days.map((d,i)=>{const e=getEntry(d,kind); const v=e?.answers[id]; return v?[i,+v]:null;}).filter(Boolean);
+  // first row: overall = the average of all ratings in each check-in
+  const rows=[{icon:"✨",label:"Overall",val:e=>avgRating(e),cls:" overall"}].concat(dims.map(k=>({icon:DIMENSIONS[k].icon,label:DIMENSIONS[k].label,val:e=>+e.answers[k+"_scale"]||null,cls:""})));
+  return rows.map(R=>{
+    const line=kind=>{ const pts=days.map((d,i)=>{const e=getEntry(d,kind); const v=e&&R.val(e); return v?[i,+v]:null;}).filter(Boolean);
       if(!pts.length) return {svg:"",vals:[]};
       const xy=pts.map(([i,v])=>`${(i/29*100).toFixed(1)},${(30-(v-1)/4*26-2).toFixed(1)}`);
       return {svg:`<polyline class="ln-${kind}" fill="none" stroke="${kind==="morning"?"var(--morning)":"var(--night)"}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" points="${xy.join(" ")}"/>`+xy.map(p=>`<circle cx="${p.split(",")[0]}" cy="${p.split(",")[1]}" r="1.4" fill="${kind==="morning"?"var(--morning)":"var(--night)"}"/>`).join(""), vals:pts.map(p=>p[1])};
     };
     const m=line("morning"), n=line("night"); const all=m.vals.concat(n.vals);
     const avg=all.length?(all.reduce((a,b)=>a+b,0)/all.length).toFixed(1):"–";
-    return `<div class="trend"><span>${D.icon} ${D.label}</span><svg viewBox="0 0 100 32" preserveAspectRatio="none">${m.svg}${n.svg}</svg><b style="text-align:right">${avg}</b></div>`;
+    return `<div class="trend${R.cls}"><span>${R.icon} ${R.label}</span><svg viewBox="0 0 100 32" preserveAspectRatio="none">${m.svg}${n.svg}</svg><b style="text-align:right">${avg}</b></div>`;
   }).join("") + `<div class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i class="lg-n" style="background:var(--night)"></i>Night</span></div>`;
 }
 /* ---------- Day view: the day's highlights and notes ---------- */
@@ -1239,31 +1276,44 @@ function openDaySheet(d){
   dayBg.querySelectorAll("[data-open-k]").forEach(bt=>bt.onclick=()=>{ const k=bt.dataset.openK; dayBg.remove(); dayBg=null; openForm(k,d); });
   const full=dayBg.querySelector("#dayFull"); if(full) full.onclick=()=>{ closeDaySheet(); showDayInHistory(d); };
   dayBg.querySelectorAll(".mini-badge[data-b]").forEach(bt=>{
-    bt.onclick=()=>{ hideTip(); closeDaySheet(); S.focusBadge=bt.dataset.b; setView("badges"); };
+    bt.onclick=()=>{ hideTip(); closeDaySheet(); showBadges(bt.dataset.b); };
     bt.onmouseenter=bt.onfocus=()=>showTip(bt, bt.dataset.name, bt.dataset.desc);
     bt.onmouseleave=bt.onblur=hideTip;
   });
 }
 
 /* ---------- Badges ---------- */
-function focusBadgeAfterRender(){
-  if(!S.focusBadge) return; const el=document.getElementById("badge-"+S.focusBadge); S.focusBadge=null;
-  if(el) setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"center"}),40);
+/* Badges live in History. showBadges() opens History at the Badges section (optionally on one badge). */
+const BADGES_SHOWN=6;
+function showBadges(id){
+  S.view="history"; S.form=null; S.scrollBadges=true; if(id){ S.focusBadge=id; }
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v==="history"));
+  render();
 }
-function renderBadges(){
+function focusBadgeAfterRender(){
+  if(!S.focusBadge && !S.scrollBadges) return;
+  const el=(S.focusBadge&&document.getElementById("badge-"+S.focusBadge))||document.getElementById("badges");
+  const center=!!S.focusBadge; S.focusBadge=null; S.scrollBadges=false;
+  if(el) setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:center?"center":"start"}),40);
+}
+function badgesSectionHTML(){
   // Only earned badges are shown, newest first: no totals or locked slots to "complete".
   const earned=earnedBadges(S.entries), n=Object.keys(earned).length;
   const got=badgeList().filter(x=>earned[x.id]).sort((x,y)=>earned[y.id].localeCompare(earned[x.id]));
-  $app.innerHTML = `
+  if(S.focusBadge && got.findIndex(b=>b.id===S.focusBadge)>=BADGES_SHOWN) S.badgesAll=true;
+  const shown=S.badgesAll?got:got.slice(0,BADGES_SHOWN);
+  return `<section id="badges" aria-labelledby="badges-h">
+    <div class="section-title"><h2 id="badges-h">Badges</h2><span class="small muted">${n} earned</span></div>
     <div class="card" style="display:flex;gap:16px;align-items:center">
       <div style="font-size:2.4rem">🏅</div>
       <div><h2 style="font-size:1.2rem">${n?`You've earned ${n} ${n===1?"badge":"badges"}`:"Your badges will show up here"}</h2>
       <div class="small muted">${n?"Every one of these is a time you showed up for yourself. ":""}Badges reward showing up, never your ratings. A hard day logged honestly counts just as much.</div></div>
     </div>
-    ${n?`<div class="grid badges" style="margin-top:14px">${got.map(b=>`<div class="card badge ${S.focusBadge===b.id?"focus":""}" id="badge-${esc(b.id)}"><div class="em">${b.em}</div><h3>${b.name}</h3><p>${b.desc}</p><p class="when">Earned ${fmtDate(earned[b.id])}</p></div>`).join("")}</div>
-      <p class="small muted" style="text-align:center;margin-top:18px">More badges appear as you keep checking in. There's no list to finish.</p>`
-    :`<div class="card muted" style="margin-top:14px;text-align:center">Your first badge is one check-in or affirmation away.</div>`}`;
-  focusBadgeAfterRender();
+    ${n?`<div class="grid badges" style="margin-top:14px">${shown.map(b=>`<div class="card badge ${S.focusBadge===b.id?"focus":""}" id="badge-${esc(b.id)}"><div class="em">${b.em}</div><h3>${b.name}</h3><p>${b.desc}</p><p class="when">Earned ${fmtDate(earned[b.id])}</p></div>`).join("")}</div>
+      ${got.length>BADGES_SHOWN?`<p style="text-align:center;margin-top:12px"><button class="linkbtn" id="badgesAll" aria-expanded="${!!S.badgesAll}">${S.badgesAll?"Show fewer":`Show all ${got.length} badges`}</button></p>`:""}
+      <p class="small muted" style="text-align:center;margin-top:14px">More badges appear as you keep checking in. There's no list to finish.</p>`
+    :`<div class="card muted" style="margin-top:14px;text-align:center">Your first badge is one check-in or affirmation away.</div>`}
+  </section>`;
 }
 
 /* ---------- Data (export / import) ---------- */

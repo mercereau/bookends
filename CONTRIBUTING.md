@@ -124,7 +124,7 @@ Check that the file is still valid JSON with `python3 -m json.tool data/suggesti
 ## 4. Changing code or styles
 
 - Whenever you edit `css/styles.css` or `js/app.js`, **bump its `?v=` number in `index.html`**. Browsers cache these files for a year, so without the bump, returning visitors keep the old version.
-- Check the Today, History, Badges, Settings and About tabs at phone width (about 390px) and desktop width, in both light and dark mode.
+- Check the Today, Skills, History, Settings and About tabs at phone width (about 390px) and desktop width, in both light and dark mode.
 - Open the browser console and make sure there are no errors.
 - Don't add anything that loads from another site. `_headers` has a strict Content Security Policy that would block it anyway.
 
