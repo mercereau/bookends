@@ -931,8 +931,8 @@ function renderSkills(){
     <div class="card skills-intro"><h2>🧰 Skills</h2><p>${esc(D.intro)}</p>${CRISIS_LINE}</div>
     ${hl.length?`<section class="skill-group helped-group" aria-labelledby="sg-helped">
       <h3 id="sg-helped"><span aria-hidden="true">💛</span> What's helped me</h3>
-      <p class="small muted">Skills you said helped, with the ones that helped most first.</p>
-      <div class="grid skill-grid">${hl.slice(0,6).map(x=>skillCardHTML(skillById(x.id),x)).join("")}</div>
+      <p class="small muted">Your top 3, based on what you said helped.</p>
+      <div class="grid skill-grid">${hl.slice(0,3).map(x=>skillCardHTML(skillById(x.id),x)).join("")}</div>
     </section>`:""}
     ${D.groups.map(g=>`<section class="skill-group" aria-labelledby="sg-${g.id}">
       <h3 id="sg-${g.id}"><span aria-hidden="true">${g.icon}</span> ${esc(g.title)}</h3>
