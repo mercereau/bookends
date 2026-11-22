@@ -575,6 +575,12 @@ html.text-l .badges{grid-template-columns:1fr!important}
 @media (prefers-reduced-motion:reduce){.skill-card .go{transition:none}}
 .helped-chip{align-self:flex-start;margin-top:4px;font-size:.8rem;font-weight:700;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--ink)}
 .helped-group > p{margin:-4px 0 8px}
+.skill-note{max-width:24rem;margin:18px auto 0;text-align:left}
+.skill-note label{display:block;font-weight:700;margin-bottom:6px}
+.skill-note p{margin:6px 0 0}
+.er-note{display:block;margin-top:3px;font-size:.92rem;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.skill-row{align-items:flex-start}
+.skill-row .er-time,.skill-row .er-ico{padding-top:2px}
 .skills-more{margin-top:18px}
 .skills-more a{color:inherit}
 .skill-sheet .sheet-head{background:color-mix(in srgb,var(--accent) 12%,var(--card))}

@@ -982,13 +982,25 @@ function openSkill(id){
         <div class="skill-rate" role="group" aria-labelledby="skAskQ">
           <button class="btn" data-helped="yes">👍 Yes, it helped</button>
           <button class="btn ghost" data-helped="little">🤏 A little</button>
-          <button class="btn ghost" data-helped="no">😐 Not really</button></div></div>`;
-    foot.innerHTML=`<button class="btn ghost" id="skSkip">Skip</button>`;
+          <button class="btn ghost" data-helped="no">😐 Not really</button></div>
+        <div class="skill-note"><label for="skNote">What happened? <span class="muted">(optional)</span></label>
+          <textarea id="skNote" rows="3" maxlength="1000" placeholder="What was going on, what you felt, or anything you noticed"></textarea>
+          <p class="small muted">Saved in today's log with your answer.</p></div></div>`;
+    foot.innerHTML=`<button class="btn ghost" id="skSkip">Skip</button><button class="btn" id="skSave" disabled>Save</button>`;
+    let pick=null; const save=foot.querySelector("#skSave"), note=body.querySelector("#skNote");
+    const sync=()=>{ save.disabled=!pick && !note.value.trim(); };
     foot.querySelector("#skSkip").onclick=()=>closeSkill();
-    body.querySelectorAll("[data-helped]").forEach(b=>b.onclick=()=>answer(b.dataset.helped));
+    save.onclick=()=>{ if(pick) return answer(pick); rec.note=note.value.trim(); saveSkillLog(); closeSkill(); };
+    note.oninput=sync;
+    body.querySelectorAll("[data-helped]").forEach(b=>{ b.setAttribute("aria-pressed","false"); b.onclick=()=>{
+      pick=pick===b.dataset.helped?null:b.dataset.helped;
+      body.querySelectorAll("[data-helped]").forEach(x=>{ const on=x.dataset.helped===pick; x.setAttribute("aria-pressed",on); x.classList.toggle("ghost",!on); });
+      sync(); }; });
+    body.querySelector("[data-helped='yes']").classList.add("ghost");
     body.scrollTop=0; body.querySelector("[data-helped]").focus();
   };
   const answer=h=>{
+    const t=skillBg.querySelector("#skNote")?.value.trim(); if(t) rec.note=t;
     rec.helped=h; saveSkillLog();
     const msg={yes:["💛","Glad it helped.","It's in today's log. Come back to it anytime."],
       little:["🌱","A little still counts.","It's in today's log. Skills get stronger the more you practice them."],
@@ -1023,7 +1035,7 @@ function saveSkillLog(){
 function cleanSkillLog(log){
   const out={}; if(!log||typeof log!=="object") return out;
   for(const [d,list] of Object.entries(log)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(list)){
-    const ok=list.filter(r=>r&&typeof r.id==="string").map(r=>({id:r.id,at:String(r.at||""),...(HELPED_LABEL[r.helped]?{helped:r.helped}:{})}));
+    const ok=list.filter(r=>r&&typeof r.id==="string").map(r=>({id:r.id,at:String(r.at||""),...(HELPED_LABEL[r.helped]?{helped:r.helped}:{}),...(typeof r.note==="string"&&r.note.trim()?{note:r.note.trim().slice(0,1000)}:{})}));
     if(ok.length) out[d]=ok; }
   return out;
 }
@@ -1117,7 +1129,7 @@ function dayEntryHTML(d){
     const edited=e.updatedAt&&e.createdAt&&new Date(e.updatedAt)-new Date(e.createdAt)>60000;
     ev.push({at:e.createdAt||"", sort:e.createdAt||(k==="morning"?"0":"2"), html:`<li><button class="entry-row" data-k="${e.key}"><span class="er-time">${clock(e.createdAt)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">${FORMS[k].icon}</span><span class="er-text"><b>${FORMS[k].title}</b>${edited?`<span class="small muted"> · edited ${clock(e.updatedAt)}</span>`:""}</span><span class="avg">${avgRating(e)?.toFixed(1)??"–"}</span></button></li>`}); }
   for(const r of S.skillLog[d]||[]){ const k=skillById(r.id);
-    ev.push({sort:r.at||"1", html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(r.at)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">🧰</span><span class="er-text"><b>${esc(k?k.name:r.id)}</b><span class="small muted"> · ${r.helped?HELPED_LABEL[r.helped]:"Used"}</span></span></div></li>`}); }
+    ev.push({sort:r.at||"1", html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(r.at)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">🧰</span><span class="er-text"><b>${esc(k?k.name:r.id)}</b><span class="small muted"> · ${r.helped?HELPED_LABEL[r.helped]:"Used"}</span>${r.note?`<span class="er-note">${esc(r.note)}</span>`:""}</span></div></li>`}); }
   ev.sort((a,b)=>a.sort.localeCompare(b.sort));
   return `<section class="card day-entry"><button class="de-head" data-day-open="${d}"><h3>${d===today()?"Today · ":""}${fmtDate(d)}</h3><span class="small muted">View day →</span></button><ul class="de-list">${ev.map(x=>x.html).join("")}</ul></section>`;
 }
