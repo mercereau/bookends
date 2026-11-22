@@ -1,12 +1,16 @@
 {
  "_notes": "Coping skills adapted from Dialectical Behavior Therapy (DBT), developed by Marsha Linehan. Original plain-language wording. Skills are reminders, not a substitute for learning DBT with a clinician. TIPP's temperature and intense-exercise steps are intentionally left out for safety.",
- "intro": "Quick skills for when feelings start to run high. Most come from Dialectical Behavior Therapy (DBT), and a few are simple grounding exercises. Pick one, take your time, and come back to them whenever you need.",
+ "intro": "Quick skills for when feelings start to run high. They come from Dialectical Behavior Therapy (DBT) and Cognitive Behavioral Therapy (CBT), plus a few simple grounding exercises. Pick one, take your time, and come back to them whenever you need.",
  "learnMore": {
-  "text": "These are reminders, not therapy. DBT works best when you learn it with a trained clinician.",
+  "text": "These are reminders, not therapy. DBT and CBT work best when you learn them with a trained clinician.",
   "links": [
    {
     "name": "What is DBT? (Cleveland Clinic)",
     "url": "https://my.clevelandclinic.org/health/treatments/22838-dialectical-behavior-therapy-dbt"
+   },
+   {
+    "name": "Self-help CBT techniques (NHS)",
+    "url": "https://www.nhs.uk/every-mind-matters/mental-wellbeing-tips/self-help-cbt-techniques/"
    },
    {
     "name": "Find a DBT-trained therapist (Behavioral Tech)",
@@ -67,9 +71,24 @@
    "title": "Check my thinking",
    "icon": "🧭",
    "skills": [
+    "catch",
+    "traps",
+    "worstbest",
+    "record",
     "facts",
     "opposite",
     "wise"
+   ]
+  },
+  {
+   "id": "unstuck",
+   "title": "Get unstuck",
+   "icon": "🪜",
+   "skills": [
+    "smallsteps",
+    "problem",
+    "worrytime",
+    "fears"
    ]
   },
   {
@@ -525,6 +544,148 @@
    }
   },
   {
+   "id": "catch",
+   "name": "Catch it, check it, change it",
+   "origin": "Adapted from CBT.",
+   "tagline": "Question an unhelpful thought instead of believing it.",
+   "when": "When a thought is dragging your mood down.",
+   "steps": [
+    {
+     "k": "🎣",
+     "t": "Catch it",
+     "d": "Notice the thought and say it to yourself in words: \"I'm thinking that...\""
+    },
+    {
+     "k": "🔍",
+     "t": "Check it",
+     "d": "Is it a fact or a guess? What's the evidence for it, and against it? Would you say this to a friend?"
+    },
+    {
+     "k": "🔄",
+     "t": "Change it",
+     "d": "Swap it for something more balanced and kind. It doesn't have to be cheerful, just fair and true."
+    }
+   ],
+   "source": {
+    "name": "NHS: Reframing Unhelpful Thoughts",
+    "url": "https://www.nhs.uk/every-mind-matters/mental-wellbeing-tips/self-help-cbt-techniques/reframing-unhelpful-thoughts/"
+   }
+  },
+  {
+   "id": "traps",
+   "name": "Spot the thinking trap",
+   "origin": "Adapted from CBT.",
+   "tagline": "Name the trap, and it loosens its grip.",
+   "when": "When your thoughts feel extreme or stuck on the worst.",
+   "steps": [
+    {
+     "k": "1",
+     "t": "Write down the thought",
+     "d": "Get it out of your head and into words."
+    },
+    {
+     "k": "2",
+     "t": "Look for a trap",
+     "d": "Common ones: all-or-nothing, expecting the worst, mind reading, predicting the future, \"shoulds,\" labeling yourself, ignoring the good, and \"I feel it, so it must be true.\""
+    },
+    {
+     "k": "3",
+     "t": "Name it",
+     "d": "\"That's mind reading.\" Just naming it puts a little space between you and the thought."
+    },
+    {
+     "k": "4",
+     "t": "Try a fairer version",
+     "d": "Rewrite the thought without the trap. \"I always mess up\" might become \"I made a mistake today, and I've done plenty right too.\""
+    }
+   ],
+   "source": {
+    "name": "Cleveland Clinic: Cognitive Distortions",
+    "url": "https://health.clevelandclinic.org/cognitive-distortions"
+   }
+  },
+  {
+   "id": "worstbest",
+   "name": "Worst, best, most likely",
+   "origin": "Adapted from CBT.",
+   "tagline": "Zoom out from the worst-case story.",
+   "when": "When your mind jumps straight to disaster.",
+   "steps": [
+    {
+     "k": "😟",
+     "t": "The worst case",
+     "d": "What's the worst that could realistically happen? Say it plainly."
+    },
+    {
+     "k": "💪",
+     "t": "How I'd cope",
+     "d": "If it did happen, what would you do? Who could help? You've handled hard things before."
+    },
+    {
+     "k": "🌤️",
+     "t": "The best case",
+     "d": "What's the best that could happen? Let yourself picture it."
+    },
+    {
+     "k": "⚖️",
+     "t": "The most likely",
+     "d": "Somewhere in between is what usually happens. What's the most likely outcome?"
+    }
+   ],
+   "source": {
+    "name": "NHS: Reframing Unhelpful Thoughts",
+    "url": "https://www.nhs.uk/every-mind-matters/mental-wellbeing-tips/self-help-cbt-techniques/reframing-unhelpful-thoughts/"
+   }
+  },
+  {
+   "id": "record",
+   "name": "Thought record",
+   "origin": "Adapted from CBT.",
+   "tagline": "Walk through a tough moment on paper.",
+   "when": "When you have a few minutes and want to untangle what happened.",
+   "steps": [
+    {
+     "k": "1",
+     "t": "The situation",
+     "d": "What happened? Where were you, and who was there? Just the facts."
+    },
+    {
+     "k": "2",
+     "t": "My feelings",
+     "d": "What did you feel, and how strong was it, from 0 to 100?"
+    },
+    {
+     "k": "3",
+     "t": "The thought",
+     "d": "What went through your mind? Which thought hit the hardest?"
+    },
+    {
+     "k": "4",
+     "t": "Evidence for it",
+     "d": "What facts back that thought up?"
+    },
+    {
+     "k": "5",
+     "t": "Evidence against it",
+     "d": "What facts don't fit? What would a friend point out?"
+    },
+    {
+     "k": "6",
+     "t": "A more balanced thought",
+     "d": "Put the evidence together into a fairer way to see it."
+    },
+    {
+     "k": "7",
+     "t": "Re-rate",
+     "d": "How strong is the feeling now, from 0 to 100? Any change counts."
+    }
+   ],
+   "source": {
+    "name": "NHS: Thought Record",
+    "url": "https://www.nhs.uk/every-mind-matters/mental-wellbeing-tips/self-help-cbt-techniques/thought-record/"
+   }
+  },
+  {
    "id": "facts",
    "name": "Check the facts",
    "tagline": "Make sure the feeling fits what's really happening.",
@@ -618,6 +779,143 @@
    "source": {
     "name": "McLean Hospital: Practical DBT Strategies",
     "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "smallsteps",
+   "name": "One small step",
+   "origin": "Adapted from CBT.",
+   "tagline": "Do first, and let the mood catch up.",
+   "when": "When you feel low, flat, or can't get started.",
+   "steps": [
+    {
+     "k": "1",
+     "t": "Pick something small",
+     "d": "Choose one activity that's enjoyable or gives you a sense of getting something done. Smaller is better."
+    },
+    {
+     "k": "2",
+     "t": "Shrink it even more",
+     "d": "\"Clean the kitchen\" can become \"wash five dishes.\" No step is too small."
+    },
+    {
+     "k": "3",
+     "t": "Give it a time",
+     "d": "Decide when you'll do it, like \"after lunch\" or \"at 4 PM.\""
+    },
+    {
+     "k": "4",
+     "t": "Do it, then notice",
+     "d": "Afterward, notice how you feel, even if the change is tiny. You don't have to feel motivated first."
+    }
+   ],
+   "source": {
+    "name": "University of Michigan: Behavioral Activation",
+    "url": "https://medicine.umich.edu/sites/default/files/content/downloads/Behavioral-Activation-for-Depression.pdf"
+   }
+  },
+  {
+   "id": "problem",
+   "name": "Problem solving",
+   "origin": "Adapted from CBT.",
+   "tagline": "Turn a big mess into one next step.",
+   "when": "When a real, practical problem feels overwhelming.",
+   "steps": [
+    {
+     "k": "1",
+     "t": "Name the problem",
+     "d": "Describe it in one or two sentences, focusing on facts, not blame."
+    },
+    {
+     "k": "2",
+     "t": "List every possible solution",
+     "d": "Write down all the ideas, even the silly ones. Don't judge them yet."
+    },
+    {
+     "k": "3",
+     "t": "Weigh them",
+     "d": "For the most promising ones, jot down the pros and cons."
+    },
+    {
+     "k": "4",
+     "t": "Pick one and plan it",
+     "d": "Choose a solution and break it into small, specific steps."
+    },
+    {
+     "k": "5",
+     "t": "Try it, then review",
+     "d": "Give it a go. If it didn't work, that's information. Go back and try another option."
+    }
+   ],
+   "source": {
+    "name": "NHS: Problem Solving",
+    "url": "https://www.nhs.uk/every-mind-matters/mental-wellbeing-tips/self-help-cbt-techniques/problem-solving/"
+   }
+  },
+  {
+   "id": "worrytime",
+   "name": "Worry time",
+   "origin": "Adapted from CBT.",
+   "tagline": "Give worries an appointment instead of your whole day.",
+   "when": "When worries keep popping up and taking over.",
+   "steps": [
+    {
+     "k": "🗓️",
+     "t": "Set a time",
+     "d": "Pick 10 to 15 minutes later today for worrying, not too close to bedtime."
+    },
+    {
+     "k": "📝",
+     "t": "Park it",
+     "d": "When a worry shows up, jot it down and tell yourself, \"I'll think about this at worry time.\""
+    },
+    {
+     "k": "↩️",
+     "t": "Come back to now",
+     "d": "Return to what you were doing. The worry is saved. You don't have to hold it."
+    },
+    {
+     "k": "⏱️",
+     "t": "Worry on schedule",
+     "d": "At worry time, look at your list. Some worries won't matter anymore. For the rest, ask if there's anything you can do."
+    }
+   ],
+   "source": {
+    "name": "NHS: Tackling Your Worries",
+    "url": "https://www.nhs.uk/every-mind-matters/mental-wellbeing-tips/self-help-cbt-techniques/tackling-your-worries/"
+   }
+  },
+  {
+   "id": "fears",
+   "name": "Face it, one step at a time",
+   "origin": "Adapted from CBT.",
+   "tagline": "Build courage with small, steady steps.",
+   "when": "When you've been avoiding something because it makes you anxious.",
+   "steps": [
+    {
+     "k": "1",
+     "t": "Name what you're avoiding",
+     "d": "Pick one thing anxiety has been keeping you from doing."
+    },
+    {
+     "k": "2",
+     "t": "Make a ladder",
+     "d": "List small steps from easiest to hardest. Each one a little more challenging than the last."
+    },
+    {
+     "k": "3",
+     "t": "Start at the bottom",
+     "d": "Try the easiest step. Stay with it until the anxiety starts to ease, even a little."
+    },
+    {
+     "k": "4",
+     "t": "Climb at your pace",
+     "d": "Repeat a step until it feels manageable, then move up. Going slowly still counts."
+    }
+   ],
+   "source": {
+    "name": "NHS: Facing Your Fears",
+    "url": "https://www.nhs.uk/every-mind-matters/mental-wellbeing-tips/self-help-cbt-techniques/facing-your-fears/"
    }
   },
   {
