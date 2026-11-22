@@ -556,7 +556,10 @@ html.text-l .badges{grid-template-columns:1fr!important}
 .skill-card{border:0;text-align:left;display:flex;flex-direction:column;gap:4px;cursor:pointer;font:inherit;color:var(--ink)}
 .skill-card:hover{box-shadow:0 0 0 2px var(--accent)}
 .skill-name{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:1.1rem}
-.skill-card .go{font-size:.85rem;font-weight:700;color:color-mix(in srgb,var(--accent) 80%,var(--ink));margin-top:2px}
+.skill-card .skill-name{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.skill-card .go{font-weight:700;color:color-mix(in srgb,var(--accent) 80%,var(--ink));flex:none;transition:transform .15s}
+.skill-card:hover .go,.skill-card:focus-visible .go{transform:translateX(3px)}
+@media (prefers-reduced-motion:reduce){.skill-card .go{transition:none}}
 .skills-more{margin-top:18px}
 .skills-more a{color:inherit}
 .skill-sheet .sheet-head{background:color-mix(in srgb,var(--accent) 12%,var(--card))}

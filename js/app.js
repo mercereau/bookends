@@ -918,7 +918,7 @@ function renderSkills(){
     ${D.groups.map(g=>`<section class="skill-group" aria-labelledby="sg-${g.id}">
       <h3 id="sg-${g.id}"><span aria-hidden="true">${g.icon}</span> ${esc(g.title)}</h3>
       <div class="grid skill-grid">${g.skills.map(id=>{ const k=skillById(id); return k?`<button class="card skill-card" data-skill="${k.id}">
-        <span class="skill-name">${esc(k.name)}</span><span class="small muted">${esc(k.tagline)}</span><span class="go">Walk me through it →</span></button>`:""; }).join("")}</div>
+        <span class="skill-name">${esc(k.name)}<span class="go" aria-hidden="true">→</span></span><span class="small muted">${esc(k.tagline)}</span></button>`:""; }).join("")}</div>
     </section>`).join("")}
     <div class="card skills-more"><p class="small muted">${esc(D.learnMore.text)}</p>
       <p class="small">${D.learnMore.links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ↗</a>`).join(" · ")}</p></div>`;
