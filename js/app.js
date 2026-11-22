@@ -1208,7 +1208,7 @@ function renderAbout(){
         <h2 class="sec">How it works<a class="anchor" href="#about-how" aria-label="Link to this section">#</a></h2>
         <ul>
           <li><b>🌅 Morning intention</b> is open from ${hourLabel(win("morning")[0])} to ${hourLabel(win("morning")[1])}. <b>🌙 Nightly reflection</b> is open from ${hourLabel(win("night")[0])} to ${hourLabel(win("night")[1])}. You can change both windows in <b>Settings</b>.</li>
-          <li><b>🧰 Skills</b> has short coping skills, like STOP, DEAR MAN, "catch it, check it, change it" and the 5-4-3-2-1 grounding exercise, for when feelings start to run high. They come from Dialectical Behavior Therapy (DBT) and Cognitive Behavioral Therapy (CBT). They're reminders, not therapy.</li>
+          <li><b>🧰 Skills</b> has short coping skills, like STOP, DEAR MAN, "catch it, check it, change it," a self-compassion break and the 5-4-3-2-1 grounding exercise, for when feelings start to run high. They draw on DBT, CBT, ACT, mindfulness and self-compassion. They're reminders, not therapy.</li>
           <li>Each check-in walks through the eight areas of wellness, one at a time. Rate each one from 1 to 5 and write as much or as little as you want. Skipping is fine.</li>
           <li><b>Check-ins are for today.</b> You can look back on past days, but you can't fill them in afterward. If you miss a day, that's okay. There's always tomorrow. No guilt, no shame.</li>
           <li><b>Badges reward showing up, never your ratings.</b> A hard day logged honestly counts just as much as a great one. There's no list to finish.</li>

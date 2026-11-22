@@ -1,8 +1,8 @@
 {
- "_notes": "Coping skills adapted from Dialectical Behavior Therapy (DBT), developed by Marsha Linehan. Original plain-language wording. Skills are reminders, not a substitute for learning DBT with a clinician. TIPP's temperature and intense-exercise steps are intentionally left out for safety.",
- "intro": "Quick skills for when feelings start to run high. They come from Dialectical Behavior Therapy (DBT) and Cognitive Behavioral Therapy (CBT), plus a few simple grounding exercises. Pick one, take your time, and come back to them whenever you need.",
+ "_notes": "Coping skills adapted from Dialectical Behavior Therapy (DBT, developed by Marsha Linehan), Cognitive Behavioral Therapy (CBT), Acceptance and Commitment Therapy (ACT), self-compassion research, mindfulness, solution-focused therapy, and simple grounding and body-based exercises. Original plain-language wording. Skills are reminders, not a substitute for learning them with a clinician. TIPP's temperature and intense-exercise steps are intentionally left out for safety.",
+ "intro": "Quick skills for when feelings start to run high. They draw on a few kinds of therapy, like DBT, CBT and ACT, plus mindfulness, self-compassion and simple grounding exercises. Pick one, take your time, and come back to them whenever you need.",
  "learnMore": {
-  "text": "These are reminders, not therapy. DBT and CBT work best when you learn them with a trained clinician.",
+  "text": "These are reminders, not therapy. They work best when you learn them with a trained clinician.",
   "links": [
    {
     "name": "What is DBT? (Cleveland Clinic)",
@@ -24,7 +24,8 @@
    "title": "Pause before I react",
    "icon": "✋",
    "skills": [
-    "stop"
+    "stop",
+    "anchor"
    ]
   },
   {
@@ -34,7 +35,8 @@
    "skills": [
     "54321",
     "color",
-    "categories"
+    "categories",
+    "orient"
    ]
   },
   {
@@ -42,8 +44,11 @@
    "title": "Calm my body",
    "icon": "🌬️",
    "skills": [
+    "sigh",
     "paced",
+    "butterfly",
     "muscle",
+    "bodyscan",
     "soothe"
    ]
   },
@@ -52,8 +57,20 @@
    "title": "Get through the next few minutes",
    "icon": "🌊",
    "skills": [
+    "wave",
+    "rain",
+    "leaves",
     "accepts",
     "improve"
+   ]
+  },
+  {
+   "id": "kind",
+   "title": "Be kind to myself",
+   "icon": "💛",
+   "skills": [
+    "selfcomp",
+    "friend"
    ]
   },
   {
@@ -72,6 +89,7 @@
    "icon": "🧭",
    "skills": [
     "catch",
+    "defuse",
     "traps",
     "worstbest",
     "record",
@@ -86,6 +104,9 @@
    "icon": "🪜",
    "skills": [
     "smallsteps",
+    "values",
+    "scaling",
+    "exceptions",
     "problem",
     "worrytime",
     "fears"
@@ -953,6 +974,472 @@
    "source": {
     "name": "McLean Hospital: Practical DBT Strategies",
     "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "anchor",
+   "name": "Drop anchor",
+   "origin": "Adapted from ACT.",
+   "tagline": "Steady yourself in an emotional storm.",
+   "when": "When a big feeling is sweeping you away.",
+   "steps": [
+    {
+     "k": "A",
+     "t": "Acknowledge what's here",
+     "d": "Quietly name what's showing up inside: \"I'm noticing fear,\" or \"Here's that tight chest again.\" You don't have to fix it."
+    },
+    {
+     "k": "C",
+     "t": "Come back into your body",
+     "d": "Press your feet into the floor. Straighten your back. Slowly stretch or press your hands together. Feel that you're here."
+    },
+    {
+     "k": "E",
+     "t": "Engage with the world",
+     "d": "Look around and notice what you can see and hear. Then turn your attention back to what you're doing."
+    },
+    {
+     "k": "🔁",
+     "t": "Go around again",
+     "d": "Repeat a few times, slowly. The storm may still be there, but you're anchored while it passes."
+    }
+   ],
+   "source": {
+    "name": "Psychwire: Dropping Anchor (Russ Harris)",
+    "url": "https://psychwire.com/free-resources/clinical-tools/resource-1i9a4oo/the-dropping-anchor-resource-kit"
+   }
+  },
+  {
+   "id": "orient",
+   "name": "Look around the room",
+   "origin": "A body-based calming exercise.",
+   "tagline": "Let your eyes tell your body you're safe.",
+   "when": "When you feel on edge, jumpy or far away.",
+   "steps": [
+    {
+     "k": "👀",
+     "t": "Slowly look around",
+     "d": "Let your head and eyes move slowly. Look left, right, up, down, and even behind you."
+    },
+    {
+     "k": "🪟",
+     "t": "Notice where you are",
+     "d": "Find the door, the windows, the walls. Take in the colors and shapes."
+    },
+    {
+     "k": "🌼",
+     "t": "Rest on something pleasant",
+     "d": "Let your eyes land on something that's neutral or nice to look at. Stay with it for a few breaths."
+    },
+    {
+     "k": "💭",
+     "t": "Check in",
+     "d": "Notice if anything shifted. A longer breath, softer shoulders? Any change counts."
+    }
+   ],
+   "source": {
+    "name": "Insight Timer: Orienting Practice",
+    "url": "https://insighttimer.com/techniques/somatics/orienting-practice"
+   }
+  },
+  {
+   "id": "sigh",
+   "name": "Double sigh",
+   "origin": "A body-based calming exercise.",
+   "tagline": "Two breaths in, one long breath out.",
+   "when": "When you need to calm down fast, right where you are.",
+   "steps": [
+    {
+     "k": "👃",
+     "t": "Breathe in through your nose",
+     "d": "Take a normal breath in."
+    },
+    {
+     "k": "➕",
+     "t": "Sneak in a little more",
+     "d": "Without breathing out, take a second, shorter sip of air to fill your lungs all the way."
+    },
+    {
+     "k": "😮‍💨",
+     "t": "Long, slow breath out",
+     "d": "Let it all go slowly through your mouth, longer than the breath in."
+    },
+    {
+     "k": "🔁",
+     "t": "Repeat",
+     "d": "Do it two or three times, or keep going for a few minutes if it helps."
+    }
+   ],
+   "source": {
+    "name": "Stanford Medicine: Cyclic Sighing",
+    "url": "https://med.stanford.edu/news/insights/2023/02/cyclic-sighing-can-help-breathe-away-anxiety.html"
+   }
+  },
+  {
+   "id": "butterfly",
+   "name": "Butterfly hug",
+   "origin": "A calming technique from EMDR.",
+   "tagline": "Give yourself a slow, steady, two-sided tap.",
+   "when": "When you feel shaky, overwhelmed or need comfort.",
+   "steps": [
+    {
+     "k": "🦋",
+     "t": "Cross your arms",
+     "d": "Cross your arms over your chest so each hand rests near the opposite shoulder or collarbone."
+    },
+    {
+     "k": "👐",
+     "t": "Tap, left and right",
+     "d": "Slowly tap one hand, then the other, like butterfly wings. Find a gentle, steady rhythm."
+    },
+    {
+     "k": "🌬️",
+     "t": "Breathe and notice",
+     "d": "Breathe slowly while you tap. Notice what's going on in your body without judging it."
+    },
+    {
+     "k": "✋",
+     "t": "Stop when it's enough",
+     "d": "Keep going until you feel a bit calmer, usually a minute or two. Then rest your hands."
+    }
+   ],
+   "source": {
+    "name": "EMDRIA: The Butterfly Hug Method",
+    "url": "https://www.emdria.org/resource/the-emdr-therapy-butterfly-hug-method-for-self-administered-bilateral-stimulation-iberoamerican-journal-of-psychotraumatology-and-dissociation/"
+   }
+  },
+  {
+   "id": "bodyscan",
+   "name": "Body scan",
+   "origin": "A mindfulness practice.",
+   "tagline": "Check in with your body, one part at a time.",
+   "when": "When you're tense, wired, or having trouble winding down.",
+   "steps": [
+    {
+     "k": "🪑",
+     "t": "Get settled",
+     "d": "Sit or lie down comfortably. Close your eyes or soften your gaze. Take a few easy breaths."
+    },
+    {
+     "k": "🦶",
+     "t": "Start at your feet",
+     "d": "Notice how your feet feel: warm, cool, tingly, heavy, nothing at all. Whatever's there is fine."
+    },
+    {
+     "k": "⬆️",
+     "t": "Move slowly upward",
+     "d": "Shift your attention to your legs, belly, chest, back, hands, arms, shoulders, neck and face."
+    },
+    {
+     "k": "😌",
+     "t": "Breathe into tight spots",
+     "d": "If you find tension, breathe toward it and let it soften a little. If your mind wanders, just come back."
+    },
+    {
+     "k": "🌕",
+     "t": "Feel your whole body",
+     "d": "Finish by noticing your whole body at once. Take one more breath before you open your eyes."
+    }
+   ],
+   "source": {
+    "name": "Greater Good in Action: Body Scan Meditation",
+    "url": "https://ggia.berkeley.edu/practice/body_scan_meditation"
+   }
+  },
+  {
+   "id": "rain",
+   "name": "RAIN",
+   "origin": "A mindfulness practice.",
+   "tagline": "Make room for a hard feeling instead of fighting it.",
+   "when": "When you're stuck in a painful feeling.",
+   "steps": [
+    {
+     "k": "R",
+     "t": "Recognize",
+     "d": "Name what's happening: \"This is anxiety,\" or \"I'm feeling really hurt.\""
+    },
+    {
+     "k": "A",
+     "t": "Allow",
+     "d": "Let it be here for a moment, just as it is. You might whisper \"this belongs\" or simply \"yes.\""
+    },
+    {
+     "k": "I",
+     "t": "Investigate gently",
+     "d": "Where do you feel it in your body? What does this part of you most need right now?"
+    },
+    {
+     "k": "N",
+     "t": "Nurture",
+     "d": "Offer yourself some care. A hand on your heart, a kind word, or whatever you'd give someone you love."
+    }
+   ],
+   "source": {
+    "name": "Tara Brach: RAIN",
+    "url": "https://www.tarabrach.com/rain/"
+   }
+  },
+  {
+   "id": "leaves",
+   "name": "Leaves on a stream",
+   "origin": "Adapted from ACT.",
+   "tagline": "Watch your thoughts float by.",
+   "when": "When your mind won't stop racing or replaying.",
+   "steps": [
+    {
+     "k": "🏞️",
+     "t": "Picture a stream",
+     "d": "Imagine sitting beside a gentle stream with leaves floating along the water."
+    },
+    {
+     "k": "🍃",
+     "t": "Put each thought on a leaf",
+     "d": "Whenever a thought shows up, good or bad, place it on a leaf and watch it drift away."
+    },
+    {
+     "k": "🌀",
+     "t": "If you get pulled in",
+     "d": "If you get caught up in a thought, that's normal. Notice it, and gently come back to the stream."
+    },
+    {
+     "k": "🙂",
+     "t": "Even \"this isn't working\"",
+     "d": "Thoughts like \"I'm bored\" or \"I'm doing this wrong\" go on leaves too. Keep going for a few minutes."
+    }
+   ],
+   "source": {
+    "name": "NHS (ELFT): Leaves on a Stream",
+    "url": "https://www.elft.nhs.uk/sites/default/files/2023-02/Mindfulness%20-%20leaves%20on%20a%20stream.pdf"
+   }
+  },
+  {
+   "id": "selfcomp",
+   "name": "Self-compassion break",
+   "origin": "From self-compassion research.",
+   "tagline": "Three kind sentences for a hard moment.",
+   "when": "When you're being hard on yourself or going through something tough.",
+   "steps": [
+    {
+     "k": "1",
+     "t": "This is hard",
+     "d": "Say to yourself, \"This is a moment of struggle,\" or just \"Ouch, this hurts.\" Notice it without brushing it off."
+    },
+    {
+     "k": "2",
+     "t": "I'm not alone",
+     "d": "\"Other people feel this way too. Struggling is part of being human.\""
+    },
+    {
+     "k": "3",
+     "t": "May I be kind to myself",
+     "d": "Put a hand on your heart or somewhere comforting. Say, \"May I be kind to myself,\" or \"May I give myself what I need.\""
+    }
+   ],
+   "source": {
+    "name": "Greater Good in Action: Self-Compassion Break",
+    "url": "https://ggia.berkeley.edu/practice/self_compassion_break"
+   }
+  },
+  {
+   "id": "friend",
+   "name": "Talk to yourself like a friend",
+   "origin": "From self-compassion research.",
+   "tagline": "Give yourself the kindness you'd give someone you love.",
+   "when": "When your inner voice is harsh.",
+   "steps": [
+    {
+     "k": "🫂",
+     "t": "Picture a good friend",
+     "d": "Imagine a close friend going through exactly what you're going through right now."
+    },
+    {
+     "k": "💬",
+     "t": "What would you say?",
+     "d": "What would you tell them? How would you say it? Notice your tone and your words."
+    },
+    {
+     "k": "🔍",
+     "t": "Notice the difference",
+     "d": "Compare that with how you've been talking to yourself. What's different?"
+    },
+    {
+     "k": "💛",
+     "t": "Say it to yourself",
+     "d": "Now offer yourself those same words, in that same kind tone. You deserve them too."
+    }
+   ],
+   "source": {
+    "name": "Greater Good in Action: How Would You Treat a Friend?",
+    "url": "https://ggia.berkeley.edu/practice/how_would_you_treat_a_friend"
+   }
+  },
+  {
+   "id": "defuse",
+   "name": "\"I'm having the thought that...\"",
+   "origin": "Adapted from ACT.",
+   "tagline": "Put a little space between you and a thought.",
+   "when": "When a harsh or scary thought feels like the truth.",
+   "steps": [
+    {
+     "k": "💭",
+     "t": "Catch the thought",
+     "d": "Notice the thought exactly as your mind says it, like \"I'm going to mess this up.\""
+    },
+    {
+     "k": "🏷️",
+     "t": "Add a label",
+     "d": "Say it again with \"I'm having the thought that...\" in front: \"I'm having the thought that I'm going to mess this up.\""
+    },
+    {
+     "k": "👀",
+     "t": "Step back once more",
+     "d": "Now try: \"I notice I'm having the thought that...\" Feel how it sits a little farther away?"
+    },
+    {
+     "k": "➡️",
+     "t": "Carry on",
+     "d": "You don't have to argue with it or make it go away. Let it be there and get back to what matters."
+    }
+   ],
+   "source": {
+    "name": "Northwestern University: Defusion Techniques",
+    "url": "https://www.northwestern.edu/csaw/resources/defusion-techniques-csaw.pdf"
+   }
+  },
+  {
+   "id": "values",
+   "name": "Toward what matters",
+   "origin": "Adapted from ACT.",
+   "tagline": "Pick your next move by what you care about.",
+   "when": "When you're stuck, drifting, or about to do something you'll regret.",
+   "steps": [
+    {
+     "k": "🧭",
+     "t": "What matters to me here?",
+     "d": "Think about the kind of person you want to be in this moment: patient, brave, kind, honest, caring for yourself?"
+    },
+    {
+     "k": "🎣",
+     "t": "Notice what's hooking you",
+     "d": "What thoughts or feelings are pulling you away from that? Just name them."
+    },
+    {
+     "k": "↔️",
+     "t": "Toward or away?",
+     "d": "Look at what you're about to do. Does it move you toward the person you want to be, or away?"
+    },
+    {
+     "k": "👣",
+     "t": "Take one toward move",
+     "d": "Choose one small action that moves you toward what matters, even with the hard feelings still along for the ride."
+    }
+   ],
+   "source": {
+    "name": "Russ Harris: The Choice Point",
+    "url": "https://www.actmindfully.com.au/upimages/Choice_Point_2.0_A_Brief_Overview_-_Russ_Harris_April_2017.pdf"
+   }
+  },
+  {
+   "id": "scaling",
+   "name": "0 to 10",
+   "origin": "Adapted from solution-focused therapy.",
+   "tagline": "Find your next small step up.",
+   "when": "When a problem feels all-or-nothing.",
+   "steps": [
+    {
+     "k": "🔢",
+     "t": "Rate it",
+     "d": "On a scale from 0 to 10, where 10 is how you'd like things to be, where are you right now?"
+    },
+    {
+     "k": "✅",
+     "t": "Why not lower?",
+     "d": "What's keeping you at that number and not lower? That's something you're already doing right."
+    },
+    {
+     "k": "⬆️",
+     "t": "One point up",
+     "d": "What would one point higher look like? What would be different?"
+    },
+    {
+     "k": "👣",
+     "t": "One small step",
+     "d": "What's one small thing you could do to move up just one point?"
+    }
+   ],
+   "source": {
+    "name": "Simply Psychology: Solution-Focused Brief Therapy",
+    "url": "https://www.simplypsychology.org/solution-focused-therapy.html"
+   }
+  },
+  {
+   "id": "exceptions",
+   "name": "When was it easier?",
+   "origin": "Adapted from solution-focused therapy.",
+   "tagline": "Learn from the times things went a little better.",
+   "when": "When a problem feels like it's always there.",
+   "steps": [
+    {
+     "k": "🔎",
+     "t": "Find an exception",
+     "d": "Think of a time when this problem was smaller, easier, or didn't show up at all. Even a little."
+    },
+    {
+     "k": "🧩",
+     "t": "What was different?",
+     "d": "Where were you? Who was around? What were you doing, or not doing?"
+    },
+    {
+     "k": "💪",
+     "t": "What did you do?",
+     "d": "What part did you play in making it go better? Give yourself credit."
+    },
+    {
+     "k": "🔁",
+     "t": "Do a little more of it",
+     "d": "What's one piece of that you could try again today?"
+    }
+   ],
+   "source": {
+    "name": "Simply Psychology: Solution-Focused Brief Therapy",
+    "url": "https://www.simplypsychology.org/solution-focused-therapy.html"
+   }
+  },
+  {
+   "id": "wave",
+   "name": "Ride the wave",
+   "tagline": "Feelings rise, peak and pass, like waves.",
+   "when": "When a feeling is big and you want to push it away or act on it right now.",
+   "steps": [
+    {
+     "k": "🏷️",
+     "t": "Name it",
+     "d": "Say what you're feeling: \"This is anger,\" \"This is fear,\" \"This is sadness.\""
+    },
+    {
+     "k": "🫀",
+     "t": "Find it in your body",
+     "d": "Where do you feel it? Tight throat, hot face, heavy chest? Just notice, like you're watching the weather."
+    },
+    {
+     "k": "🌊",
+     "t": "Picture a wave",
+     "d": "Imagine the feeling as a wave. It builds, it peaks, and it rolls back out. You don't have to block it or hold on to it."
+    },
+    {
+     "k": "🏄",
+     "t": "Don't act on it yet",
+     "d": "Feeling it doesn't mean you have to do what it says. Let the urge be there without following it."
+    },
+    {
+     "k": "⏱️",
+     "t": "Stay with it a little",
+     "d": "Try a minute or two. Remind yourself, \"I'm not my feeling, and this will pass.\" Notice it start to ease."
+    }
+   ],
+   "source": {
+    "name": "Now Matters Now: Mindfulness of Current Emotion",
+    "url": "https://nowmattersnow.org/skill/mindfulness-of-current-emotion/"
    }
   }
  ]
