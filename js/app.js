@@ -95,6 +95,7 @@ const BADGES = [
   {id:"backup-first", em:"💾", name:"Safe Keeping",   desc:"Download a backup of your entries", test:s=>s.backups>=1},
   {id:"home-screen",  em:"📱", name:"Right at Home",  desc:"Open Bookends from your Home Screen", test:s=>s.homeScreen>=1},
   {id:"share-first",  em:"🤝", name:"In This Together", desc:"Download a summary to share with your provider", test:s=>s.shares>=1},
+  {id:"reminder-set", em:"⏰", name:"Friendly Reminder", desc:"Add a check-in reminder to your calendar", test:s=>s.reminders>=1},
   {id:"full-picture", em:"🎯", name:"Full Picture",    desc:"Rate every wellness area in one check-in", test:s=>s.allScales>=1},
   {id:"streak-2",     em:"✨", name:"Two in a Row",    desc:"Check in two days in a row", test:s=>s.longest>=2, progress:s=>[s.longest,2]},
   {id:"entries-5",    em:"🙌", name:"High Five",       desc:"5 total check-ins", test:s=>s.total>=5, progress:s=>[s.total,5]},
@@ -276,6 +277,7 @@ function computeStats(entries, asOf=today()){
     proud: es.filter(e=>e.kind==="night" && (e.answers.proud_text||"").trim()).length,
     backups: (S.backups||[]).filter(d=>d<=asOf).length,
     shares: (S.shares||[]).filter(d=>d<=asOf).length,
+    reminders: Object.values(S.reminders||{}).filter(r=>r?.date && r.date<=asOf).length,
     homeScreen: S.homeDate && S.homeDate<=asOf ? 1 : 0,
     feelings: es.filter(e=>Array.isArray(e.answers.emotional_feelings) && e.answers.emotional_feelings.length).length,
     complete: es.filter(isComplete).length,
@@ -295,7 +297,7 @@ function affStats(asOf){
 }
 function earnedBadges(entries){
   // returns {badgeId: dateEarned}
-  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.shares||[],S.homeDate?[S.homeDate]:[]))].filter(d=>d<=today()).sort();
+  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.shares||[],Object.values(S.reminders||{}).map(r=>r.date).filter(Boolean),S.homeDate?[S.homeDate]:[]))].filter(d=>d<=today()).sort();
   for(const d of dates){
     const s=computeStats(entries,d);
     for(const b of BADGES) if(!out[b.id] && b.test(s)) out[b.id]=d;
@@ -308,7 +310,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, backups:[], homeDate:null, shares:[], prefs:{affMode:"popup",colorMode:"standard",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, backups:[], homeDate:null, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -327,6 +329,7 @@ function avgRating(e){ const v=Object.entries(e.answers).filter(([k])=>k.endsWit
 
 function render(){
   ({today:renderToday, history:renderHistory, badges:renderBadges, settings:renderSettings, about:renderAbout})[S.view]();
+  if(S.view==="today" && pendingCelebration.length && !S.form){ const b=pendingCelebration; pendingCelebration=[]; setTimeout(()=>celebrate(b,computeStats(S.entries)),250); }
   if(S.form) renderForm(); else closeSheet();
 }
 
@@ -527,6 +530,42 @@ function noteShare(){ // records today and celebrates any new badge; returns tru
   const after=earnedBadges(S.entries), fresh=badgeList().filter(b=>after[b.id]&&!before[b.id]);
   if(fresh.length){ if(!S.form) render(); celebrate(fresh,computeStats(S.entries)); return true; }
   return false;
+}
+/* Calendar reminders: a repeating daily event (.ics) at the start of a check-in window. No server involved.
+   S.reminders = { morning:{hour, date}, night:{hour, date} } remembers what was set, for the status line and the badge. */
+const REMINDERS_META_KEY="meta_reminders";
+let pendingCelebration=[];   // badges to celebrate the next time the Today screen shows
+function icsText(kind){
+  const [a,b]=win(kind), now=new Date(), pad=n=>String(n).padStart(2,"0");
+  const start=`${today().replace(/-/g,"")}T${pad(a)}0000`;   // floating local time, so it follows the phone's time zone
+  const stamp=now.toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
+  const esc=t=>t.replace(/\\/g,"\\\\").replace(/([,;])/g,"\\$1").replace(/\n/g,"\\n");
+  const until=b===24?"midnight":hourLabel(b), url=location.origin.startsWith("http")?location.origin+"/":"https://bookends.day/";
+  const title=kind==="morning"?"🌅 Morning intention":"🌙 Nightly reflection";
+  const body=kind==="morning"?`Your morning window is open until ${until}. Take a few minutes to set an intention. ${url}`:`Your evening window is open until ${until}. Take a few minutes to look back on today. ${url}`;
+  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Bookends//Reminders//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",
+    "BEGIN:VEVENT",`UID:bookends-${kind}-reminder@bookends.day`,`DTSTAMP:${stamp}`,`DTSTART:${start}`,"DURATION:PT15M","RRULE:FREQ=DAILY",
+    `SUMMARY:${esc(title)}`,`DESCRIPTION:${esc(body)}`,`URL:${url}`,"TRANSP:TRANSPARENT",
+    "BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${esc(title)}`,"TRIGGER:PT0M","END:VALARM",
+    "END:VEVENT","END:VCALENDAR",""].join("\r\n");
+}
+async function setReminder(kind){
+  const ok=await saveFile(`bookends-${kind}-reminder.ics`, icsText(kind), "text/calendar");
+  if(!ok) return;
+  const before=earnedBadges(S.entries);
+  S.reminders={...(S.reminders||{}), [kind]:{hour:win(kind)[0], date:(S.reminders?.[kind]?.date)||today()}};
+  const doc={key:REMINDERS_META_KEY,kind:"meta",reminders:S.reminders,updatedAt:new Date().toISOString(),v:1};
+  affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
+  const after=earnedBadges(S.entries), fresh=badgeList().filter(b=>after[b.id]&&!before[b.id]);
+  if(fresh.length) pendingCelebration.push(...fresh);
+  render();
+  toast(`${kind==="morning"?"Morning":"Nightly"} reminder downloaded. Open it to add it to your calendar.`);
+}
+function reminderStatus(kind){
+  const r=S.reminders?.[kind], a=win(kind)[0];
+  if(!r) return `Goes off every day at ${hourLabel(a)}, when the window opens.`;
+  if(r.hour!==a) return `Your window now opens at ${hourLabel(a)}. Set it again to update, then delete the old ${hourLabel(r.hour)} reminder from your calendar.`;
+  return `✓ Set for ${hourLabel(a)}. Tap again if you need to re-add it.`;
 }
 function saveBackupLog(){ const doc={key:BACKUPS_META_KEY,kind:"meta",days:S.backups,updatedAt:new Date().toISOString(),v:1};
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{}); }
@@ -1344,6 +1383,15 @@ function renderSettings(){
       <div class="pref-label" style="margin-top:18px"><b>Display</b></div>
       <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Color-blind friendly colors</b><span class="small muted">Uses colors that are easier to tell apart with color vision differences, and adds patterns and check marks where color shows meaning.</span></span><input type="checkbox" class="switch" id="pCvd" ${P.colorMode==="cvd"?"checked":""}></label>
     </div>`+`
+    <div class="card" style="margin-top:14px" id="reminderCard">
+      <h2 style="font-size:1.15rem">Reminders</h2>
+      <p class="small muted">Add a daily reminder to your calendar app. It goes off when each check-in window opens. Nothing is sent anywhere: you download a calendar file and your phone handles the rest.</p>
+      <div class="rem-list">
+        ${["morning","night"].map(k=>`<div class="rem-row"><button class="btn ${S.reminders?.[k]&&S.reminders[k].hour===win(k)[0]?"ghost":""}" id="rem-${k}">${k==="morning"?"🌅 Set Morning reminder":"🌙 Set Nightly reminder"}</button>
+          <span class="small muted">${reminderStatus(k)}</span></div>`).join("")}
+      </div>
+      <p class="small muted" style="margin-top:10px">On iPhone, open the downloaded file and tap <b>Add to Calendar</b>. If you change your check-in windows later, set the reminder again.</p>
+    </div>
     <div class="card" style="margin-top:14px" id="shareCard">
       <h2 style="font-size:1.15rem">Share with your provider</h2>
       <p class="small muted">Make a simple, printable summary of your check-ins, with charts of your ratings over time, to share with a therapist or counselor. Nothing is sent anywhere. You download it and decide who sees it.</p>
@@ -1383,6 +1431,7 @@ function renderSettings(){
     try{ await S.store.remove(BACKUPS_META_KEY); S.backups=[]; }catch(err){}
     try{ await S.store.remove(HOME_META_KEY); S.homeDate=null; }catch(err){}
     try{ await S.store.remove(SHARES_META_KEY); S.shares=[]; }catch(err){}
+    try{ await S.store.remove(REMINDERS_META_KEY); S.reminders={}; }catch(err){}
     toast(S.entries.length?`Deleted ${n}; some couldn't be removed — try again.`:"All entries deleted"); render();
   });
   const setWin=(key,kind)=>e=>{ S.prefs[key]=+e.target.value; fixWindows(S.prefs); savePrefs(); render();
@@ -1391,6 +1440,7 @@ function renderSettings(){
   document.getElementById("pME").onchange=setWin("morningEnd","morning");
   document.getElementById("pNS").onchange=setWin("nightStart","night");
   document.getElementById("pNE").onchange=setWin("nightEnd","night");
+  ["morning","night"].forEach(k=>document.getElementById(`rem-${k}`).onclick=()=>setReminder(k));
   document.getElementById("pCvd").onchange=e=>{
     S.prefs.colorMode=e.target.checked?"cvd":"standard"; applyColorMode(S.prefs.colorMode); savePrefs(); render();
     toast(e.target.checked?"Color-blind friendly colors on":"Standard colors on");
@@ -1508,6 +1558,7 @@ function confetti(count){
   try{ const all = await S.store.list(); const meta=all.find(e=>e.key===AFF_META_KEY);
     S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{}; S.entries = all.filter(e=>FORMS[e.kind]);
     const hm=all.find(e=>e.key===HOME_META_KEY); S.homeDate=/^\d{4}-\d{2}-\d{2}$/.test(hm?.date||"")?hm.date:null;
+    const rm=all.find(e=>e.key===REMINDERS_META_KEY); S.reminders=(rm?.reminders&&typeof rm.reminders==="object")?rm.reminders:{};
     const sh=all.find(e=>e.key===SHARES_META_KEY); S.shares=Array.isArray(sh?.days)?sh.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
     const bk=all.find(e=>e.key===BACKUPS_META_KEY); S.backups=Array.isArray(bk?.days)?bk.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
     const p=all.find(e=>e.key===PREFS_KEY); let lp=null; try{ lp=JSON.parse(localStorage.getItem("ir_prefs")||"null"); }catch(e){}
