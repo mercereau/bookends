@@ -1,6 +1,6 @@
 {
  "_notes": "Coping skills adapted from Dialectical Behavior Therapy (DBT), developed by Marsha Linehan. Original plain-language wording. Skills are reminders, not a substitute for learning DBT with a clinician. TIPP's temperature and intense-exercise steps are intentionally left out for safety.",
- "intro": "Quick skills for when feelings start to run high. They come from Dialectical Behavior Therapy (DBT). Pick one, take your time, and come back to them whenever you need.",
+ "intro": "Quick skills for when feelings start to run high. Most come from Dialectical Behavior Therapy (DBT), and a few are simple grounding exercises. Pick one, take your time, and come back to them whenever you need.",
  "learnMore": {
   "text": "These are reminders, not therapy. DBT works best when you learn it with a trained clinician.",
   "links": [
@@ -21,6 +21,16 @@
    "icon": "✋",
    "skills": [
     "stop"
+   ]
+  },
+  {
+   "id": "ground",
+   "title": "Ground myself in the here and now",
+   "icon": "🌱",
+   "skills": [
+    "54321",
+    "color",
+    "categories"
    ]
   },
   {
@@ -102,6 +112,110 @@
    "source": {
     "name": "McLean Hospital: Practical DBT Strategies",
     "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "54321",
+   "name": "5-4-3-2-1",
+   "origin": "A grounding exercise.",
+   "tagline": "Use your senses to come back to right now.",
+   "when": "When your mind is racing or you feel far away from what's around you.",
+   "steps": [
+    {
+     "k": "5",
+     "t": "Five things you can see",
+     "d": "Look around and name five things. Really notice them: the color, the shape, a scuff or a pattern."
+    },
+    {
+     "k": "4",
+     "t": "Four things you can feel",
+     "d": "Your feet on the floor, the chair at your back, the fabric of your sleeve, the air on your skin."
+    },
+    {
+     "k": "3",
+     "t": "Three things you can hear",
+     "d": "A fan, traffic, a bird, the hum of the fridge. Sounds outside your body count most."
+    },
+    {
+     "k": "2",
+     "t": "Two things you can smell",
+     "d": "Coffee, soap, fresh air. If nothing's nearby, take a short walk to find a scent."
+    },
+    {
+     "k": "1",
+     "t": "One thing you can taste",
+     "d": "What's in your mouth right now? Gum, coffee, toothpaste. Or take a sip of water and notice it."
+    }
+   ],
+   "source": {
+    "name": "University of Rochester Medical Center: 5-4-3-2-1 Coping Technique",
+    "url": "https://www.urmc.rochester.edu/behavioral-health-partners/bhp-blog/april-2018/5-4-3-2-1-coping-technique-for-anxiety"
+   }
+  },
+  {
+   "id": "color",
+   "name": "Color hunt",
+   "origin": "A grounding exercise.",
+   "tagline": "Find five things of one color.",
+   "when": "When you need something simple to focus on, anywhere.",
+   "steps": [
+    {
+     "k": "🔵",
+     "t": "Pick a color",
+     "d": "Start with blue. Any color works."
+    },
+    {
+     "k": "5",
+     "t": "Find five things that color",
+     "d": "Look around and name five blue things, out loud or in your head."
+    },
+    {
+     "k": "🔍",
+     "t": "Get specific",
+     "d": "For each one, name the exact shade. Not just blue: navy, sky, teal, denim."
+    },
+    {
+     "k": "🔴",
+     "t": "Switch colors",
+     "d": "Now try red, then green, then yellow. Keep going until you feel steadier."
+    }
+   ],
+   "source": {
+    "name": "Cleveland Clinic: Grounding Techniques",
+    "url": "https://health.clevelandclinic.org/grounding-techniques"
+   }
+  },
+  {
+   "id": "categories",
+   "name": "Categories game",
+   "origin": "A grounding exercise.",
+   "tagline": "Give your busy mind a small, easy job.",
+   "when": "When worries keep looping and you can't get out of your head.",
+   "steps": [
+    {
+     "k": "1",
+     "t": "Pick a category",
+     "d": "Dog breeds, cities, foods, movies, sports teams. Something easy and neutral."
+    },
+    {
+     "k": "2",
+     "t": "Name as many as you can",
+     "d": "Take your time. There's no wrong answer and no timer."
+    },
+    {
+     "k": "3",
+     "t": "Make it A to Z",
+     "d": "Try one for each letter: apple, banana, carrot... Skip letters that are hard."
+    },
+    {
+     "k": "4",
+     "t": "Switch it up",
+     "d": "When one category runs dry, pick another. Keep going until your mind feels quieter."
+    }
+   ],
+   "source": {
+    "name": "Cleveland Clinic: Grounding Techniques",
+    "url": "https://health.clevelandclinic.org/grounding-techniques"
    }
   },
   {
