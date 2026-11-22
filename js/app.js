@@ -258,6 +258,35 @@ function dynamicBadges(entries, out){
     out[id]=d;
   }
 }
+/* Skill badges: one for each skill group, the first time you use a skill from it, plus a few for practicing */
+const SKILL_GROUP_BADGES={
+  pause:{em:"✋",name:"Paused",desc:"Used a skill to pause before reacting"},
+  ground:{em:"🌱",name:"Grounded",desc:"Used a skill to come back to the here and now"},
+  calm:{em:"🌬️",name:"Calm Body",desc:"Used a skill to calm your body"},
+  ride:{em:"🌊",name:"Wave Rider",desc:"Used a skill to get through a hard moment"},
+  kind:{em:"💛",name:"Kind to Me",desc:"Used a skill to be kind to yourself"},
+  ask:{em:"🗣️",name:"Spoke Up",desc:"Used a skill for asking for what you need"},
+  think:{em:"🧭",name:"Clear Head",desc:"Used a skill to check your thinking"},
+  unstuck:{em:"🪜",name:"Unstuck",desc:"Used a skill to take a next step"},
+  base:{em:"🛡️",name:"Baseline Keeper",desc:"Used a skill to protect your baseline"}
+};
+function skillBadges(out){
+  const G=SKILLS.data?.groups; if(!G) return;
+  const uses=Object.entries(S.skillLog||{}).filter(([d])=>d<=today()).sort(([a],[b])=>a.localeCompare(b)).flatMap(([d,list])=>list.map(r=>({...r,d})));
+  if(!uses.length) return;
+  const add=(id,b,d)=>{ DYN_BADGES[id]={id,...b}; if(!out[id]) out[id]=d; };
+  const groupOf={}; G.forEach(g=>g.skills.forEach(id=>groupOf[id]=g.id));
+  const seen={}; uses.forEach(u=>{ const g=groupOf[u.id]; if(g && !seen[g]) seen[g]=u.d; });
+  for(const g of G){ if(!seen[g.id]) continue;
+    add("skillgroup-"+g.id, SKILL_GROUP_BADGES[g.id]||{em:g.icon||"🧰",name:g.title,desc:`Used a skill from “${g.title}”`}, seen[g.id]); }
+  if(G.every(g=>seen[g.id])) add("skill-all-groups",{em:"🗃️",name:"Full Toolbox",desc:"Used a skill from every group"}, Object.values(seen).sort().pop());
+  const firstHelp=uses.find(u=>u.helped==="yes"||u.helped==="little");
+  if(firstHelp) add("skill-helped",{em:"🔑",name:"Found What Works",desc:"A skill helped you"}, firstHelp.d);
+  const distinct=[]; uses.forEach(u=>{ if(!distinct.find(x=>x.id===u.id)) distinct.push(u); });
+  if(distinct.length>=5) add("skill-5",{em:"🎒",name:"Skill Explorer",desc:"Tried 5 different skills"}, distinct[4].d);
+  if(distinct.length>=10) add("skill-10",{em:"🧳",name:"Skill Collector",desc:"Tried 10 different skills"}, distinct[9].d);
+  if(uses.length>=10) add("skill-uses-10",{em:"🔁",name:"Practice Makes Progress",desc:"Used skills 10 times"}, uses[9].d);
+}
 function monthProgress(){ // this month's progress toward its badge, for "next up" hints
   const ym=today().slice(0,7), n=new Set(S.entries.filter(e=>e.date.startsWith(ym)).map(e=>e.date)).size;
   if(n>=MONTHLY_MIN_DAYS) return null;
@@ -317,6 +346,7 @@ function earnedBadges(entries){
     if(Object.keys(out).length===BADGES.length) break;
   }
   dynamicBadges(entries,out);
+  skillBadges(out);
   return out;
 }
 
@@ -1002,7 +1032,9 @@ function openSkill(id){
   };
   const answer=h=>{
     const t=skillBg.querySelector("#skNote")?.value.trim(); if(t) rec.note=t;
+    const before=earnedBadges(S.entries);
     rec.helped=h; saveSkillLog();
+    const after=earnedBadges(S.entries); skillPendingBadges=skillPendingBadges.concat(badgeList().filter(b=>after[b.id]&&!before[b.id]&&!skillPendingBadges.includes(b)));
     const msg={yes:["💛","Glad it helped.","It's in today's log. Come back to it anytime."],
       little:["🌱","A little still counts.","It's in today's log. Skills get stronger the more you practice them."],
       no:["🤍","That's okay.","Not every skill fits every moment. It's in today's log, and there are plenty of others to try."]}[h];
