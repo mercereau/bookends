@@ -1061,7 +1061,7 @@ function renderHistory(){
   const cells=[]; for(let i=0;i<startPad;i++) cells.push(`<span></span>`);
   for(let d=1; d<=dim; d++){ const ds=ymd(new Date(y,mo,d)); const r=s.byDate[ds]||{};
     cells.push(`<button class="cell ${ds>t?"future":""} ${ds===t?"today":""} ${ds===S.histDay?"sel":""}" data-d="${ds}" title="${fmtDate(ds)}" ${ds>t?"disabled":""}><span class="m ${r.morning?"on":""}"></span><span class="n ${r.night?"on":""}"></span></button>`); }
-  const list=[...S.entries].sort((a,b)=>(b.date+b.kind).localeCompare(a.date+a.kind)).slice(0,60);
+  const days=historyDays();
   $app.innerHTML = `
     ${S.histDay?dayDetailHTML(S.histDay):""}
     <div class="card" ${S.histDay?'style="margin-top:14px"':""}>
@@ -1075,15 +1075,31 @@ function renderHistory(){
     </div>
     <div class="section-title"><h2>Trends</h2><span class="small muted">last 30 days · 1–5</span></div>
     <div class="card">${trendsHTML()}</div>
-    <div class="section-title"><h2>Entries</h2><span class="small muted">${S.entries.length} total</span></div>
-    <div>${list.length?list.map(e=>`<button class="entry" data-k="${e.key}"><span class="tag">${FORMS[e.kind].icon}</span><span class="t"><b>${FORMS[e.kind].title}</b><br><span class="small muted">${fmtDate(e.date)}</span></span><span class="avg">${avgRating(e)?.toFixed(1)??"–"}</span></button>`).join(""):`<div class="card muted">No entries yet. Your first check-in will show up here.</div>`}</div>
+    <div class="section-title"><h2>Entries</h2><span class="small muted">${days.length} day${days.length===1?"":"s"}</span></div>
+    <div>${days.length?days.slice(0,60).map(dayEntryHTML).join(""):`<div class="card muted">No entries yet. Your first check-in will show up here.</div>`}</div>
   `;
   document.getElementById("prev").onclick=()=>{S.cal=new Date(y,mo-1,1);render();};
   document.getElementById("next").onclick=()=>{S.cal=new Date(y,mo+1,1);render();};
   $app.querySelectorAll(".cell[data-d]:not(.future)").forEach(b=>b.onclick=()=>{ S.histDay=b.dataset.d; render(); document.getElementById("dayDetail")?.scrollIntoView({behavior:"smooth",block:"start"}); });
   const ddc=document.getElementById("ddClose"); if(ddc) ddc.onclick=()=>{ S.histDay=null; render(); };
   $app.querySelectorAll(".day-detail [data-open-k]").forEach(b=>b.onclick=()=>openForm(b.dataset.openK,S.histDay));
-  $app.querySelectorAll(".entry").forEach(b=>b.onclick=()=>{const e=S.entries.find(x=>x.key===b.dataset.k); openForm(e.kind,e.date);});
+  $app.querySelectorAll(".entry[data-k]").forEach(b=>b.onclick=()=>{const e=S.entries.find(x=>x.key===b.dataset.k); openForm(e.kind,e.date);});
+  $app.querySelectorAll("[data-day-open]").forEach(b=>b.onclick=()=>{ S.histDay=b.dataset.dayOpen; render(); document.getElementById("dayDetail")?.scrollIntoView({behavior:"smooth",block:"start"}); });
+}
+/* Entries grouped by day: check-ins and skills, in the order they happened, with times */
+function historyDays(){
+  return [...new Set(S.entries.map(e=>e.date).concat(Object.keys(S.skillLog).filter(d=>S.skillLog[d].length)))].filter(d=>d<=today()).sort().reverse();
+}
+const clock=iso=>{ const t=iso?new Date(iso):null; return t&&!isNaN(t)?t.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):""; };
+function dayEntryHTML(d){
+  const ev=[];
+  for(const k of ["morning","night"]){ const e=getEntry(d,k); if(!e) continue;
+    const edited=e.updatedAt&&e.createdAt&&new Date(e.updatedAt)-new Date(e.createdAt)>60000;
+    ev.push({at:e.createdAt||"", sort:e.createdAt||(k==="morning"?"0":"2"), html:`<li><button class="entry-row" data-k="${e.key}"><span class="er-time">${clock(e.createdAt)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">${FORMS[k].icon}</span><span class="er-text"><b>${FORMS[k].title}</b>${edited?`<span class="small muted"> · edited ${clock(e.updatedAt)}</span>`:""}</span><span class="avg">${avgRating(e)?.toFixed(1)??"–"}</span></button></li>`}); }
+  for(const r of S.skillLog[d]||[]){ const k=skillById(r.id);
+    ev.push({sort:r.at||"1", html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(r.at)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">🧰</span><span class="er-text"><b>${esc(k?k.name:r.id)}</b><span class="small muted"> · ${r.helped?HELPED_LABEL[r.helped]:"Used"}</span></span></div></li>`}); }
+  ev.sort((a,b)=>a.sort.localeCompare(b.sort));
+  return `<section class="card day-entry"><button class="de-head" data-day-open="${d}"><h3>${d===today()?"Today · ":""}${fmtDate(d)}</h3><span class="small muted">View day →</span></button><ul class="de-list">${ev.map(x=>x.html).join("")}</ul></section>`;
 }
 function trendsHTML(){
   const t=today(), days=[...Array(30)].map((_,i)=>addDays(t,i-29));
