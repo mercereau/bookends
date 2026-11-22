@@ -565,6 +565,12 @@ html.text-l .badges{grid-template-columns:1fr!important}
 .skill-sheet .sheet-head{background:color-mix(in srgb,var(--accent) 12%,var(--card))}
 .skill-when{margin:4px 0 14px}
 .skill-step{text-align:center;padding:10px 4px}
+.skill-rate{display:flex;flex-direction:column;gap:10px;max-width:18rem;margin:18px auto 4px}
+.skill-rate .btn{width:100%;justify-content:center}
+.sk-used{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.sk-used li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.sk-name{font-weight:600}
+.sk-meta{font-size:.9rem}
 .skill-step h3{font-size:1.25rem;margin:6px 0}
 .skill-step p{font-size:1.05rem;line-height:1.55;margin:0 auto;max-width:32em}
 .skill-key{display:inline-grid;place-items:center;min-width:2.4rem;height:2.4rem;padding:0 .5rem;border-radius:12px;background:var(--accent-soft);color:color-mix(in srgb,var(--accent) 70%,var(--ink));font-family:Fraunces,Georgia,serif;font-weight:700;font-size:1.15rem}

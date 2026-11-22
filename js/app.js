@@ -323,7 +323,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, backups:[], homeDate:null, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -952,18 +952,42 @@ function openSkill(id){
     foot.innerHTML=st.all?`<button class="btn" id="skDone">Done</button>`
       :`<button class="btn ghost" id="skPrev" ${st.i===0?"disabled":""}>← Back</button><button class="btn" id="skNext">${st.i===n-1?"Done":"Next →"}</button>`;
     body.querySelector("#skAll").onclick=()=>{ st.all=!st.all; draw(); };
-    const dn=foot.querySelector("#skDone"); if(dn) dn.onclick=()=>closeSkill();
+    const dn=foot.querySelector("#skDone"); if(dn) dn.onclick=ask;
     const pv=foot.querySelector("#skPrev"); if(pv) pv.onclick=()=>{ if(st.i>0){ st.i--; draw(); } };
-    const nx=foot.querySelector("#skNext"); if(nx) nx.onclick=()=>{ if(st.i<n-1){ st.i++; draw(); body.scrollTop=0; } else closeSkill(); };
+    const nx=foot.querySelector("#skNext"); if(nx) nx.onclick=()=>{ if(st.i<n-1){ st.i++; draw(); body.scrollTop=0; } else ask(); };
+  };
+  // at the end, ask if it helped; the answer goes in today's log
+  const ask=()=>{
+    const body=skillBg.querySelector("#skBody"), foot=skillBg.querySelector("#skFoot");
+    body.innerHTML=`<div class="skill-step skill-ask"><div class="skill-key big" aria-hidden="true">💭</div><h3 id="skAskQ">Did this help?</h3>
+        <p class="muted">Your answer goes in today's log, so over time you can see which skills work best for you.</p>
+        <div class="skill-rate" role="group" aria-labelledby="skAskQ">
+          <button class="btn" data-helped="yes">👍 Yes, it helped</button>
+          <button class="btn ghost" data-helped="little">🤏 A little</button>
+          <button class="btn ghost" data-helped="no">😐 Not really</button></div></div>`;
+    foot.innerHTML=`<button class="btn ghost" id="skSkip">Skip</button>`;
+    foot.querySelector("#skSkip").onclick=()=>closeSkill();
+    body.querySelectorAll("[data-helped]").forEach(b=>b.onclick=()=>answer(b.dataset.helped));
+    body.scrollTop=0; body.querySelector("[data-helped]").focus();
+  };
+  const answer=h=>{
+    rec.helped=h; saveSkillLog();
+    const msg={yes:["💛","Glad it helped.","It's in today's log. Come back to it anytime."],
+      little:["🌱","A little still counts.","It's in today's log. Skills get stronger the more you practice them."],
+      no:["🤍","That's okay.","Not every skill fits every moment. It's in today's log, and there are plenty of others to try."]}[h];
+    const body=skillBg.querySelector("#skBody"), foot=skillBg.querySelector("#skFoot");
+    body.innerHTML=`<div class="skill-step" aria-live="polite"><div class="skill-key big" aria-hidden="true">${msg[0]}</div><h3>${msg[1]}</h3><p>${msg[2]}</p></div>`;
+    foot.innerHTML=(h==="yes"?"":`<button class="btn ghost" id="skOther">Try another skill</button>`)+`<button class="btn" id="skFin">Done</button>`;
+    const o=foot.querySelector("#skOther"); if(o) o.onclick=()=>{ closeSkill(); if(S.view!=="skills"){ S.view="skills"; render(); } window.scrollTo(0,0); };
+    foot.querySelector("#skFin").onclick=()=>closeSkill(); foot.querySelector("#skFin").focus();
   };
   draw();
-  // first skill opened earns a badge, shown after the skill closes so it never interrupts
-  if(!S.skillDate){
-    const before=earnedBadges(S.entries); S.skillDate=today();
-    const doc={key:SKILLS_META_KEY,kind:"meta",date:S.skillDate,updatedAt:new Date().toISOString(),v:1};
-    affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
-    const after=earnedBadges(S.entries); skillPendingBadges=badgeList().filter(b=>after[b.id]&&!before[b.id]);
-  }
+  // opening a skill counts as using it: log it now, and the first one earns a badge (shown after the skill closes)
+  const before=earnedBadges(S.entries), day=today(), rec={id, at:new Date().toISOString()};
+  (S.skillLog[day] ||= []).push(rec);
+  if(!S.skillDate) S.skillDate=day;
+  saveSkillLog();
+  const after=earnedBadges(S.entries); skillPendingBadges=badgeList().filter(b=>after[b.id]&&!before[b.id]);
 }
 function closeSkill(instant){
   if(!skillBg) return; const bg=skillBg; skillBg=null;
@@ -971,6 +995,26 @@ function closeSkill(instant){
   if(instant) return bg.remove();
   bg.classList.add("closing"); setTimeout(()=>bg.remove(),180);
   if(skillPendingBadges.length){ const fresh=skillPendingBadges; skillPendingBadges=[]; render(); setTimeout(()=>celebrate(fresh,computeStats(S.entries)),260); }
+}
+/* Skill log: S.skillLog = { "YYYY-MM-DD": [{id, at, helped:"yes"|"little"|"no"}] }. Opening a skill counts as using it. */
+const HELPED_LABEL={yes:"Helped",little:"Helped a little",no:"Didn't help this time"};
+function saveSkillLog(){
+  const doc={key:SKILLS_META_KEY,kind:"meta",date:S.skillDate,log:S.skillLog,updatedAt:new Date().toISOString(),v:2};
+  affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
+}
+function cleanSkillLog(log){
+  const out={}; if(!log||typeof log!=="object") return out;
+  for(const [d,list] of Object.entries(log)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(list)){
+    const ok=list.filter(r=>r&&typeof r.id==="string").map(r=>({id:r.id,at:String(r.at||""),...(HELPED_LABEL[r.helped]?{helped:r.helped}:{})}));
+    if(ok.length) out[d]=ok; }
+  return out;
+}
+function skillsDayHTML(d){
+  const list=S.skillLog[d]; if(!list||!list.length) return "";
+  const rows=list.map(r=>{ const k=skillById(r.id); const tm=r.at?new Date(r.at):null;
+    const time=tm&&!isNaN(tm)?tm.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"";
+    return `<li><span class="sk-name">${esc(k?k.name:r.id)}</span><span class="sk-meta muted">${r.helped?HELPED_LABEL[r.helped]:"Used"}${time?" · "+time:""}</span></li>`; }).join("");
+  return `<div class="dd-block skills-used"><div class="dd-head"><h3>🧰 Skills I used</h3></div><ul class="sk-used">${rows}</ul></div>`;
 }
 /* A gentle link on Today. After a low Emotional rating today, it gets a warmer message (can be turned off in Settings). */
 function skillLinkHTML(){
@@ -1003,10 +1047,10 @@ function dayDetailHTML(d){
     return `<div class="dd-block ${k}"><div class="dd-head"><h3>${FORMS[k].icon} ${FORMS[k].title}</h3><button class="linkbtn" data-open-k="${k}">Open</button></div>
       ${rows?`<ul class="dd-list">${rows}</ul>`:`<p class="muted small">Checked in, no answers recorded.</p>`}</div>`;
   }).join("");
-  const none=!ents.some(([,e])=>e);
+  const none=!ents.some(([,e])=>e), sk=skillsDayHTML(d);
   return `<section class="card day-detail" id="dayDetail">
       <div class="dd-top"><h2>${isToday?"Today · ":""}${fmtDate(d)}</h2><button class="xbtn" id="ddClose" aria-label="Close day">✕</button></div>
-      ${none?`<p class="muted">${isToday?"Nothing logged yet today.":"No check-ins this day. That's okay. There's always tomorrow."}</p>`:parts}
+      ${none&&!sk?`<p class="muted">${isToday?"Nothing logged yet today.":"No check-ins this day. That's okay. There's always tomorrow."}</p>`:parts+sk}
     </section>`;
 }
 function renderHistory(){
@@ -1121,10 +1165,11 @@ function openDaySheet(d){
     body+=`<div class="hls">${highlightHTML("morning",hm)}${highlightHTML("night",hn)}</div>`;
     if(proud && !(hn && hn.sec.dim==="closing")) body+=`<div class="proud">⭐ <b>Proud of:</b> ${esc(proud)}</div>`;
     if(!hm && !hn && !proud) body=`<p class="muted">Checked in, no notes this time. Showing up counts.</p>`;
+    body+=skillsDayHTML(d);
     body+=dayBadgesHTML(d);
     body+=`<button class="linkbtn full-link" id="dayFull">See the full day in History →</button>`;
   } else {
-    body= isToday ? `<p class="muted">Nothing logged yet today.</p>` : `<p class="muted">No check-ins this day. That's okay. There's always tomorrow.</p>`;
+    body= (isToday ? `<p class="muted">Nothing logged yet today.</p>` : `<p class="muted">No check-ins this day. That's okay. There's always tomorrow.</p>`)+skillsDayHTML(d);
   }
   const btns=["morning","night"].map(k=>{
     const e=getEntry(d,k), F=FORMS[k];
@@ -1290,10 +1335,11 @@ function renderAbout(){
 
 /* ---------- Backup export ---------- */
 const BACKUP_KEY="ir_last_backup";
-const hasData=()=>S.entries.length>0 || Object.keys(S.affLog).length>0;
+const hasData=()=>S.entries.length>0 || Object.keys(S.affLog).length>0 || Object.keys(S.skillLog).length>0;
 function backupJSON(){
   const all=[...S.entries].sort((a,b)=>a.key.localeCompare(b.key));
   if(Object.keys(S.affLog).length) all.push({key:AFF_META_KEY,kind:"meta",days:S.affLog,v:1});
+  if(Object.keys(S.skillLog).length) all.push({key:SKILLS_META_KEY,kind:"meta",date:S.skillDate,log:S.skillLog,v:2});
   return JSON.stringify(all,null,2);
 }
 function lastBackup(){ try{ return localStorage.getItem(BACKUP_KEY); }catch(e){ return null; } }
@@ -1536,7 +1582,7 @@ function renderSettings(){
     try{ await affSaving; await S.store.remove(AFF_META_KEY); S.affLog={}; }catch(err){}
     try{ await S.store.remove(BACKUPS_META_KEY); S.backups=[]; }catch(err){}
     try{ await S.store.remove(HOME_META_KEY); S.homeDate=null; }catch(err){}
-    try{ await S.store.remove(SKILLS_META_KEY); S.skillDate=null; }catch(err){}
+    try{ await S.store.remove(SKILLS_META_KEY); S.skillDate=null; S.skillLog={}; }catch(err){}
     try{ await S.store.remove(SHARES_META_KEY); S.shares=[]; }catch(err){}
     try{ await S.store.remove(REMINDERS_META_KEY); S.reminders={}; }catch(err){}
     toast(S.entries.length?`Deleted ${n}; some couldn't be removed — try again.`:"All entries deleted"); render();
@@ -1572,7 +1618,12 @@ function renderSettings(){
     let n=0; for(const e of ok){ try{ await S.store.save(e); S.entries=S.entries.filter(x=>x.key!==e.key).concat(e); n++; }catch(err){ break; } }
     const meta=arr.find(e=>e&&e.key===AFF_META_KEY&&e.days&&typeof e.days==="object");
     if(meta){ for(const [d,ids] of Object.entries(meta.days)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(ids)) S.affLog[d]=[...new Set([...(S.affLog[d]||[]),...ids.map(String)])]; saveAffLog(); await affSaving; }
-    toast(`Imported ${n} check-ins${meta?" + affirmation history":""}`); render();
+    const skm=arr.find(e=>e&&e.key===SKILLS_META_KEY&&e.log&&typeof e.log==="object");
+    if(skm){ const inc=cleanSkillLog(skm.log);
+      for(const [d,list] of Object.entries(inc)){ const have=new Set((S.skillLog[d]||[]).map(r=>r.id+r.at)); S.skillLog[d]=(S.skillLog[d]||[]).concat(list.filter(r=>!have.has(r.id+r.at))); }
+      if(!S.skillDate||(/^\d{4}-\d{2}-\d{2}$/.test(skm.date||"")&&skm.date<S.skillDate)) S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(skm.date||"")?skm.date:(Object.keys(inc).sort()[0]||S.skillDate);
+      saveSkillLog(); await affSaving; }
+    toast(`Imported ${n} check-ins${meta?" + affirmation history":""}${skm?" + skills log":""}`); render();
   };
 }
 
@@ -1666,7 +1717,7 @@ function confetti(count){
   await affReady;
   try{ const all = await S.store.list(); const meta=all.find(e=>e.key===AFF_META_KEY);
     S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{}; S.entries = all.filter(e=>FORMS[e.kind]);
-    const sk=all.find(e=>e.key===SKILLS_META_KEY); S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(sk?.date||"")?sk.date:null;
+    const sk=all.find(e=>e.key===SKILLS_META_KEY); S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(sk?.date||"")?sk.date:null; S.skillLog=cleanSkillLog(sk?.log);
     const hm=all.find(e=>e.key===HOME_META_KEY); S.homeDate=/^\d{4}-\d{2}-\d{2}$/.test(hm?.date||"")?hm.date:null;
     const rm=all.find(e=>e.key===REMINDERS_META_KEY); S.reminders=(rm?.reminders&&typeof rm.reminders==="object")?rm.reminders:{};
     const sh=all.find(e=>e.key===SHARES_META_KEY); S.shares=Array.isArray(sh?.days)?sh.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
