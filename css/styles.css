@@ -133,6 +133,19 @@ textarea:focus{outline:none;border-color:var(--dc,var(--accent))}
 .entry .tag{font-size:1.3rem}
 .entry .t{flex:1}
 .entry .avg{font-family:Fraunces,serif;font-size:1.2rem}
+.day-entry{padding:12px 14px;margin-bottom:10px}
+.de-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%;background:none;border:0;padding:2px 0 8px;font:inherit;color:var(--ink);cursor:pointer;text-align:left}
+.de-head h3{font-size:1.05rem;margin:0}
+.de-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.de-list li+li{border-top:1px dashed var(--line)}
+.entry-row{display:flex;align-items:center;gap:10px;width:100%;padding:9px 2px;background:none;border:0;font:inherit;color:var(--ink);text-align:left}
+button.entry-row{cursor:pointer}
+button.entry-row:hover b{text-decoration:underline}
+.er-time{flex:none;width:4.6rem;font-size:.88rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.er-ico{flex:none;font-size:1.1rem}
+.er-text{flex:1;min-width:0}
+.entry-row .avg{font-family:Fraunces,serif;font-size:1.1rem}
+html.text-xl .er-time{width:auto}
 .trend{display:grid;grid-template-columns:140px 1fr 40px;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:.9rem}
 .trend:last-child{border:0}
 .trend svg{width:100%;height:32px}
@@ -546,3 +559,51 @@ html.text-xl .pref{flex-wrap:wrap}
 html.text-l .badges{grid-template-columns:1fr!important}
 .badge .em{max-width:100%}
 .badge .em{font-size:min(2.2rem,12vw);width:min(4rem,22vw);height:min(4rem,22vw)}
+
+/* ---------- Skills ---------- */
+.skills-intro h2{margin-bottom:6px}
+.skill-crisis{margin:10px 0 0}
+.skill-group{margin-top:18px}
+.skill-group h3{font-size:1.05rem;margin:0 0 8px}
+.skill-grid{grid-template-columns:repeat(auto-fill,minmax(min(14rem,100%),1fr));gap:10px}
+.skill-card{border:0;text-align:left;display:flex;flex-direction:column;gap:4px;cursor:pointer;font:inherit;color:var(--ink)}
+.skill-card:hover{box-shadow:0 0 0 2px var(--accent)}
+.skill-name{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:1.1rem}
+.skill-card .skill-name{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.skill-card .go{font-weight:700;color:color-mix(in srgb,var(--accent) 80%,var(--ink));flex:none;transition:transform .15s}
+.skill-card:hover .go,.skill-card:focus-visible .go{transform:translateX(3px)}
+@media (prefers-reduced-motion:reduce){.skill-card .go{transition:none}}
+.helped-chip{align-self:flex-start;margin-top:4px;font-size:.8rem;font-weight:700;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--ink)}
+.helped-group > p{margin:-4px 0 8px}
+.skill-note{max-width:24rem;margin:18px auto 0;text-align:left}
+.skill-note label{display:block;font-weight:700;margin-bottom:6px}
+.skill-note p{margin:6px 0 0}
+.er-note{display:block;margin-top:3px;font-size:.92rem;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.skill-row{align-items:flex-start}
+.skill-row .er-time,.skill-row .er-ico{padding-top:2px}
+.skills-more{margin-top:18px}
+.skills-more a{color:inherit}
+.skill-sheet .sheet-head{background:color-mix(in srgb,var(--accent) 12%,var(--card))}
+.skill-when{margin:4px 0 14px}
+.skill-step{text-align:center;padding:10px 4px}
+.skill-rate{display:flex;flex-direction:column;gap:10px;max-width:18rem;margin:18px auto 4px}
+.skill-rate .btn{width:100%;justify-content:center}
+.sk-tags{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.sk-tag{font-size:.88rem;font-weight:600;padding:4px 11px;border-radius:999px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--ink)}
+.sk-tag.little{background:transparent;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 45%,transparent)}
+.skill-step h3{font-size:1.25rem;margin:6px 0}
+.skill-step p{font-size:1.05rem;line-height:1.55;margin:0 auto;max-width:32em}
+.skill-key{display:inline-grid;place-items:center;min-width:2.4rem;height:2.4rem;padding:0 .5rem;border-radius:12px;background:var(--accent-soft);color:color-mix(in srgb,var(--accent) 70%,var(--ink));font-family:Fraunces,Georgia,serif;font-weight:700;font-size:1.15rem}
+.skill-key.big{min-width:3.4rem;height:3.4rem;font-size:1.7rem;border-radius:16px}
+.skill-dots{display:flex;gap:6px;justify-content:center;margin-top:14px}
+.skill-dots span{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.skill-dots span.on{background:var(--accent)}
+.skill-steps{list-style:none;padding:0;margin:0;display:grid;gap:12px}
+.skill-steps li{display:flex;gap:12px;align-items:flex-start}
+.skill-steps p{margin:2px 0 0}
+.skill-link{display:block;width:100%;margin-top:12px;border:1.5px dashed var(--line);background:transparent;color:var(--ink);border-radius:14px;padding:10px 14px;font:inherit;font-weight:600;text-align:left;cursor:pointer}
+.skill-link:hover{border-color:var(--accent)}
+.skill-nudge{margin-top:12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:color-mix(in srgb,var(--accent) 8%,var(--card))}
+.skill-nudge-actions{display:flex;align-items:center;gap:12px}
+@media(max-width:560px){.skill-link{margin-top:10px;padding:9px 12px;font-size:.92rem}}
+.skill-sheet a,.skills-more a{color:inherit;text-decoration:underline}

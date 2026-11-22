@@ -107,6 +107,7 @@ const BADGES = [
   {id:"home-screen",  em:"📱", name:"Right at Home",  desc:"Open Bookends from your Home Screen", test:s=>s.homeScreen>=1},
   {id:"share-first",  em:"🤝", name:"In This Together", desc:"Download a summary to share with your provider", test:s=>s.shares>=1},
   {id:"reminder-set", em:"⏰", name:"Friendly Reminder", desc:"Add a check-in reminder to your calendar", test:s=>s.reminders>=1},
+  {id:"skill-first",  em:"🧰", name:"Toolbox",       desc:"Open a coping skill", test:s=>s.skills>=1},
   {id:"full-picture", em:"🎯", name:"Full Picture",    desc:"Rate every wellness area in one check-in", test:s=>s.allScales>=1},
   {id:"streak-2",     em:"✨", name:"Two in a Row",    desc:"Check in two days in a row", test:s=>s.longest>=2, progress:s=>[s.longest,2]},
   {id:"entries-5",    em:"🙌", name:"High Five",       desc:"5 total check-ins", test:s=>s.total>=5, progress:s=>[s.total,5]},
@@ -289,6 +290,7 @@ function computeStats(entries, asOf=today()){
     backups: (S.backups||[]).filter(d=>d<=asOf).length,
     shares: (S.shares||[]).filter(d=>d<=asOf).length,
     reminders: Object.values(S.reminders||{}).filter(r=>r?.date && r.date<=asOf).length,
+    skills: S.skillDate && S.skillDate<=asOf ? 1 : 0,
     homeScreen: S.homeDate && S.homeDate<=asOf ? 1 : 0,
     feelings: es.filter(e=>Array.isArray(e.answers.emotional_feelings) && e.answers.emotional_feelings.length).length,
     complete: es.filter(isComplete).length,
@@ -308,7 +310,7 @@ function affStats(asOf){
 }
 function earnedBadges(entries){
   // returns {badgeId: dateEarned}
-  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.shares||[],Object.values(S.reminders||{}).map(r=>r.date).filter(Boolean),S.homeDate?[S.homeDate]:[]))].filter(d=>d<=today()).sort();
+  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.shares||[],Object.values(S.reminders||{}).map(r=>r.date).filter(Boolean),S.homeDate?[S.homeDate]:[],S.skillDate?[S.skillDate]:[]))].filter(d=>d<=today()).sort();
   for(const d of dates){
     const s=computeStats(entries,d);
     for(const b of BADGES) if(!out[b.id] && b.test(s)) out[b.id]=d;
@@ -321,7 +323,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, backups:[], homeDate:null, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -339,7 +341,7 @@ function getEntry(date,kind){ return S.entries.find(e=>e.date===date && e.kind==
 function avgRating(e){ const v=Object.entries(e.answers).filter(([k])=>k.endsWith("_scale")).map(([,v])=>+v).filter(Boolean); return v.length?(v.reduce((a,b)=>a+b,0)/v.length):null; }
 
 function render(){
-  ({today:renderToday, history:renderHistory, badges:renderBadges, settings:renderSettings, about:renderAbout})[S.view]();
+  ({today:renderToday, skills:renderSkills, history:renderHistory, badges:renderBadges, settings:renderSettings, about:renderAbout})[S.view]();
   if(S.view==="today" && pendingCelebration.length && !S.form){ const b=pendingCelebration; pendingCelebration=[]; setTimeout(()=>celebrate(b,computeStats(S.entries)),250); }
   if(S.form) renderForm(); else closeSheet();
 }
@@ -364,6 +366,7 @@ function renderToday(){
       ${ciCard("morning",m,morningOpen,"Set the tone for your day","Start check-in →",closedMsg("morning"))}
       ${ciCard("night",n,nightOpen,"Look back on how today went","Start reflection →",closedMsg("night"))}
     </div>
+    ${skillLinkHTML()}
     <div class="card" style="margin-top:14px">
       <div class="shelf-head"><span class="small muted">Your week on the shelf</span>
         <span class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i class="lg-n" style="background:var(--night)"></i>Night</span></span></div>
@@ -379,6 +382,7 @@ function renderToday(){
   const ae=document.getElementById("affEntry"); if(ae) ae.onclick=()=>openAffSheet(false);
   if(S.prefs.affMode==="embedded") bindAffirm();
   const qb=document.getElementById("quickBackup"); if(qb) qb.onclick=downloadBackup;
+  bindSkillLink();
 }
 /* Time windows (each person can change these in Settings):
    morning intention: midnight until prefs.morningEnd · nightly reflection: prefs.nightStart until midnight. 24h clock. */
@@ -664,13 +668,14 @@ function maybeAutoAffirm(){ // once per day, on the first visit, unless turned o
 
 /* ---------- Preferences (kept with the user's data; synced on the Claude-hosted copy) ---------- */
 const PREFS_KEY="meta_prefs";
-const DEFAULT_PREFS={affMode:"popup", colorMode:"standard", morningStart:5, morningEnd:12, nightStart:17, nightEnd:24};
+const DEFAULT_PREFS={affMode:"popup", colorMode:"standard", skillNudge:true, morningStart:5, morningEnd:12, nightStart:17, nightEnd:24};
 const AFF_MODES=["off","embedded","popup"];
 function normalizePrefs(p){ // also upgrades the earlier on/off switches
   const out={...DEFAULT_PREFS, ...p};
   if(!AFF_MODES.includes(out.affMode)) out.affMode = p.affEnabled===false ? "off" : "popup";
   if(!("affMode" in p) && p.affEnabled===false) out.affMode="off";
   if(!["standard","cvd"].includes(out.colorMode)) out.colorMode="standard";
+  out.skillNudge = out.skillNudge!==false;
   for(const k of ["morningStart","morningEnd","nightStart","nightEnd"]) out[k]=Number.isInteger(+out[k])?+out[k]:DEFAULT_PREFS[k];
   fixWindows(out);
   delete out.affEnabled; delete out.affAuto; return out;
@@ -895,6 +900,169 @@ async function saveForm(){
   else toast("Changes saved");
 }
 
+/* ---------- Skills: DBT-based coping skills (data/skills.json) ---------- */
+const SKILLS={data:null}, SKILLS_META_KEY="meta_skills", SKILL_NUDGE_KEY="ir_skill_nudge_hidden";
+let skillBg=null, skillPendingBadges=[];
+async function loadSkills(){
+  try{ const r=await fetch("data/skills.json",{cache:"no-cache"}); if(!r.ok) throw 0; const d=await r.json(); if(!Array.isArray(d.skills)) throw 0; SKILLS.data=d; }
+  catch(e){ SKILLS.data=null; }
+}
+const skillById=id=>SKILLS.data?.skills.find(x=>x.id===id);
+const groupOfSkill=id=>SKILLS.data?.groups.find(g=>g.skills.includes(id));
+const CRISIS_LINE=`<p class="small muted skill-crisis">If you're in crisis or thinking about hurting yourself, call or text <b>988</b> (US) any time.</p>`;
+/* Which skills have helped: counts from the skill log, best first ("yes" counts fully, "a little" counts half) */
+function helpedSkills(){
+  const m={};
+  for(const [d,list] of Object.entries(S.skillLog)) for(const r of list){
+    if(r.helped!=="yes"&&r.helped!=="little") continue;
+    const x=m[r.id] ||= {id:r.id,yes:0,little:0,last:""}; x[r.helped]++; if(d>x.last) x.last=d; }
+  return Object.values(m).filter(x=>skillById(x.id)).sort((a,b)=>(b.yes+b.little/2)-(a.yes+a.little/2)||b.last.localeCompare(a.last));
+}
+const helpedText=x=>{ const n=x.yes+x.little; return x.yes? (n===1?"Helped once":`Helped ${n} times`) : (n===1?"Helped a little once":`Helped a little ${n} times`); };
+function skillCardHTML(k,h){
+  return `<button class="card skill-card${h?" helped":""}" data-skill="${k.id}">
+        <span class="skill-name">${esc(k.name)}<span class="go" aria-hidden="true">→</span></span><span class="small muted">${esc(k.tagline)}</span>${h?`<span class="helped-chip">💛 ${helpedText(h)}</span>`:""}</button>`;
+}
+function renderSkills(){
+  const D=SKILLS.data;
+  const hl=helpedSkills(), hm=Object.fromEntries(hl.map(x=>[x.id,x]));
+  if(!D){ document.getElementById("app").innerHTML=`<div class="card"><h2>Skills</h2><p class="muted">Skills couldn't load right now. Check your connection and try again.</p>${CRISIS_LINE}</div>`; return; }
+  document.getElementById("app").innerHTML=`
+    <div class="card skills-intro"><h2>🧰 Skills</h2><p>${esc(D.intro)}</p>${CRISIS_LINE}</div>
+    ${hl.length?`<section class="skill-group helped-group" aria-labelledby="sg-helped">
+      <h3 id="sg-helped"><span aria-hidden="true">💛</span> What's helped me</h3>
+      <p class="small muted">Your top 3, based on what you said helped.</p>
+      <div class="grid skill-grid">${hl.slice(0,3).map(x=>skillCardHTML(skillById(x.id),x)).join("")}</div>
+    </section>`:""}
+    ${D.groups.map(g=>`<section class="skill-group" aria-labelledby="sg-${g.id}">
+      <h3 id="sg-${g.id}"><span aria-hidden="true">${g.icon}</span> ${esc(g.title)}</h3>
+      <div class="grid skill-grid">${g.skills.map(id=>{ const k=skillById(id); return k?skillCardHTML(k,hm[id]):""; }).join("")}</div>
+    </section>`).join("")}
+    <div class="card skills-more"><p class="small muted">${esc(D.learnMore.text)}</p>
+      <p class="small">${D.learnMore.links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ↗</a>`).join(" · ")}</p></div>`;
+  document.querySelectorAll("[data-skill]").forEach(b=>b.onclick=()=>openSkill(b.dataset.skill));
+}
+function openSkill(id){
+  const k=skillById(id); if(!k) return;
+  closeSkill(true);
+  const g=groupOfSkill(id), st={i:0, all:false};
+  skillBg=document.createElement("div"); skillBg.className="sheet-bg skill-bg";
+  skillBg.innerHTML=`<div class="sheet skill-sheet" role="dialog" aria-modal="true" aria-labelledby="skill-title">
+      <div class="sheet-head"><div class="sheet-title"><span class="sheet-ico" aria-hidden="true">${g?.icon||"🧰"}</span><div><h2 id="skill-title">${esc(k.name)}</h2><div class="small muted">${esc(k.tagline)}</div></div></div>
+        <button class="xbtn" id="skClose" aria-label="Close">✕</button></div>
+      <div class="sheet-body" id="skBody"></div>
+      <div class="sheet-foot" id="skFoot"></div>
+    </div>`;
+  skillBg.addEventListener("mousedown",e=>{ if(e.target===skillBg) closeSkill(); });
+  document.body.appendChild(skillBg); document.body.classList.add("noscroll");
+  skillBg.querySelector("#skClose").onclick=()=>closeSkill();
+  const n=k.steps.length;
+  const draw=()=>{
+    const body=skillBg.querySelector("#skBody"), foot=skillBg.querySelector("#skFoot");
+    body.innerHTML=`<p class="skill-when"><b>Use it:</b> ${esc(k.when)}</p>
+      ${st.all?`<ol class="skill-steps">${k.steps.map(x=>`<li><span class="skill-key" aria-hidden="true">${esc(x.k)}</span><div><b>${esc(x.t)}</b><p>${esc(x.d)}</p></div></li>`).join("")}</ol>`
+        :`<div class="skill-step" aria-live="polite"><div class="skill-step-n small muted">Step ${st.i+1} of ${n}</div>
+            <div class="skill-key big" aria-hidden="true">${esc(k.steps[st.i].k)}</div><h3>${esc(k.steps[st.i].t)}</h3><p>${esc(k.steps[st.i].d)}</p>
+            <div class="skill-dots" aria-hidden="true">${k.steps.map((_,j)=>`<span class="${j===st.i?"on":""}"></span>`).join("")}</div></div>`}
+      <p class="small"><button class="linkbtn" id="skAll">${st.all?"Go one step at a time":"Show all steps at once"}</button></p>
+      ${CRISIS_LINE}
+      <p class="small muted">${esc(k.origin||"Adapted from DBT.")} Learn more: <a href="${esc(k.source.url)}" target="_blank" rel="noopener">${esc(k.source.name)} ↗</a></p>`;
+    foot.innerHTML=st.all?`<button class="btn" id="skDone">Done</button>`
+      :`<button class="btn ghost" id="skPrev" ${st.i===0?"disabled":""}>← Back</button><button class="btn" id="skNext">${st.i===n-1?"Done":"Next →"}</button>`;
+    body.querySelector("#skAll").onclick=()=>{ st.all=!st.all; draw(); };
+    const dn=foot.querySelector("#skDone"); if(dn) dn.onclick=ask;
+    const pv=foot.querySelector("#skPrev"); if(pv) pv.onclick=()=>{ if(st.i>0){ st.i--; draw(); } };
+    const nx=foot.querySelector("#skNext"); if(nx) nx.onclick=()=>{ if(st.i<n-1){ st.i++; draw(); body.scrollTop=0; } else ask(); };
+  };
+  // at the end, ask if it helped; the answer goes in today's log
+  const ask=()=>{
+    const body=skillBg.querySelector("#skBody"), foot=skillBg.querySelector("#skFoot");
+    body.innerHTML=`<div class="skill-step skill-ask"><div class="skill-key big" aria-hidden="true">💭</div><h3 id="skAskQ">Did this help?</h3>
+        <p class="muted">Your answer goes in today's log, so over time you can see which skills work best for you.</p>
+        <div class="skill-rate" role="group" aria-labelledby="skAskQ">
+          <button class="btn" data-helped="yes">👍 Yes, it helped</button>
+          <button class="btn ghost" data-helped="little">🤏 A little</button>
+          <button class="btn ghost" data-helped="no">😐 Not really</button></div>
+        <div class="skill-note"><label for="skNote">What happened? <span class="muted">(optional)</span></label>
+          <textarea id="skNote" rows="3" maxlength="1000" placeholder="What was going on, what you felt, or anything you noticed"></textarea>
+          <p class="small muted">Saved in today's log with your answer.</p></div></div>`;
+    foot.innerHTML=`<button class="btn ghost" id="skSkip">Skip</button><button class="btn" id="skSave" disabled>Save</button>`;
+    let pick=null; const save=foot.querySelector("#skSave"), note=body.querySelector("#skNote");
+    const sync=()=>{ save.disabled=!pick && !note.value.trim(); };
+    foot.querySelector("#skSkip").onclick=()=>closeSkill();
+    save.onclick=()=>{ if(pick) return answer(pick); rec.note=note.value.trim(); saveSkillLog(); closeSkill(); };
+    note.oninput=sync;
+    body.querySelectorAll("[data-helped]").forEach(b=>{ b.setAttribute("aria-pressed","false"); b.onclick=()=>{
+      pick=pick===b.dataset.helped?null:b.dataset.helped;
+      body.querySelectorAll("[data-helped]").forEach(x=>{ const on=x.dataset.helped===pick; x.setAttribute("aria-pressed",on); x.classList.toggle("ghost",!on); });
+      sync(); }; });
+    body.querySelector("[data-helped='yes']").classList.add("ghost");
+    body.scrollTop=0; body.querySelector("[data-helped]").focus();
+  };
+  const answer=h=>{
+    const t=skillBg.querySelector("#skNote")?.value.trim(); if(t) rec.note=t;
+    rec.helped=h; saveSkillLog();
+    const msg={yes:["💛","Glad it helped.","It's in today's log. Come back to it anytime."],
+      little:["🌱","A little still counts.","It's in today's log. Skills get stronger the more you practice them."],
+      no:["🤍","That's okay.","Not every skill fits every moment. It's in today's log, and there are plenty of others to try."]}[h];
+    const body=skillBg.querySelector("#skBody"), foot=skillBg.querySelector("#skFoot");
+    body.innerHTML=`<div class="skill-step" aria-live="polite"><div class="skill-key big" aria-hidden="true">${msg[0]}</div><h3>${msg[1]}</h3><p>${msg[2]}</p></div>`;
+    foot.innerHTML=(h==="yes"?"":`<button class="btn ghost" id="skOther">Try another skill</button>`)+`<button class="btn" id="skFin">Done</button>`;
+    const o=foot.querySelector("#skOther"); if(o) o.onclick=()=>{ closeSkill(); if(S.view!=="skills"){ S.view="skills"; render(); } window.scrollTo(0,0); };
+    foot.querySelector("#skFin").onclick=()=>closeSkill(); foot.querySelector("#skFin").focus();
+  };
+  draw();
+  // opening a skill counts as using it: log it now, and the first one earns a badge (shown after the skill closes)
+  const before=earnedBadges(S.entries), day=today(), rec={id, at:new Date().toISOString()};
+  (S.skillLog[day] ||= []).push(rec);
+  if(!S.skillDate) S.skillDate=day;
+  saveSkillLog();
+  const after=earnedBadges(S.entries); skillPendingBadges=badgeList().filter(b=>after[b.id]&&!before[b.id]);
+}
+function closeSkill(instant){
+  if(!skillBg) return; const bg=skillBg; skillBg=null;
+  if(!S.form) document.body.classList.remove("noscroll");
+  if(instant) return bg.remove();
+  bg.classList.add("closing"); setTimeout(()=>bg.remove(),180);
+  if(skillPendingBadges.length){ const fresh=skillPendingBadges; skillPendingBadges=[]; render(); setTimeout(()=>celebrate(fresh,computeStats(S.entries)),260); }
+}
+/* Skill log: S.skillLog = { "YYYY-MM-DD": [{id, at, helped:"yes"|"little"|"no"}] }. Opening a skill counts as using it. */
+const HELPED_LABEL={yes:"Helped",little:"Helped a little",no:"Didn't help this time"};
+function saveSkillLog(){
+  const doc={key:SKILLS_META_KEY,kind:"meta",date:S.skillDate,log:S.skillLog,updatedAt:new Date().toISOString(),v:2};
+  affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
+}
+function cleanSkillLog(log){
+  const out={}; if(!log||typeof log!=="object") return out;
+  for(const [d,list] of Object.entries(log)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(list)){
+    const ok=list.filter(r=>r&&typeof r.id==="string").map(r=>({id:r.id,at:String(r.at||""),...(HELPED_LABEL[r.helped]?{helped:r.helped}:{}),...(typeof r.note==="string"&&r.note.trim()?{note:r.note.trim().slice(0,1000)}:{})}));
+    if(ok.length) out[d]=ok; }
+  return out;
+}
+function skillsDayHTML(d){
+  // only skills that helped, once each, as small tags ("a little" gets a lighter tag)
+  const best={}; for(const r of S.skillLog[d]||[]) if(r.helped==="yes"||r.helped==="little") best[r.id]=best[r.id]==="yes"?"yes":r.helped;
+  const ids=Object.keys(best); if(!ids.length) return "";
+  const tags=ids.map(id=>{ const k=skillById(id); const lab=esc(k?k.name:id);
+    return `<li class="sk-tag ${best[id]}" title="${best[id]==="yes"?"Helped":"Helped a little"}">${lab}${best[id]==="little"?'<span class="sr-only"> (helped a little)</span>':""}</li>`; }).join("");
+  return `<div class="dd-block skills-used"><div class="dd-head"><h3>🧰 Skills that helped</h3></div><ul class="sk-tags">${tags}</ul></div>`;
+}
+/* A gentle link on Today. After a low Emotional rating today, it gets a warmer message (can be turned off in Settings). */
+function skillLinkHTML(){
+  if(!SKILLS.data) return "";
+  const t=today(), low=S.prefs.skillNudge && ["morning","night"].some(k=>{ const e=getEntry(t,k); const v=+e?.answers?.emotional_scale; return v && v<=2; });
+  let hidden=false; try{ hidden=localStorage.getItem(SKILL_NUDGE_KEY)===t; }catch(e){}
+  const top=helpedSkills()[0], tk=top&&skillById(top.id);
+  if(low && !hidden) return `<div class="card skill-nudge"><div><b>Rough day?</b> <span class="muted">${tk?`<b>${esc(tk.name)}</b> has helped you before.`:"A quick coping skill might help."}</span></div>
+      <div class="skill-nudge-actions">${tk?`<button class="btn" id="tryTop" data-top="${tk.id}">💛 Try ${esc(tk.name)}</button><button class="linkbtn" id="toSkills">All skills</button>`:`<button class="btn" id="toSkills">🧰 Try a skill</button>`}<button class="linkbtn" id="hideNudge">Not now</button></div></div>`;
+  return `<button class="skill-link" id="toSkills">🧰 Feeling overwhelmed? Try a coping skill →</button>`;
+}
+function bindSkillLink(){
+  const b=document.getElementById("toSkills"); if(b) b.onclick=()=>setView("skills");
+  const tt=document.getElementById("tryTop"); if(tt) tt.onclick=()=>openSkill(tt.dataset.top);
+  const h=document.getElementById("hideNudge"); if(h) h.onclick=()=>{ try{ localStorage.setItem(SKILL_NUDGE_KEY,today()); }catch(e){} render(); };
+}
+
 /* ---------- History ---------- */
 function showDayInHistory(d){
   S.histDay=d; S.cal=new Date(+d.slice(0,4),+d.slice(5,7)-1,1); setView("history");
@@ -912,10 +1080,10 @@ function dayDetailHTML(d){
     return `<div class="dd-block ${k}"><div class="dd-head"><h3>${FORMS[k].icon} ${FORMS[k].title}</h3><button class="linkbtn" data-open-k="${k}">Open</button></div>
       ${rows?`<ul class="dd-list">${rows}</ul>`:`<p class="muted small">Checked in, no answers recorded.</p>`}</div>`;
   }).join("");
-  const none=!ents.some(([,e])=>e);
+  const none=!ents.some(([,e])=>e), sk=skillsDayHTML(d);
   return `<section class="card day-detail" id="dayDetail">
       <div class="dd-top"><h2>${isToday?"Today · ":""}${fmtDate(d)}</h2><button class="xbtn" id="ddClose" aria-label="Close day">✕</button></div>
-      ${none?`<p class="muted">${isToday?"Nothing logged yet today.":"No check-ins this day. That's okay. There's always tomorrow."}</p>`:parts}
+      ${none&&!sk?`<p class="muted">${isToday?"Nothing logged yet today.":"No check-ins this day. That's okay. There's always tomorrow."}</p>`:parts+sk}
     </section>`;
 }
 function renderHistory(){
@@ -925,7 +1093,7 @@ function renderHistory(){
   const cells=[]; for(let i=0;i<startPad;i++) cells.push(`<span></span>`);
   for(let d=1; d<=dim; d++){ const ds=ymd(new Date(y,mo,d)); const r=s.byDate[ds]||{};
     cells.push(`<button class="cell ${ds>t?"future":""} ${ds===t?"today":""} ${ds===S.histDay?"sel":""}" data-d="${ds}" title="${fmtDate(ds)}" ${ds>t?"disabled":""}><span class="m ${r.morning?"on":""}"></span><span class="n ${r.night?"on":""}"></span></button>`); }
-  const list=[...S.entries].sort((a,b)=>(b.date+b.kind).localeCompare(a.date+a.kind)).slice(0,60);
+  const days=historyDays();
   $app.innerHTML = `
     ${S.histDay?dayDetailHTML(S.histDay):""}
     <div class="card" ${S.histDay?'style="margin-top:14px"':""}>
@@ -939,15 +1107,31 @@ function renderHistory(){
     </div>
     <div class="section-title"><h2>Trends</h2><span class="small muted">last 30 days · 1–5</span></div>
     <div class="card">${trendsHTML()}</div>
-    <div class="section-title"><h2>Entries</h2><span class="small muted">${S.entries.length} total</span></div>
-    <div>${list.length?list.map(e=>`<button class="entry" data-k="${e.key}"><span class="tag">${FORMS[e.kind].icon}</span><span class="t"><b>${FORMS[e.kind].title}</b><br><span class="small muted">${fmtDate(e.date)}</span></span><span class="avg">${avgRating(e)?.toFixed(1)??"–"}</span></button>`).join(""):`<div class="card muted">No entries yet. Your first check-in will show up here.</div>`}</div>
+    <div class="section-title"><h2>Entries</h2><span class="small muted">${days.length} day${days.length===1?"":"s"}</span></div>
+    <div>${days.length?days.slice(0,60).map(dayEntryHTML).join(""):`<div class="card muted">No entries yet. Your first check-in will show up here.</div>`}</div>
   `;
   document.getElementById("prev").onclick=()=>{S.cal=new Date(y,mo-1,1);render();};
   document.getElementById("next").onclick=()=>{S.cal=new Date(y,mo+1,1);render();};
   $app.querySelectorAll(".cell[data-d]:not(.future)").forEach(b=>b.onclick=()=>{ S.histDay=b.dataset.d; render(); document.getElementById("dayDetail")?.scrollIntoView({behavior:"smooth",block:"start"}); });
   const ddc=document.getElementById("ddClose"); if(ddc) ddc.onclick=()=>{ S.histDay=null; render(); };
   $app.querySelectorAll(".day-detail [data-open-k]").forEach(b=>b.onclick=()=>openForm(b.dataset.openK,S.histDay));
-  $app.querySelectorAll(".entry").forEach(b=>b.onclick=()=>{const e=S.entries.find(x=>x.key===b.dataset.k); openForm(e.kind,e.date);});
+  $app.querySelectorAll(".entry[data-k]").forEach(b=>b.onclick=()=>{const e=S.entries.find(x=>x.key===b.dataset.k); openForm(e.kind,e.date);});
+  $app.querySelectorAll("[data-day-open]").forEach(b=>b.onclick=()=>{ S.histDay=b.dataset.dayOpen; render(); document.getElementById("dayDetail")?.scrollIntoView({behavior:"smooth",block:"start"}); });
+}
+/* Entries grouped by day: check-ins and skills, in the order they happened, with times */
+function historyDays(){
+  return [...new Set(S.entries.map(e=>e.date).concat(Object.keys(S.skillLog).filter(d=>S.skillLog[d].length)))].filter(d=>d<=today()).sort().reverse();
+}
+const clock=iso=>{ const t=iso?new Date(iso):null; return t&&!isNaN(t)?t.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):""; };
+function dayEntryHTML(d){
+  const ev=[];
+  for(const k of ["morning","night"]){ const e=getEntry(d,k); if(!e) continue;
+    const edited=e.updatedAt&&e.createdAt&&new Date(e.updatedAt)-new Date(e.createdAt)>60000;
+    ev.push({at:e.createdAt||"", sort:e.createdAt||(k==="morning"?"0":"2"), html:`<li><button class="entry-row" data-k="${e.key}"><span class="er-time">${clock(e.createdAt)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">${FORMS[k].icon}</span><span class="er-text"><b>${FORMS[k].title}</b>${edited?`<span class="small muted"> · edited ${clock(e.updatedAt)}</span>`:""}</span><span class="avg">${avgRating(e)?.toFixed(1)??"–"}</span></button></li>`}); }
+  for(const r of S.skillLog[d]||[]){ const k=skillById(r.id);
+    ev.push({sort:r.at||"1", html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(r.at)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">🧰</span><span class="er-text"><b>${esc(k?k.name:r.id)}</b><span class="small muted"> · ${r.helped?HELPED_LABEL[r.helped]:"Used"}</span>${r.note?`<span class="er-note">${esc(r.note)}</span>`:""}</span></div></li>`}); }
+  ev.sort((a,b)=>a.sort.localeCompare(b.sort));
+  return `<section class="card day-entry"><button class="de-head" data-day-open="${d}"><h3>${d===today()?"Today · ":""}${fmtDate(d)}</h3><span class="small muted">View day →</span></button><ul class="de-list">${ev.map(x=>x.html).join("")}</ul></section>`;
 }
 function trendsHTML(){
   const t=today(), days=[...Array(30)].map((_,i)=>addDays(t,i-29));
@@ -1030,10 +1214,11 @@ function openDaySheet(d){
     body+=`<div class="hls">${highlightHTML("morning",hm)}${highlightHTML("night",hn)}</div>`;
     if(proud && !(hn && hn.sec.dim==="closing")) body+=`<div class="proud">⭐ <b>Proud of:</b> ${esc(proud)}</div>`;
     if(!hm && !hn && !proud) body=`<p class="muted">Checked in, no notes this time. Showing up counts.</p>`;
+    body+=skillsDayHTML(d);
     body+=dayBadgesHTML(d);
     body+=`<button class="linkbtn full-link" id="dayFull">See the full day in History →</button>`;
   } else {
-    body= isToday ? `<p class="muted">Nothing logged yet today.</p>` : `<p class="muted">No check-ins this day. That's okay. There's always tomorrow.</p>`;
+    body= (isToday ? `<p class="muted">Nothing logged yet today.</p>` : `<p class="muted">No check-ins this day. That's okay. There's always tomorrow.</p>`)+skillsDayHTML(d);
   }
   const btns=["morning","night"].map(k=>{
     const e=getEntry(d,k), F=FORMS[k];
@@ -1117,6 +1302,7 @@ function renderAbout(){
         <h2 class="sec">How it works<a class="anchor" href="#about-how" aria-label="Link to this section">#</a></h2>
         <ul>
           <li><b>🌅 Morning intention</b> is open from ${hourLabel(win("morning")[0])} to ${hourLabel(win("morning")[1])}. <b>🌙 Nightly reflection</b> is open from ${hourLabel(win("night")[0])} to ${hourLabel(win("night")[1])}. You can change both windows in <b>Settings</b>.</li>
+          <li><b>🧰 Skills</b> has short coping skills, like STOP, DEAR MAN, "catch it, check it, change it," a self-compassion break and the 5-4-3-2-1 grounding exercise, for when feelings start to run high. They draw on DBT, CBT, ACT, mindfulness and self-compassion. They're reminders, not therapy.</li>
           <li>Each check-in walks through the eight areas of wellness, one at a time. Rate each one from 1 to 5 and write as much or as little as you want. Skipping is fine.</li>
           <li><b>Check-ins are for today.</b> You can look back on past days, but you can't fill them in afterward. If you miss a day, that's okay. There's always tomorrow. No guilt, no shame.</li>
           <li><b>Badges reward showing up, never your ratings.</b> A hard day logged honestly counts just as much as a great one. There's no list to finish.</li>
@@ -1198,10 +1384,11 @@ function renderAbout(){
 
 /* ---------- Backup export ---------- */
 const BACKUP_KEY="ir_last_backup";
-const hasData=()=>S.entries.length>0 || Object.keys(S.affLog).length>0;
+const hasData=()=>S.entries.length>0 || Object.keys(S.affLog).length>0 || Object.keys(S.skillLog).length>0;
 function backupJSON(){
   const all=[...S.entries].sort((a,b)=>a.key.localeCompare(b.key));
   if(Object.keys(S.affLog).length) all.push({key:AFF_META_KEY,kind:"meta",days:S.affLog,v:1});
+  if(Object.keys(S.skillLog).length) all.push({key:SKILLS_META_KEY,kind:"meta",date:S.skillDate,log:S.skillLog,v:2});
   return JSON.stringify(all,null,2);
 }
 function lastBackup(){ try{ return localStorage.getItem(BACKUP_KEY); }catch(e){ return null; } }
@@ -1392,6 +1579,8 @@ function renderSettings(){
         ${[["off","🚫","Off","No affirmations."],["embedded","📌","On the Today screen","Shown right on the main page."],["popup","🌤️","Pop-up","Opens once a day on your first visit. A small row on the Today screen reopens it."]]
           .map(([v,ic,t,d])=>`<label class="choice ${P.affMode===v?"on":""}"><input type="radio" name="affMode" value="${v}" ${P.affMode===v?"checked":""}><span class="c-ic">${ic}</span><span class="c-t"><b>${t}</b><span class="small muted">${d}</span></span></label>`).join("")}
       </div>
+      <div class="pref-label" style="margin-top:18px"><b>Skills</b></div>
+      <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Suggest a skill on rough days</b><span class="small muted">After a low Emotional rating, Today shows a gentle link to the Skills tab.</span></span><input type="checkbox" class="switch" id="pSkill" ${P.skillNudge?"checked":""}></label>
       <div class="pref-label" style="margin-top:18px"><b>Display</b></div>
       <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Color-blind friendly colors</b><span class="small muted">Uses colors that are easier to tell apart with color vision differences, and adds patterns and check marks where color shows meaning.</span></span><input type="checkbox" class="switch" id="pCvd" ${P.colorMode==="cvd"?"checked":""}></label>
     </div>`+`
@@ -1442,6 +1631,7 @@ function renderSettings(){
     try{ await affSaving; await S.store.remove(AFF_META_KEY); S.affLog={}; }catch(err){}
     try{ await S.store.remove(BACKUPS_META_KEY); S.backups=[]; }catch(err){}
     try{ await S.store.remove(HOME_META_KEY); S.homeDate=null; }catch(err){}
+    try{ await S.store.remove(SKILLS_META_KEY); S.skillDate=null; S.skillLog={}; }catch(err){}
     try{ await S.store.remove(SHARES_META_KEY); S.shares=[]; }catch(err){}
     try{ await S.store.remove(REMINDERS_META_KEY); S.reminders={}; }catch(err){}
     toast(S.entries.length?`Deleted ${n}; some couldn't be removed — try again.`:"All entries deleted"); render();
@@ -1453,6 +1643,7 @@ function renderSettings(){
   document.getElementById("pNS").onchange=setWin("nightStart","night");
   document.getElementById("pNE").onchange=setWin("nightEnd","night");
   ["morning","night"].forEach(k=>document.getElementById(`rem-${k}`).onclick=()=>setReminder(k));
+  document.getElementById("pSkill").onchange=e=>{ S.prefs.skillNudge=e.target.checked; savePrefs(); };
   document.getElementById("pCvd").onchange=e=>{
     S.prefs.colorMode=e.target.checked?"cvd":"standard"; applyColorMode(S.prefs.colorMode); savePrefs(); render();
     toast(e.target.checked?"Color-blind friendly colors on":"Standard colors on");
@@ -1476,7 +1667,12 @@ function renderSettings(){
     let n=0; for(const e of ok){ try{ await S.store.save(e); S.entries=S.entries.filter(x=>x.key!==e.key).concat(e); n++; }catch(err){ break; } }
     const meta=arr.find(e=>e&&e.key===AFF_META_KEY&&e.days&&typeof e.days==="object");
     if(meta){ for(const [d,ids] of Object.entries(meta.days)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(ids)) S.affLog[d]=[...new Set([...(S.affLog[d]||[]),...ids.map(String)])]; saveAffLog(); await affSaving; }
-    toast(`Imported ${n} check-ins${meta?" + affirmation history":""}`); render();
+    const skm=arr.find(e=>e&&e.key===SKILLS_META_KEY&&e.log&&typeof e.log==="object");
+    if(skm){ const inc=cleanSkillLog(skm.log);
+      for(const [d,list] of Object.entries(inc)){ const have=new Set((S.skillLog[d]||[]).map(r=>r.id+r.at)); S.skillLog[d]=(S.skillLog[d]||[]).concat(list.filter(r=>!have.has(r.id+r.at))); }
+      if(!S.skillDate||(/^\d{4}-\d{2}-\d{2}$/.test(skm.date||"")&&skm.date<S.skillDate)) S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(skm.date||"")?skm.date:(Object.keys(inc).sort()[0]||S.skillDate);
+      saveSkillLog(); await affSaving; }
+    toast(`Imported ${n} check-ins${meta?" + affirmation history":""}${skm?" + skills log":""}`); render();
   };
 }
 
@@ -1508,6 +1704,7 @@ function renderSettings(){
       if(modalEl && d.closest(".modal-bg")){ e.preventDefault(); closeModal(); }
       else if(affBg && d.closest(".aff-bg")){ e.preventDefault(); closeAffSheet(); }
       else if(dayBg && d.closest(".sheet-bg")===dayBg){ e.preventDefault(); closeDaySheet(); }
+      else if(skillBg && d.closest(".sheet-bg")===skillBg){ e.preventDefault(); closeSkill(); }
       return; // the check-in form handles its own Esc
     }
     if(e.key!=="Tab") return;
@@ -1564,11 +1761,12 @@ function confetti(count){
 /* ---------- Boot ---------- */
 (async function boot(){
   countVisit();
-  const affReady = Promise.all([loadAffirmations(), loadSuggestions()]);
+  const affReady = Promise.all([loadAffirmations(), loadSuggestions(), loadSkills()]);
   S.store = await pickStore();
   await affReady;
   try{ const all = await S.store.list(); const meta=all.find(e=>e.key===AFF_META_KEY);
     S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{}; S.entries = all.filter(e=>FORMS[e.kind]);
+    const sk=all.find(e=>e.key===SKILLS_META_KEY); S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(sk?.date||"")?sk.date:null; S.skillLog=cleanSkillLog(sk?.log);
     const hm=all.find(e=>e.key===HOME_META_KEY); S.homeDate=/^\d{4}-\d{2}-\d{2}$/.test(hm?.date||"")?hm.date:null;
     const rm=all.find(e=>e.key===REMINDERS_META_KEY); S.reminders=(rm?.reminders&&typeof rm.reminders==="object")?rm.reminders:{};
     const sh=all.find(e=>e.key===SHARES_META_KEY); S.shares=Array.isArray(sh?.days)?sh.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
