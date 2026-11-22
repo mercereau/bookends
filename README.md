@@ -16,6 +16,7 @@ The app has no accounts and no tracking, and it doesn't send your entries anywhe
 - **Check-in windows.** Each check-in is open only during its window, and you set the windows in Settings. Each window can be 1 to 8 hours. Past days are read-only. If you miss a day, the app says so gently, and that's it.
 - **Badges and streaks** without guilt. You only see badges you've earned. Earning one means something nice happened, not that you're behind on the rest. There are also monthly badges, holiday badges and affirmation badges.
 - **Writing help.** Each question has a short hint about what to include, plus a few tap-to-add ideas picked at random ("Take a short walk", "Eat some fruit"). Emotional wellness adds a **feelings wheel**: pick up to three feelings and they're filled in for you. Using it earns a badge.
+- **Skills.** A tab of short coping skills adapted from Dialectical Behavior Therapy (DBT): STOP, paced breathing, paired muscle relaxation, self-soothing, ACCEPTS, IMPROVE, DEAR MAN, GIVE, FAST, Check the Facts, Opposite Action, Wise Mind and PLEASE. Each one walks you through a step at a time. After a low Emotional rating, Today shows a gentle link to them (you can turn this off). They're reminders, not therapy.
 - **Daily affirmations**, three a day at most. If you keep coming back, the app nudges you to take a break from the screen. You can turn affirmations off, show them on the Today screen, or get a pop-up once a day.
 - **Your week on the shelf.** Each day is a book, colored by which check-ins you did. Tap a book to see that day's highlights.
 - **History.** Trends, past entries and a calendar.
@@ -59,6 +60,7 @@ css/styles.css          All styles, including dark mode and phone layouts
 js/app.js               The whole app, in plain JavaScript with no dependencies
 data/affirmations.json  Affirmations, suggestions and take-a-break messages
 data/suggestions.json   Writing hints, tap-to-add ideas and the feelings wheel
+data/skills.json        DBT-based coping skills for the Skills tab
 fonts/                  Self-hosted DM Sans and Fraunces (variable, Latin subset) + OFL licenses
 favicon.*, icon-*.png, apple-touch-icon.png, site.webmanifest
 _headers                Cloudflare security and caching headers

@@ -1,0 +1,547 @@
+{
+ "_notes": "Coping skills adapted from Dialectical Behavior Therapy (DBT), developed by Marsha Linehan. Original plain-language wording. Skills are reminders, not a substitute for learning DBT with a clinician. TIPP's temperature and intense-exercise steps are intentionally left out for safety.",
+ "intro": "Quick skills for when feelings start to run high. They come from Dialectical Behavior Therapy (DBT). Pick one, take your time, and come back to them whenever you need.",
+ "learnMore": {
+  "text": "These are reminders, not therapy. DBT works best when you learn it with a trained clinician.",
+  "links": [
+   {
+    "name": "What is DBT? (Cleveland Clinic)",
+    "url": "https://my.clevelandclinic.org/health/treatments/22838-dialectical-behavior-therapy-dbt"
+   },
+   {
+    "name": "Find a DBT-trained therapist (Behavioral Tech)",
+    "url": "https://behavioraltech.org/find-therapist/"
+   }
+  ]
+ },
+ "groups": [
+  {
+   "id": "pause",
+   "title": "Pause before I react",
+   "icon": "✋",
+   "skills": [
+    "stop"
+   ]
+  },
+  {
+   "id": "calm",
+   "title": "Calm my body",
+   "icon": "🌬️",
+   "skills": [
+    "paced",
+    "muscle",
+    "soothe"
+   ]
+  },
+  {
+   "id": "ride",
+   "title": "Get through the next few minutes",
+   "icon": "🌊",
+   "skills": [
+    "accepts",
+    "improve"
+   ]
+  },
+  {
+   "id": "ask",
+   "title": "Ask for what I need",
+   "icon": "🗣️",
+   "skills": [
+    "dearman",
+    "give",
+    "fast"
+   ]
+  },
+  {
+   "id": "think",
+   "title": "Check my thinking",
+   "icon": "🧭",
+   "skills": [
+    "facts",
+    "opposite",
+    "wise"
+   ]
+  },
+  {
+   "id": "base",
+   "title": "Protect my baseline",
+   "icon": "🛡️",
+   "skills": [
+    "please"
+   ]
+  }
+ ],
+ "skills": [
+  {
+   "id": "stop",
+   "name": "STOP",
+   "tagline": "Hit pause before you do something you'll regret.",
+   "when": "When you feel an urge to snap, send that text, or storm off.",
+   "steps": [
+    {
+     "k": "S",
+     "t": "Stop",
+     "d": "Freeze for a second. Don't move, don't speak, don't type. You're in charge here, not the feeling."
+    },
+    {
+     "k": "T",
+     "t": "Take a step back",
+     "d": "Step away, even just in your head. Take one slow, deep breath."
+    },
+    {
+     "k": "O",
+     "t": "Observe",
+     "d": "Notice what's happening inside and around you. What are you feeling? What's actually going on?"
+    },
+    {
+     "k": "P",
+     "t": "Proceed mindfully",
+     "d": "Ask yourself what would help most right now, and what you want to happen. Then choose your next move on purpose."
+    }
+   ],
+   "source": {
+    "name": "McLean Hospital: Practical DBT Strategies",
+    "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "paced",
+   "name": "Paced breathing",
+   "tagline": "Slow your breath to slow your body down.",
+   "when": "When your heart is racing or your chest feels tight.",
+   "steps": [
+    {
+     "k": "1",
+     "t": "Get settled",
+     "d": "Sit or stand comfortably. Let your shoulders drop."
+    },
+    {
+     "k": "2",
+     "t": "Breathe in",
+     "d": "Breathe in through your nose for about 4 counts. Let your belly rise."
+    },
+    {
+     "k": "3",
+     "t": "Breathe out longer",
+     "d": "Breathe out slowly for about 6 counts, like you're blowing on hot soup. A longer out-breath tells your body it's safe."
+    },
+    {
+     "k": "4",
+     "t": "Keep going",
+     "d": "Repeat for one to two minutes. If counting feels like too much, just make each out-breath a little longer than the in-breath."
+    }
+   ],
+   "source": {
+    "name": "McLean Hospital: Practical DBT Strategies",
+    "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "muscle",
+   "name": "Paired muscle relaxation",
+   "tagline": "Tense, then let go, and let your body follow.",
+   "when": "When stress is sitting in your shoulders, jaw, or hands.",
+   "steps": [
+    {
+     "k": "1",
+     "t": "Pick a spot",
+     "d": "Start with your hands, shoulders, or face. Wherever you're holding tension."
+    },
+    {
+     "k": "2",
+     "t": "Tense while breathing in",
+     "d": "Breathe in and gently tighten that area for about 5 seconds. Firm, not painful."
+    },
+    {
+     "k": "3",
+     "t": "Release while breathing out",
+     "d": "Breathe out, let it all go, and quietly say \"relax\" to yourself. Notice the difference."
+    },
+    {
+     "k": "4",
+     "t": "Move on",
+     "d": "Work your way through a few areas. Over time, the word \"relax\" alone can help your body let go."
+    }
+   ],
+   "source": {
+    "name": "McLean Hospital: Practical DBT Strategies",
+    "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "soothe",
+   "name": "Self-soothe with your senses",
+   "tagline": "Comfort yourself one sense at a time.",
+   "when": "When you feel raw and need to be gentle with yourself.",
+   "steps": [
+    {
+     "k": "👀",
+     "t": "Sight",
+     "d": "Look at something calming: the sky, a favorite photo, a candle, a plant."
+    },
+    {
+     "k": "👂",
+     "t": "Sound",
+     "d": "Put on soothing music, nature sounds, or a voice you love."
+    },
+    {
+     "k": "👃",
+     "t": "Smell",
+     "d": "Breathe in something pleasant: coffee, a lotion, fresh air, a favorite soap."
+    },
+    {
+     "k": "👅",
+     "t": "Taste",
+     "d": "Slowly sip a warm drink or savor a small treat. Really taste it."
+    },
+    {
+     "k": "✋",
+     "t": "Touch",
+     "d": "Wrap up in a soft blanket, pet an animal, or hold something with a comforting texture."
+    }
+   ],
+   "source": {
+    "name": "McLean Hospital: Practical DBT Strategies",
+    "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "accepts",
+   "name": "ACCEPTS",
+   "tagline": "Distract yourself until the wave passes.",
+   "when": "When a feeling is strong and you can't fix the problem right now.",
+   "steps": [
+    {
+     "k": "A",
+     "t": "Activities",
+     "d": "Do something that takes some focus: a walk, a puzzle, cleaning, a show."
+    },
+    {
+     "k": "C",
+     "t": "Contributing",
+     "d": "Help someone. Send a kind message, do a favor, or volunteer."
+    },
+    {
+     "k": "C",
+     "t": "Comparisons",
+     "d": "Remember a time you got through something hard. You've coped before."
+    },
+    {
+     "k": "E",
+     "t": "Emotions",
+     "d": "Bring in a different feeling on purpose: a funny video, an uplifting song."
+    },
+    {
+     "k": "P",
+     "t": "Pushing away",
+     "d": "Set the problem aside for now. Picture putting it in a box on a high shelf. You can come back to it later."
+    },
+    {
+     "k": "T",
+     "t": "Thoughts",
+     "d": "Give your mind a job: count backward from 100 by 7s, name things in a category, or read."
+    },
+    {
+     "k": "S",
+     "t": "Sensations",
+     "d": "Shift your focus with a gentle sensation: a warm shower, a good stretch, a strong mint."
+    }
+   ],
+   "source": {
+    "name": "McLean Hospital: Practical DBT Strategies",
+    "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "improve",
+   "name": "IMPROVE the moment",
+   "tagline": "Make a hard moment a little more bearable.",
+   "when": "When you're stuck in a tough situation you can't leave.",
+   "steps": [
+    {
+     "k": "I",
+     "t": "Imagery",
+     "d": "Picture a calm, safe place in detail. What do you see, hear, and feel there?"
+    },
+    {
+     "k": "M",
+     "t": "Meaning",
+     "d": "Look for any purpose or lesson in this, even a small one."
+    },
+    {
+     "k": "P",
+     "t": "Prayer",
+     "d": "Pray, meditate, or connect with whatever brings you peace."
+    },
+    {
+     "k": "R",
+     "t": "Relaxation",
+     "d": "Loosen your body. Unclench your jaw, drop your shoulders, breathe slowly."
+    },
+    {
+     "k": "O",
+     "t": "One thing in the moment",
+     "d": "Focus fully on just what you're doing right now. Only this step."
+    },
+    {
+     "k": "V",
+     "t": "Vacation",
+     "d": "Take a short break: five minutes outside, a cup of tea, closing your eyes."
+    },
+    {
+     "k": "E",
+     "t": "Encouragement",
+     "d": "Talk to yourself like a good friend would: \"I can get through this. This won't last forever.\""
+    }
+   ],
+   "source": {
+    "name": "McLean Hospital: Practical DBT Strategies",
+    "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "dearman",
+   "name": "DEAR MAN",
+   "tagline": "Ask for what you need, clearly and kindly.",
+   "when": "When you need to make a request or say no.",
+   "steps": [
+    {
+     "k": "D",
+     "t": "Describe",
+     "d": "Stick to the facts of the situation. No blaming."
+    },
+    {
+     "k": "E",
+     "t": "Express",
+     "d": "Share how you feel about it, using \"I feel...\" statements."
+    },
+    {
+     "k": "A",
+     "t": "Assert",
+     "d": "Ask for what you want, or say no, clearly. Don't make them guess."
+    },
+    {
+     "k": "R",
+     "t": "Reinforce",
+     "d": "Explain how it helps them too, or thank them when they come through."
+    },
+    {
+     "k": "M",
+     "t": "Mindful",
+     "d": "Stay on topic. If the conversation drifts, calmly come back to your point."
+    },
+    {
+     "k": "A",
+     "t": "Appear confident",
+     "d": "Steady voice, eye contact, good posture. Even if you don't feel it yet."
+    },
+    {
+     "k": "N",
+     "t": "Negotiate",
+     "d": "Be willing to give a little. Ask, \"What would work for you?\""
+    }
+   ],
+   "source": {
+    "name": "McLean Hospital: Practical DBT Strategies",
+    "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "give",
+   "name": "GIVE",
+   "tagline": "Keep the relationship strong while you talk.",
+   "when": "When the relationship matters as much as getting your way.",
+   "steps": [
+    {
+     "k": "G",
+     "t": "Gentle",
+     "d": "No attacks, threats, or judging. Keep your tone kind."
+    },
+    {
+     "k": "I",
+     "t": "Interested",
+     "d": "Listen to their side. Let them finish."
+    },
+    {
+     "k": "V",
+     "t": "Validate",
+     "d": "Show you understand how they feel, even if you disagree."
+    },
+    {
+     "k": "E",
+     "t": "Easy manner",
+     "d": "A little warmth or humor goes a long way. Smile if it fits."
+    }
+   ],
+   "source": {
+    "name": "McLean Hospital: Practical DBT Strategies",
+    "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "fast",
+   "name": "FAST",
+   "tagline": "Keep your self-respect in a tough conversation.",
+   "when": "When you're tempted to give in just to keep the peace.",
+   "steps": [
+    {
+     "k": "F",
+     "t": "Fair",
+     "d": "Be fair to the other person, and to yourself."
+    },
+    {
+     "k": "A",
+     "t": "Apologies (only when they fit)",
+     "d": "Don't over-apologize for having needs or opinions."
+    },
+    {
+     "k": "S",
+     "t": "Stick to your values",
+     "d": "Don't trade away what matters to you to avoid conflict."
+    },
+    {
+     "k": "T",
+     "t": "Truthful",
+     "d": "Be honest. No exaggerating, no making excuses."
+    }
+   ],
+   "source": {
+    "name": "McLean Hospital: Practical DBT Strategies",
+    "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "facts",
+   "name": "Check the facts",
+   "tagline": "Make sure the feeling fits what's really happening.",
+   "when": "When your reaction feels bigger than the situation.",
+   "steps": [
+    {
+     "k": "1",
+     "t": "What happened?",
+     "d": "Describe just the facts, like a camera would see it."
+    },
+    {
+     "k": "2",
+     "t": "What's my story about it?",
+     "d": "Notice the meaning you're adding. What are you assuming?"
+    },
+    {
+     "k": "3",
+     "t": "Any other explanations?",
+     "d": "Think of at least one other way to see it."
+    },
+    {
+     "k": "4",
+     "t": "Does my feeling fit?",
+     "d": "Does this feeling, and how strong it is, match the facts? If not, it's okay to let some of it go."
+    }
+   ],
+   "source": {
+    "name": "McLean Hospital: Practical DBT Strategies",
+    "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "opposite",
+   "name": "Opposite action",
+   "tagline": "When a feeling doesn't fit, act the opposite way.",
+   "when": "When an emotion is pushing you toward something that won't help.",
+   "steps": [
+    {
+     "k": "1",
+     "t": "Name the feeling",
+     "d": "Fear, anger, sadness, shame? Put a name on it."
+    },
+    {
+     "k": "2",
+     "t": "Notice the urge",
+     "d": "What does it want you to do? Hide, yell, stay in bed?"
+    },
+    {
+     "k": "3",
+     "t": "Check if it fits",
+     "d": "Does acting on this urge help you right now? If not, try the opposite."
+    },
+    {
+     "k": "4",
+     "t": "Do the opposite, all the way",
+     "d": "Fear says avoid, so approach a little. Sadness says withdraw, so get moving or reach out. Anger says attack, so step away and be kind."
+    }
+   ],
+   "source": {
+    "name": "McLean Hospital: Practical DBT Strategies",
+    "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "wise",
+   "name": "Wise mind",
+   "tagline": "Find the middle between feeling and thinking.",
+   "when": "When you're torn between what you feel and what you think.",
+   "steps": [
+    {
+     "k": "1",
+     "t": "Notice your emotion mind",
+     "d": "What are your feelings telling you to do?"
+    },
+    {
+     "k": "2",
+     "t": "Notice your reasonable mind",
+     "d": "What do the facts and logic say?"
+    },
+    {
+     "k": "3",
+     "t": "Breathe and drop in",
+     "d": "Take a slow breath. As you breathe out, let your attention settle in your center."
+    },
+    {
+     "k": "4",
+     "t": "Ask your wise mind",
+     "d": "Quietly ask, \"What's the wise thing to do here?\" Wait for an answer that feels calm and true."
+    }
+   ],
+   "source": {
+    "name": "McLean Hospital: Practical DBT Strategies",
+    "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  },
+  {
+   "id": "please",
+   "name": "PLEASE",
+   "tagline": "Take care of your body so feelings are easier to handle.",
+   "when": "Every day. Strong feelings hit harder when your body is run down.",
+   "steps": [
+    {
+     "k": "PL",
+     "t": "Treat physical illness",
+     "d": "Take care of aches, pain, and illness. See a doctor when you need to."
+    },
+    {
+     "k": "E",
+     "t": "Balanced eating",
+     "d": "Eat regular meals, not too much and not too little."
+    },
+    {
+     "k": "A",
+     "t": "Avoid mood-altering substances",
+     "d": "Go easy on alcohol and other substances that can throw off your mood."
+    },
+    {
+     "k": "S",
+     "t": "Balanced sleep",
+     "d": "Aim for enough sleep, on a regular schedule."
+    },
+    {
+     "k": "E",
+     "t": "Exercise",
+     "d": "Move your body most days, even a short walk."
+    }
+   ],
+   "source": {
+    "name": "McLean Hospital: Practical DBT Strategies",
+    "url": "https://home.mcleanhospital.org/dbt-strategies"
+   }
+  }
+ ]
+}

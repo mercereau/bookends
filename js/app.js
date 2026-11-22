@@ -107,6 +107,7 @@ const BADGES = [
   {id:"home-screen",  em:"📱", name:"Right at Home",  desc:"Open Bookends from your Home Screen", test:s=>s.homeScreen>=1},
   {id:"share-first",  em:"🤝", name:"In This Together", desc:"Download a summary to share with your provider", test:s=>s.shares>=1},
   {id:"reminder-set", em:"⏰", name:"Friendly Reminder", desc:"Add a check-in reminder to your calendar", test:s=>s.reminders>=1},
+  {id:"skill-first",  em:"🧰", name:"Toolbox",       desc:"Open a coping skill", test:s=>s.skills>=1},
   {id:"full-picture", em:"🎯", name:"Full Picture",    desc:"Rate every wellness area in one check-in", test:s=>s.allScales>=1},
   {id:"streak-2",     em:"✨", name:"Two in a Row",    desc:"Check in two days in a row", test:s=>s.longest>=2, progress:s=>[s.longest,2]},
   {id:"entries-5",    em:"🙌", name:"High Five",       desc:"5 total check-ins", test:s=>s.total>=5, progress:s=>[s.total,5]},
@@ -289,6 +290,7 @@ function computeStats(entries, asOf=today()){
     backups: (S.backups||[]).filter(d=>d<=asOf).length,
     shares: (S.shares||[]).filter(d=>d<=asOf).length,
     reminders: Object.values(S.reminders||{}).filter(r=>r?.date && r.date<=asOf).length,
+    skills: S.skillDate && S.skillDate<=asOf ? 1 : 0,
     homeScreen: S.homeDate && S.homeDate<=asOf ? 1 : 0,
     feelings: es.filter(e=>Array.isArray(e.answers.emotional_feelings) && e.answers.emotional_feelings.length).length,
     complete: es.filter(isComplete).length,
@@ -308,7 +310,7 @@ function affStats(asOf){
 }
 function earnedBadges(entries){
   // returns {badgeId: dateEarned}
-  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.shares||[],Object.values(S.reminders||{}).map(r=>r.date).filter(Boolean),S.homeDate?[S.homeDate]:[]))].filter(d=>d<=today()).sort();
+  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.shares||[],Object.values(S.reminders||{}).map(r=>r.date).filter(Boolean),S.homeDate?[S.homeDate]:[],S.skillDate?[S.skillDate]:[]))].filter(d=>d<=today()).sort();
   for(const d of dates){
     const s=computeStats(entries,d);
     for(const b of BADGES) if(!out[b.id] && b.test(s)) out[b.id]=d;
@@ -321,7 +323,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, backups:[], homeDate:null, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, backups:[], homeDate:null, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -339,7 +341,7 @@ function getEntry(date,kind){ return S.entries.find(e=>e.date===date && e.kind==
 function avgRating(e){ const v=Object.entries(e.answers).filter(([k])=>k.endsWith("_scale")).map(([,v])=>+v).filter(Boolean); return v.length?(v.reduce((a,b)=>a+b,0)/v.length):null; }
 
 function render(){
-  ({today:renderToday, history:renderHistory, badges:renderBadges, settings:renderSettings, about:renderAbout})[S.view]();
+  ({today:renderToday, skills:renderSkills, history:renderHistory, badges:renderBadges, settings:renderSettings, about:renderAbout})[S.view]();
   if(S.view==="today" && pendingCelebration.length && !S.form){ const b=pendingCelebration; pendingCelebration=[]; setTimeout(()=>celebrate(b,computeStats(S.entries)),250); }
   if(S.form) renderForm(); else closeSheet();
 }
@@ -364,6 +366,7 @@ function renderToday(){
       ${ciCard("morning",m,morningOpen,"Set the tone for your day","Start check-in →",closedMsg("morning"))}
       ${ciCard("night",n,nightOpen,"Look back on how today went","Start reflection →",closedMsg("night"))}
     </div>
+    ${skillLinkHTML()}
     <div class="card" style="margin-top:14px">
       <div class="shelf-head"><span class="small muted">Your week on the shelf</span>
         <span class="legend"><span><i style="background:var(--morning)"></i>Morning</span><span><i class="lg-n" style="background:var(--night)"></i>Night</span></span></div>
@@ -379,6 +382,7 @@ function renderToday(){
   const ae=document.getElementById("affEntry"); if(ae) ae.onclick=()=>openAffSheet(false);
   if(S.prefs.affMode==="embedded") bindAffirm();
   const qb=document.getElementById("quickBackup"); if(qb) qb.onclick=downloadBackup;
+  bindSkillLink();
 }
 /* Time windows (each person can change these in Settings):
    morning intention: midnight until prefs.morningEnd · nightly reflection: prefs.nightStart until midnight. 24h clock. */
@@ -664,13 +668,14 @@ function maybeAutoAffirm(){ // once per day, on the first visit, unless turned o
 
 /* ---------- Preferences (kept with the user's data; synced on the Claude-hosted copy) ---------- */
 const PREFS_KEY="meta_prefs";
-const DEFAULT_PREFS={affMode:"popup", colorMode:"standard", morningStart:5, morningEnd:12, nightStart:17, nightEnd:24};
+const DEFAULT_PREFS={affMode:"popup", colorMode:"standard", skillNudge:true, morningStart:5, morningEnd:12, nightStart:17, nightEnd:24};
 const AFF_MODES=["off","embedded","popup"];
 function normalizePrefs(p){ // also upgrades the earlier on/off switches
   const out={...DEFAULT_PREFS, ...p};
   if(!AFF_MODES.includes(out.affMode)) out.affMode = p.affEnabled===false ? "off" : "popup";
   if(!("affMode" in p) && p.affEnabled===false) out.affMode="off";
   if(!["standard","cvd"].includes(out.colorMode)) out.colorMode="standard";
+  out.skillNudge = out.skillNudge!==false;
   for(const k of ["morningStart","morningEnd","nightStart","nightEnd"]) out[k]=Number.isInteger(+out[k])?+out[k]:DEFAULT_PREFS[k];
   fixWindows(out);
   delete out.affEnabled; delete out.affAuto; return out;
@@ -895,6 +900,92 @@ async function saveForm(){
   else toast("Changes saved");
 }
 
+/* ---------- Skills: DBT-based coping skills (data/skills.json) ---------- */
+const SKILLS={data:null}, SKILLS_META_KEY="meta_skills", SKILL_NUDGE_KEY="ir_skill_nudge_hidden";
+let skillBg=null, skillPendingBadges=[];
+async function loadSkills(){
+  try{ const r=await fetch("data/skills.json",{cache:"no-cache"}); if(!r.ok) throw 0; const d=await r.json(); if(!Array.isArray(d.skills)) throw 0; SKILLS.data=d; }
+  catch(e){ SKILLS.data=null; }
+}
+const skillById=id=>SKILLS.data?.skills.find(x=>x.id===id);
+const groupOfSkill=id=>SKILLS.data?.groups.find(g=>g.skills.includes(id));
+const CRISIS_LINE=`<p class="small muted skill-crisis">If you're in crisis or thinking about hurting yourself, call or text <b>988</b> (US) any time.</p>`;
+function renderSkills(){
+  const D=SKILLS.data;
+  if(!D){ document.getElementById("app").innerHTML=`<div class="card"><h2>Skills</h2><p class="muted">Skills couldn't load right now. Check your connection and try again.</p>${CRISIS_LINE}</div>`; return; }
+  document.getElementById("app").innerHTML=`
+    <div class="card skills-intro"><h2>🧰 Skills</h2><p>${esc(D.intro)}</p>${CRISIS_LINE}</div>
+    ${D.groups.map(g=>`<section class="skill-group" aria-labelledby="sg-${g.id}">
+      <h3 id="sg-${g.id}"><span aria-hidden="true">${g.icon}</span> ${esc(g.title)}</h3>
+      <div class="grid skill-grid">${g.skills.map(id=>{ const k=skillById(id); return k?`<button class="card skill-card" data-skill="${k.id}">
+        <span class="skill-name">${esc(k.name)}</span><span class="small muted">${esc(k.tagline)}</span><span class="go">Walk me through it →</span></button>`:""; }).join("")}</div>
+    </section>`).join("")}
+    <div class="card skills-more"><p class="small muted">${esc(D.learnMore.text)}</p>
+      <p class="small">${D.learnMore.links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ↗</a>`).join(" · ")}</p></div>`;
+  document.querySelectorAll("[data-skill]").forEach(b=>b.onclick=()=>openSkill(b.dataset.skill));
+}
+function openSkill(id){
+  const k=skillById(id); if(!k) return;
+  closeSkill(true);
+  const g=groupOfSkill(id), st={i:0, all:false};
+  skillBg=document.createElement("div"); skillBg.className="sheet-bg skill-bg";
+  skillBg.innerHTML=`<div class="sheet skill-sheet" role="dialog" aria-modal="true" aria-labelledby="skill-title">
+      <div class="sheet-head"><div class="sheet-title"><span class="sheet-ico" aria-hidden="true">${g?.icon||"🧰"}</span><div><h2 id="skill-title">${esc(k.name)}</h2><div class="small muted">${esc(k.tagline)}</div></div></div>
+        <button class="xbtn" id="skClose" aria-label="Close">✕</button></div>
+      <div class="sheet-body" id="skBody"></div>
+      <div class="sheet-foot" id="skFoot"></div>
+    </div>`;
+  skillBg.addEventListener("mousedown",e=>{ if(e.target===skillBg) closeSkill(); });
+  document.body.appendChild(skillBg); document.body.classList.add("noscroll");
+  skillBg.querySelector("#skClose").onclick=()=>closeSkill();
+  const n=k.steps.length;
+  const draw=()=>{
+    const body=skillBg.querySelector("#skBody"), foot=skillBg.querySelector("#skFoot");
+    body.innerHTML=`<p class="skill-when"><b>Use it:</b> ${esc(k.when)}</p>
+      ${st.all?`<ol class="skill-steps">${k.steps.map(x=>`<li><span class="skill-key" aria-hidden="true">${esc(x.k)}</span><div><b>${esc(x.t)}</b><p>${esc(x.d)}</p></div></li>`).join("")}</ol>`
+        :`<div class="skill-step" aria-live="polite"><div class="skill-step-n small muted">Step ${st.i+1} of ${n}</div>
+            <div class="skill-key big" aria-hidden="true">${esc(k.steps[st.i].k)}</div><h3>${esc(k.steps[st.i].t)}</h3><p>${esc(k.steps[st.i].d)}</p>
+            <div class="skill-dots" aria-hidden="true">${k.steps.map((_,j)=>`<span class="${j===st.i?"on":""}"></span>`).join("")}</div></div>`}
+      <p class="small"><button class="linkbtn" id="skAll">${st.all?"Go one step at a time":"Show all steps at once"}</button></p>
+      ${CRISIS_LINE}
+      <p class="small muted">Adapted from DBT. Learn more: <a href="${esc(k.source.url)}" target="_blank" rel="noopener">${esc(k.source.name)} ↗</a></p>`;
+    foot.innerHTML=st.all?`<button class="btn" id="skDone">Done</button>`
+      :`<button class="btn ghost" id="skPrev" ${st.i===0?"disabled":""}>← Back</button><button class="btn" id="skNext">${st.i===n-1?"Done":"Next →"}</button>`;
+    body.querySelector("#skAll").onclick=()=>{ st.all=!st.all; draw(); };
+    const dn=foot.querySelector("#skDone"); if(dn) dn.onclick=()=>closeSkill();
+    const pv=foot.querySelector("#skPrev"); if(pv) pv.onclick=()=>{ if(st.i>0){ st.i--; draw(); } };
+    const nx=foot.querySelector("#skNext"); if(nx) nx.onclick=()=>{ if(st.i<n-1){ st.i++; draw(); body.scrollTop=0; } else closeSkill(); };
+  };
+  draw();
+  // first skill opened earns a badge, shown after the skill closes so it never interrupts
+  if(!S.skillDate){
+    const before=earnedBadges(S.entries); S.skillDate=today();
+    const doc={key:SKILLS_META_KEY,kind:"meta",date:S.skillDate,updatedAt:new Date().toISOString(),v:1};
+    affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
+    const after=earnedBadges(S.entries); skillPendingBadges=badgeList().filter(b=>after[b.id]&&!before[b.id]);
+  }
+}
+function closeSkill(instant){
+  if(!skillBg) return; const bg=skillBg; skillBg=null;
+  if(!S.form) document.body.classList.remove("noscroll");
+  if(instant) return bg.remove();
+  bg.classList.add("closing"); setTimeout(()=>bg.remove(),180);
+  if(skillPendingBadges.length){ const fresh=skillPendingBadges; skillPendingBadges=[]; render(); setTimeout(()=>celebrate(fresh,computeStats(S.entries)),260); }
+}
+/* A gentle link on Today. After a low Emotional rating today, it gets a warmer message (can be turned off in Settings). */
+function skillLinkHTML(){
+  if(!SKILLS.data) return "";
+  const t=today(), low=S.prefs.skillNudge && ["morning","night"].some(k=>{ const e=getEntry(t,k); const v=+e?.answers?.emotional_scale; return v && v<=2; });
+  let hidden=false; try{ hidden=localStorage.getItem(SKILL_NUDGE_KEY)===t; }catch(e){}
+  if(low && !hidden) return `<div class="card skill-nudge"><div><b>Rough day?</b> <span class="muted">A quick coping skill might help.</span></div>
+      <div class="skill-nudge-actions"><button class="btn" id="toSkills">🧰 Try a skill</button><button class="linkbtn" id="hideNudge">Not now</button></div></div>`;
+  return `<button class="skill-link" id="toSkills">🧰 Feeling overwhelmed? Try a coping skill →</button>`;
+}
+function bindSkillLink(){
+  const b=document.getElementById("toSkills"); if(b) b.onclick=()=>setView("skills");
+  const h=document.getElementById("hideNudge"); if(h) h.onclick=()=>{ try{ localStorage.setItem(SKILL_NUDGE_KEY,today()); }catch(e){} render(); };
+}
+
 /* ---------- History ---------- */
 function showDayInHistory(d){
   S.histDay=d; S.cal=new Date(+d.slice(0,4),+d.slice(5,7)-1,1); setView("history");
@@ -1117,6 +1208,7 @@ function renderAbout(){
         <h2 class="sec">How it works<a class="anchor" href="#about-how" aria-label="Link to this section">#</a></h2>
         <ul>
           <li><b>🌅 Morning intention</b> is open from ${hourLabel(win("morning")[0])} to ${hourLabel(win("morning")[1])}. <b>🌙 Nightly reflection</b> is open from ${hourLabel(win("night")[0])} to ${hourLabel(win("night")[1])}. You can change both windows in <b>Settings</b>.</li>
+          <li><b>🧰 Skills</b> has short coping skills from Dialectical Behavior Therapy (DBT), like STOP and DEAR MAN, for when feelings start to run high. They're reminders, not therapy.</li>
           <li>Each check-in walks through the eight areas of wellness, one at a time. Rate each one from 1 to 5 and write as much or as little as you want. Skipping is fine.</li>
           <li><b>Check-ins are for today.</b> You can look back on past days, but you can't fill them in afterward. If you miss a day, that's okay. There's always tomorrow. No guilt, no shame.</li>
           <li><b>Badges reward showing up, never your ratings.</b> A hard day logged honestly counts just as much as a great one. There's no list to finish.</li>
@@ -1392,6 +1484,8 @@ function renderSettings(){
         ${[["off","🚫","Off","No affirmations."],["embedded","📌","On the Today screen","Shown right on the main page."],["popup","🌤️","Pop-up","Opens once a day on your first visit. A small row on the Today screen reopens it."]]
           .map(([v,ic,t,d])=>`<label class="choice ${P.affMode===v?"on":""}"><input type="radio" name="affMode" value="${v}" ${P.affMode===v?"checked":""}><span class="c-ic">${ic}</span><span class="c-t"><b>${t}</b><span class="small muted">${d}</span></span></label>`).join("")}
       </div>
+      <div class="pref-label" style="margin-top:18px"><b>Skills</b></div>
+      <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Suggest a skill on rough days</b><span class="small muted">After a low Emotional rating, Today shows a gentle link to the Skills tab.</span></span><input type="checkbox" class="switch" id="pSkill" ${P.skillNudge?"checked":""}></label>
       <div class="pref-label" style="margin-top:18px"><b>Display</b></div>
       <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Color-blind friendly colors</b><span class="small muted">Uses colors that are easier to tell apart with color vision differences, and adds patterns and check marks where color shows meaning.</span></span><input type="checkbox" class="switch" id="pCvd" ${P.colorMode==="cvd"?"checked":""}></label>
     </div>`+`
@@ -1442,6 +1536,7 @@ function renderSettings(){
     try{ await affSaving; await S.store.remove(AFF_META_KEY); S.affLog={}; }catch(err){}
     try{ await S.store.remove(BACKUPS_META_KEY); S.backups=[]; }catch(err){}
     try{ await S.store.remove(HOME_META_KEY); S.homeDate=null; }catch(err){}
+    try{ await S.store.remove(SKILLS_META_KEY); S.skillDate=null; }catch(err){}
     try{ await S.store.remove(SHARES_META_KEY); S.shares=[]; }catch(err){}
     try{ await S.store.remove(REMINDERS_META_KEY); S.reminders={}; }catch(err){}
     toast(S.entries.length?`Deleted ${n}; some couldn't be removed — try again.`:"All entries deleted"); render();
@@ -1453,6 +1548,7 @@ function renderSettings(){
   document.getElementById("pNS").onchange=setWin("nightStart","night");
   document.getElementById("pNE").onchange=setWin("nightEnd","night");
   ["morning","night"].forEach(k=>document.getElementById(`rem-${k}`).onclick=()=>setReminder(k));
+  document.getElementById("pSkill").onchange=e=>{ S.prefs.skillNudge=e.target.checked; savePrefs(); };
   document.getElementById("pCvd").onchange=e=>{
     S.prefs.colorMode=e.target.checked?"cvd":"standard"; applyColorMode(S.prefs.colorMode); savePrefs(); render();
     toast(e.target.checked?"Color-blind friendly colors on":"Standard colors on");
@@ -1508,6 +1604,7 @@ function renderSettings(){
       if(modalEl && d.closest(".modal-bg")){ e.preventDefault(); closeModal(); }
       else if(affBg && d.closest(".aff-bg")){ e.preventDefault(); closeAffSheet(); }
       else if(dayBg && d.closest(".sheet-bg")===dayBg){ e.preventDefault(); closeDaySheet(); }
+      else if(skillBg && d.closest(".sheet-bg")===skillBg){ e.preventDefault(); closeSkill(); }
       return; // the check-in form handles its own Esc
     }
     if(e.key!=="Tab") return;
@@ -1564,11 +1661,12 @@ function confetti(count){
 /* ---------- Boot ---------- */
 (async function boot(){
   countVisit();
-  const affReady = Promise.all([loadAffirmations(), loadSuggestions()]);
+  const affReady = Promise.all([loadAffirmations(), loadSuggestions(), loadSkills()]);
   S.store = await pickStore();
   await affReady;
   try{ const all = await S.store.list(); const meta=all.find(e=>e.key===AFF_META_KEY);
     S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{}; S.entries = all.filter(e=>FORMS[e.kind]);
+    const sk=all.find(e=>e.key===SKILLS_META_KEY); S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(sk?.date||"")?sk.date:null;
     const hm=all.find(e=>e.key===HOME_META_KEY); S.homeDate=/^\d{4}-\d{2}-\d{2}$/.test(hm?.date||"")?hm.date:null;
     const rm=all.find(e=>e.key===REMINDERS_META_KEY); S.reminders=(rm?.reminders&&typeof rm.reminders==="object")?rm.reminders:{};
     const sh=all.find(e=>e.key===SHARES_META_KEY); S.shares=Array.isArray(sh?.days)?sh.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
