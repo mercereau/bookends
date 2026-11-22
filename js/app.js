@@ -1072,6 +1072,13 @@ function cleanSkillLog(log){
     if(ok.length) out[d]=ok; }
   return out;
 }
+/* Full skill log for one day in History: every skill, when, how it went, and any note */
+function skillsDayLogHTML(d){
+  const list=[...(S.skillLog[d]||[])].sort((a,b)=>String(a.at).localeCompare(String(b.at))); if(!list.length) return "";
+  const rows=list.map(r=>{ const k=skillById(r.id), good=r.helped==="yes"||r.helped==="little";
+    return `<li class="${good?"good":""}"><div class="sl-top"><span class="sl-time">${clock(r.at)||""}</span><b class="sl-name">${esc(k?k.name:r.id)}</b><span class="sl-res">${good?"💛 ":""}${r.helped?HELPED_LABEL[r.helped]:"Used"}</span></div>${r.note?`<p class="sl-note">${esc(r.note)}</p>`:""}</li>`; }).join("");
+  return `<div class="dd-block skills-used"><div class="dd-head"><h3>🧰 Skills I used</h3></div><ul class="skill-log">${rows}</ul></div>`;
+}
 function skillsDayHTML(d){
   // only skills that helped, once each, as small tags ("a little" gets a lighter tag)
   const best={}; for(const r of S.skillLog[d]||[]) if(r.helped==="yes"||r.helped==="little") best[r.id]=best[r.id]==="yes"?"yes":r.helped;
@@ -1113,7 +1120,7 @@ function dayDetailHTML(d){
     return `<div class="dd-block ${k}"><div class="dd-head"><h3>${FORMS[k].icon} ${FORMS[k].title}</h3><button class="linkbtn" data-open-k="${k}">Open</button></div>
       ${rows?`<ul class="dd-list">${rows}</ul>`:`<p class="muted small">Checked in, no answers recorded.</p>`}</div>`;
   }).join("");
-  const none=!ents.some(([,e])=>e), sk=skillsDayHTML(d);
+  const none=!ents.some(([,e])=>e), sk=skillsDayLogHTML(d);
   return `<section class="card day-detail" id="dayDetail">
       <div class="dd-top"><h2>${isToday?"Today · ":""}${fmtDate(d)}</h2><button class="xbtn" id="ddClose" aria-label="Close day">✕</button></div>
       ${none&&!sk?`<p class="muted">${isToday?"Nothing logged yet today.":"No check-ins this day. That's okay. There's always tomorrow."}</p>`:parts+sk}
