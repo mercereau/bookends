@@ -1821,6 +1821,26 @@ function winCard(kind,s){
   w.onclick=()=>w.remove(); document.body.appendChild(w); setTimeout(()=>w.remove(),6000);
 }
 function toast(msg){ document.querySelectorAll(".toast").forEach(t=>t.remove()); const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3200); }
+/* First visit: a short welcome about privacy, plus a nudge to add Bookends to the Home Screen */
+const WELCOME_KEY="ir_welcomed";
+function welcomeSeen(){ try{ return !!localStorage.getItem(WELCOME_KEY); }catch(e){ return true; } }
+function markWelcomed(){ try{ localStorage.setItem(WELCOME_KEY,today()); }catch(e){} }
+function showWelcome(){
+  markWelcomed();
+  const ua=navigator.userAgent||"", ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1), android=/Android/.test(ua);
+  const where=S.store.kind==="cloud"?"is saved to your own private space":"stays on this device";
+  const how=ios?"In Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>."
+    :android?"In Chrome, tap the <b>⋮</b> menu, then <b>Add to Home screen</b>."
+    :"On your phone, open bookends.day and add it to your Home Screen from the browser's menu.";
+  const mark=document.querySelector("svg.mark")?.cloneNode(true); if(mark){ mark.removeAttribute("role"); mark.removeAttribute("aria-label"); mark.setAttribute("aria-hidden","true"); mark.setAttribute("class","mark welcome-mark"); }
+  modal(`${mark?mark.outerHTML:""}<h2>Welcome to Bookends</h2>
+    <p>Bookends is a free, private place to start each day with an intention and end it with a reflection. Everything you enter ${where} with no account needed, so nobody else can read it, not even me.</p>
+    ${isHomeScreenApp()?"":`<div class="welcome-home"><b>📱 For the best experience, add Bookends to your Home Screen.</b>
+      <span>It opens like an app, one tap away when it's time to check in. ${how}</span></div>`}
+    <div class="actions" style="justify-content:center">${isHomeScreenApp()?"":`<button class="btn ghost" id="wHow">Show me how</button>`}<button class="btn" data-close>Get started</button></div>`,
+    el=>{ const h=el.querySelector("#wHow"); if(h) h.onclick=()=>{ closeModal(); location.hash="about-homescreen"; setView("about"); setTimeout(scrollToHash,60); };
+      setTimeout(()=>el.querySelector("[data-close]")?.focus(),30); });
+}
 function celebrate(badges,s){
   confetti(160);
   modal(`<div class="big">${badges[0].em}</div><h2>${badges.length>1?"New badges!":"Badge unlocked!"}</h2>
@@ -1857,5 +1877,7 @@ function confetti(count){
   render();
   const homeFresh=noteHomeScreen();
   if(homeFresh.length){ render(); setTimeout(()=>celebrate(homeFresh,computeStats(S.entries)),400); } // affirmation pop-up waits until next visit
-  else if(S.view==="about") setTimeout(scrollToHash,60); else maybeAutoAffirm();
+  else if(S.view==="about") setTimeout(scrollToHash,60);
+  else if(!welcomeSeen()){ if(S.entries.length||Object.keys(S.affLog).length) markWelcomed(); else showWelcome(); }   // brand-new visitors only
+  else maybeAutoAffirm();
 })();
