@@ -1364,7 +1364,7 @@ function badgesSectionHTML(){
 
 /* ---------- Data (export / import) ---------- */
 /* ---------- About ---------- */
-const ABOUT_SECTIONS=[["about-note","A quick note"],["about-why","Why I made this"],["about-name","Why \"Bookends\"?"],["about-how","How it works"],["about-homescreen","Add to Home Screen"],["about-privacy","Your privacy"],["about-free","Free, on purpose"],["about-providers","For providers"],["about-sharing","Sharing with your provider"],["about-source","Open source"]];
+const ABOUT_SECTIONS=[["about-note","A quick note"],["about-why","Why I made this"],["about-name","Why \"Bookends\"?"],["about-how","How it works"],["about-privacy","Your privacy"],["about-free","Free, on purpose"],["about-providers","For providers"],["about-sharing","Sharing with your provider"],["about-homescreen","Add to Home Screen"],["about-source","Open source"]];
 function renderAbout(){
   const privacy = S.store.kind==="cloud"
     ? "Your check-ins are saved to your own private space. Only you can read them. Nobody else who opens this page can see them."
@@ -1407,33 +1407,6 @@ function renderAbout(){
         <p class="small muted">The eight areas come from <a href="https://www.samhsa.gov/wellness-initiative/eight-dimensions-wellness" target="_blank" rel="noopener noreferrer">SAMHSA's Eight Dimensions of Wellness</a>. The affirmations are inspired by guidance from public health and mental health organizations, and each one links to its source.</p>
       </section>
 
-      <section class="card about-home" id="about-homescreen">
-        <h2 class="sec">Add Bookends to your Home Screen<a class="anchor" href="#about-homescreen" aria-label="Link to this section">#</a></h2>
-        <p>Bookends works great as a Home Screen icon. It opens like an app, without the browser bar, and it's one tap away when it's time to check in.</p>
-        <div class="howto">
-          <div class="howto-col">
-            <h3>📱 iPhone or iPad (Safari)</h3>
-            <ol>
-              <li>Open <b>bookends.day</b> in Safari.</li>
-              <li>Tap the <b>Share</b> button. On iOS 26, tap the <b>•••</b> next to the address bar first, then <b>Share</b>. On older versions, it's the square with an arrow in the toolbar.</li>
-              <li>Scroll down and tap <b>Add to Home Screen</b> (you may need to tap <b>View More</b>).</li>
-              <li>Leave <b>Open as Web App</b> on, then tap <b>Add</b>.</li>
-            </ol>
-          </div>
-          <div class="howto-col">
-            <h3>🤖 Android (Chrome)</h3>
-            <ol>
-              <li>Open <b>bookends.day</b> in Chrome.</li>
-              <li>Tap the <b>⋮</b> menu in the top-right corner.</li>
-              <li>Tap <b>Add to Home screen</b> or <b>Install app</b>.</li>
-              <li>Tap <b>Install</b> (or <b>Add</b>) to confirm.</li>
-            </ol>
-          </div>
-        </div>
-        <p class="small muted"><b>Heads up for iPhone:</b> the Home Screen app keeps its own storage, separate from Safari. If you've already been checking in from Safari, download a backup in <b>Settings</b> first, then restore it in the Home Screen app. Adding Bookends to your Home Screen also keeps Safari from clearing your entries if you haven't visited in a while.</p>
-        <p class="small muted">Opening Bookends from your Home Screen for the first time earns a little badge, too. 📱</p>
-      </section>
-
       <section class="card about-privacy" id="about-privacy">
         <h2 class="sec">Your privacy<a class="anchor" href="#about-privacy" aria-label="Link to this section">#</a></h2>
         <p>${privacy}</p>
@@ -1468,6 +1441,33 @@ function renderAbout(){
           <li>Share it the way you and your provider prefer: show it during a session, bring a printed copy, or upload it through your provider's secure patient portal.</li>
         </ol>
         <p class="small muted">Tip: regular email and text messages aren't very private. If your provider has a secure portal, use that instead. You can also just open <b>History</b> together and walk through a day.</p>
+      </section>
+
+      <section class="card about-home" id="about-homescreen">
+        <h2 class="sec">Add Bookends to your Home Screen<a class="anchor" href="#about-homescreen" aria-label="Link to this section">#</a></h2>
+        <p>Bookends works great as a Home Screen icon. It opens like an app, without the browser bar, and it's one tap away when it's time to check in.</p>
+        <div class="howto">
+          <div class="howto-col">
+            <h3>📱 iPhone or iPad (Safari)</h3>
+            <ol>
+              <li>Open <b>bookends.day</b> in Safari.</li>
+              <li>Tap the <b>Share</b> button. On iOS 26, tap the <b>•••</b> next to the address bar first, then <b>Share</b>. On older versions, it's the square with an arrow in the toolbar.</li>
+              <li>Scroll down and tap <b>Add to Home Screen</b> (you may need to tap <b>View More</b>).</li>
+              <li>Leave <b>Open as Web App</b> on, then tap <b>Add</b>.</li>
+            </ol>
+          </div>
+          <div class="howto-col">
+            <h3>🤖 Android (Chrome)</h3>
+            <ol>
+              <li>Open <b>bookends.day</b> in Chrome.</li>
+              <li>Tap the <b>⋮</b> menu in the top-right corner.</li>
+              <li>Tap <b>Add to Home screen</b> or <b>Install app</b>.</li>
+              <li>Tap <b>Install</b> (or <b>Add</b>) to confirm.</li>
+            </ol>
+          </div>
+        </div>
+        <p class="small muted"><b>Heads up for iPhone:</b> the Home Screen app keeps its own storage, separate from Safari. If you've already been checking in from Safari, download a backup in <b>Settings</b> first, then restore it in the Home Screen app. Adding Bookends to your Home Screen also keeps Safari from clearing your entries if you haven't visited in a while.</p>
+        <p class="small muted">Opening Bookends from your Home Screen for the first time earns a little badge, too. 📱</p>
       </section>
 
       <section class="card about-source" id="about-source">
