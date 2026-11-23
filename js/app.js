@@ -167,10 +167,38 @@ const HOLIDAYS = [
    Interface: list() -> entries[], save(entry), remove(key)
    ========================================================= */
 const LS_KEY = "ir_entries_v1";
+/* Everything on this device lives under one localStorage key. Safety rules:
+   - never save over data that couldn't be read (a damaged copy is set aside, and the last good copy is used if there is one)
+   - keep the previous good copy under LS_PREV_KEY as a safety net (dropped first if space runs out)
+   - a failed save throws and tells the person, instead of failing silently */
+const LS_PREV_KEY="ir_entries_v1_prev", LS_BAD_KEY="ir_entries_v1_unreadable";
+let storageWarned=0;
+function storageProblem(msg){ const now=Date.now(); if(now-storageWarned<15000) return; storageWarned=now; try{ toast(msg); }catch(e){} console.warn("[Bookends] "+msg); }
 const LocalStore = {
-  kind:"local",
-  _read(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||"{}"); }catch(e){ return {}; } },
-  _write(o){ try{ localStorage.setItem(LS_KEY, JSON.stringify(o)); }catch(e){} },
+  kind:"local", unreadable:false,
+  _parse(raw){ if(raw==null) return {}; const o=JSON.parse(raw); if(!o||typeof o!=="object"||Array.isArray(o)) throw new Error("not an object"); return o; },
+  _read(){
+    let raw; try{ raw=localStorage.getItem(LS_KEY); }catch(e){ return {}; }     // storage blocked: nothing to read, and writes will fail loudly
+    try{ const o=this._parse(raw); this.unreadable=false; return o; }
+    catch(e){
+      try{ if(!localStorage.getItem(LS_BAD_KEY)) localStorage.setItem(LS_BAD_KEY,raw); }catch(_){}
+      try{ const prev=this._parse(localStorage.getItem(LS_PREV_KEY)); if(Object.keys(prev).length){ this.unreadable=false; localStorage.setItem(LS_KEY,JSON.stringify(prev)); console.warn("[Bookends] Saved data couldn't be read; restored the previous copy."); return prev; } }catch(_){}
+      this.unreadable=true; return {};
+    }
+  },
+  _write(o){
+    if(this.unreadable){ const err=new Error("unreadable"); err.code="unreadable"; storageProblem("Bookends couldn't read your saved data, so it won't save over it. Nothing was changed."); throw err; }
+    const next=JSON.stringify(o);
+    let cur=null; try{ cur=localStorage.getItem(LS_KEY); }catch(_){}
+    try{ if(cur && cur!==next) localStorage.setItem(LS_PREV_KEY,cur); }catch(_){ try{ localStorage.removeItem(LS_PREV_KEY); }catch(__){} }
+    try{ localStorage.setItem(LS_KEY,next); }
+    catch(e){
+      try{ localStorage.removeItem(LS_PREV_KEY); localStorage.setItem(LS_KEY,next); return; }catch(_){}   // make room by dropping the safety copy, then try once more
+      const err=new Error("save failed"); err.code="quota_exceeded";
+      storageProblem("Couldn't save: this browser's storage is full or blocked. Download a backup in Settings.");
+      throw err;
+    }
+  },
   async list(){ return Object.values(this._read()); },
   async save(e){ const o=this._read(); o[e.key]=e; this._write(o); },
   async remove(k){ const o=this._read(); delete o[k]; this._write(o); },
@@ -274,7 +302,7 @@ const SKILL_GROUP_BADGES={
 };
 function skillBadges(out){
   const G=SKILLS.data?.groups; if(!G) return;
-  const uses=Object.entries(S.skillLog||{}).filter(([d])=>d<=today()).sort(([a],[b])=>a.localeCompare(b)).flatMap(([d,list])=>list.map(r=>({...r,d})));
+  const uses=Object.keys(S.skillLog||{}).filter(d=>d<=today()).sort().flatMap(d=>skillUsesOn(d).map(r=>({...r,d})));
   if(!uses.length) return;
   const add=(id,b,d)=>{ DYN_BADGES[id]={id,...b}; if(!out[id]) out[id]=d; };
   const groupOf={}; G.forEach(g=>g.skills.forEach(id=>groupOf[id]=g.id));
@@ -994,7 +1022,7 @@ async function saveForm(){
   const entry={key,date:F.date,kind:F.kind,answers,...((prev?.startedAt||!prev)?{startedAt:prev?.startedAt||F.startedAt}:{}),createdAt:prev?.createdAt||now,updatedAt:now,v:1};
   const before=earnedBadges(S.entries);
   try{ await S.store.save(entry); }
-  catch(e){ btn.disabled=false; return toast(e?.code==="quota_exceeded"?"Storage is full — export and clear old data.":"Couldn't save — check your connection and try again."); }
+  catch(e){ btn.disabled=false; return toast(e?.code==="quota_exceeded"?"Couldn't save: this browser's storage is full or blocked. Download a backup in Settings.":e?.code==="unreadable"?"Bookends couldn't read your saved data, so it won't save over it. Nothing was changed.":"Couldn't save — check your connection and try again."); }
   S.entries=S.entries.filter(e=>e.key!==key).concat(entry);
   const after=earnedBadges(S.entries);
   const fresh=badgeList().filter(b=>after[b.id] && !before[b.id]);
@@ -1019,7 +1047,7 @@ const CRISIS_LINE=`<p class="small muted skill-crisis">If you're in crisis or th
 /* Which skills have helped: counts from the skill log, best first ("yes" counts fully, "a little" counts half) */
 function helpedSkills(){
   const m={};
-  for(const [d,list] of Object.entries(S.skillLog)) for(const r of list){
+  for(const d of Object.keys(S.skillLog)) for(const r of skillUsesOn(d)){
     if(r.helped!=="yes"&&r.helped!=="little") continue;
     const x=m[r.id] ||= {id:r.id,yes:0,little:0,last:""}; x[r.helped]++; if(d>x.last) x.last=d; }
   return Object.values(m).filter(x=>skillById(x.id)).sort((a,b)=>(b.yes+b.little/2)-(a.yes+a.little/2)||b.last.localeCompare(a.last));
@@ -1148,13 +1176,14 @@ function cleanSkillLog(log){
   const out={}; if(!log||typeof log!=="object") return out;
   for(const [d,list] of Object.entries(log)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(list)){
     const ok=list.filter(r=>r&&typeof r.id==="string").map(r=>({id:r.id,at:String(r.at||""),...(r.completed?{completed:true}:{}),...(HELPED_LABEL[r.helped]?{helped:r.helped}:{}),...(typeof r.note==="string"&&r.note.trim()?{note:r.note.trim().slice(0,1000)}:{})}));
-    const merged=mergeQuickRepeats(ok); if(merged.length) out[d]=merged; }
+    if(ok.length) out[d]=ok; }        // kept exactly as saved; quick repeats are merged only when reading (skillUsesOn)
   return out;
 }
 /* Opening the same skill again within 2 minutes counts as one use (quick re-taps, accidental double opens).
    The merged use keeps the first time and any answer or note from either. */
 const REPEAT_MS=2*60*1000;
 const hasInfo=r=>!!(r.helped||r.note||r.completed);
+const skillUsesOn=d=>mergeQuickRepeats(S.skillLog[d]||[]);   // the merged view used for display, counts, badges and exports
 function mergeQuickRepeats(list){
   const out=[];
   for(const r of [...list].sort((a,b)=>a.at.localeCompare(b.at))){
@@ -1168,14 +1197,14 @@ function mergeQuickRepeats(list){
 }
 /* Full skill log for one day in History: every skill, when, how it went, and any note */
 function skillsDayLogHTML(d){
-  const list=[...(S.skillLog[d]||[])].sort((a,b)=>String(a.at).localeCompare(String(b.at))); if(!list.length) return "";
+  const list=skillUsesOn(d); if(!list.length) return "";
   const rows=list.map(r=>{ const k=skillById(r.id), good=r.helped==="yes"||r.helped==="little";
     return `<li class="${good?"good":""}"><div class="sl-top"><span class="sl-time">${clock(r.at)||""}</span><b class="sl-name">${esc(k?k.name:r.id)}</b><span class="sl-res">${good?"💛 ":""}${r.helped?HELPED_LABEL[r.helped]:"Used"}</span></div>${r.note?`<p class="sl-note">${esc(r.note)}</p>`:""}</li>`; }).join("");
   return `<div class="dd-block skills-used"><div class="dd-head"><h3>🧰 Skills I used</h3></div><ul class="skill-log">${rows}</ul></div>`;
 }
 function skillsDayHTML(d){
   // only skills that helped, once each, as small tags ("a little" gets a lighter tag)
-  const best={}; for(const r of S.skillLog[d]||[]) if(r.helped==="yes"||r.helped==="little") best[r.id]=best[r.id]==="yes"?"yes":r.helped;
+  const best={}; for(const r of skillUsesOn(d)) if(r.helped==="yes"||r.helped==="little") best[r.id]=best[r.id]==="yes"?"yes":r.helped;
   const ids=Object.keys(best); if(!ids.length) return "";
   const tags=ids.map(id=>{ const k=skillById(id); const lab=esc(k?k.name:id);
     return `<li class="sk-tag ${best[id]}" title="${best[id]==="yes"?"Helped":"Helped a little"}">${lab}${best[id]==="little"?'<span class="sr-only"> (helped a little)</span>':""}</li>`; }).join("");
@@ -1267,7 +1296,7 @@ function dayEntryHTML(d){
   for(const k of ["morning","night"]){ const e=getEntry(d,k); if(!e) continue;
     const edited=e.updatedAt&&e.createdAt&&new Date(e.updatedAt)-new Date(e.createdAt)>60000;
     ev.push({at:e.createdAt||"", sort:e.createdAt||(k==="morning"?"0":"2"), html:`<li><button class="entry-row" data-k="${e.key}"><span class="er-time">${clock(e.createdAt)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">${FORMS[k].icon}</span><span class="er-text"><b>${FORMS[k].title}</b>${edited?`<span class="small muted"> · edited ${clock(e.updatedAt)}</span>`:""}</span><span class="avg">${avgRating(e)?.toFixed(1)??"–"}</span></button></li>`}); }
-  for(const r of S.skillLog[d]||[]){ const k=skillById(r.id);
+  for(const r of skillUsesOn(d)){ const k=skillById(r.id);
     ev.push({sort:r.at||"1", html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(r.at)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">🧰</span><span class="er-text"><b>${esc(k?k.name:r.id)}</b><span class="small muted"> · ${r.helped?HELPED_LABEL[r.helped]:"Used"}</span>${r.note?`<span class="er-note">${esc(r.note)}</span>`:""}</span></div></li>`}); }
   if(S.startAt && S.startDate===d) ev.push({sort:S.startAt, html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(S.startAt)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">👣</span><span class="er-text"><b>First visit</b><span class="small muted"> · Started Bookends</span></span></div></li>`});
   ev.sort((a,b)=>a.sort.localeCompare(b.sort));
@@ -1589,7 +1618,7 @@ const HELPED_WORD={yes:"yes",little:"a little",no:"no"};
 let affIndex=null;
 const affById=id=>{ if(!AFF.data) return null; if(!affIndex){ affIndex={}; AFF.data.affirmations.forEach(a=>affIndex[a.id]=a); } return affIndex[id]||null; };
 function skillsInRange(start,end){
-  return Object.entries(S.skillLog).filter(([d])=>d>=start&&d<=end).sort(([a],[b])=>a.localeCompare(b)).flatMap(([d,list])=>list.map(r=>({...r,d})));
+  return Object.keys(S.skillLog).filter(d=>d>=start&&d<=end).sort().flatMap(d=>skillUsesOn(d).map(r=>({...r,d})));
 }
 function skillSummary(uses){
   const m={}; for(const u of uses){ const k=skillById(u.id); const x=m[u.id] ||= {id:u.id,name:k?k.name:u.id,group:groupOfSkill(u.id)?.title||"",used:0,completed:0,helped:0,helpedALittle:0,didNotHelp:0,noAnswer:0};
