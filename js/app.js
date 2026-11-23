@@ -1150,10 +1150,10 @@ function dayDetailHTML(d){
     return `<div class="dd-block ${k}"><div class="dd-head"><h3>${FORMS[k].icon} ${FORMS[k].title}</h3><button class="linkbtn" data-open-k="${k}">Open</button></div>
       ${rows?`<ul class="dd-list">${rows}</ul>`:`<p class="muted small">Checked in, no answers recorded.</p>`}</div>`;
   }).join("");
-  const none=!ents.some(([,e])=>e), sk=skillsDayLogHTML(d);
+  const none=!ents.some(([,e])=>e), sk=skillsDayLogHTML(d), bd=dayBadgesListHTML(d);
   return `<section class="card day-detail" id="dayDetail">
       <div class="dd-top"><h2>${isToday?"Today · ":""}${fmtDate(d)}</h2><button class="xbtn" id="ddClose" aria-label="Close day">✕</button></div>
-      ${none&&!sk?`<p class="muted">${isToday?"Nothing logged yet today.":"No check-ins this day. That's okay. There's always tomorrow."}</p>`:parts+sk}
+      ${none&&!sk&&!bd?`<p class="muted">${isToday?"Nothing logged yet today.":"No check-ins this day. That's okay. There's always tomorrow."}</p>`:parts+sk+bd}
     </section>`;
 }
 function renderHistory(){
@@ -1189,6 +1189,7 @@ function renderHistory(){
   const ba=document.getElementById("badgesAll"); if(ba) ba.onclick=()=>{ S.badgesAll=!S.badgesAll; const y=scrollY; render(); scrollTo(0,y); document.getElementById("badgesAll")?.focus(); };
   focusBadgeAfterRender();
   $app.querySelectorAll(".entry[data-k]").forEach(b=>b.onclick=()=>{const e=S.entries.find(x=>x.key===b.dataset.k); openForm(e.kind,e.date);});
+  $app.querySelectorAll(".bd-row").forEach(b=>b.onclick=()=>showBadges(b.dataset.badge));
   $app.querySelectorAll("[data-day-open]").forEach(b=>b.onclick=()=>{ S.histDay=b.dataset.dayOpen; render(); document.getElementById("dayDetail")?.scrollIntoView({behavior:"smooth",block:"start"}); });
 }
 /* Entries grouped by day: check-ins and skills, in the order they happened, with times */
@@ -1254,6 +1255,13 @@ function highlightHTML(kind,h){
       <div class="hl-area">${D.icon} ${h.sec.dim==="closing"?"Proud of":D.label}${anchor?` <span class="muted">· ${esc(anchor)}</span>`:""}</div>
       ${h.notes.map(n=>`<blockquote>${esc(n.a)}</blockquote>`).join("")}
     </div>`;
+}
+/* Badges earned on one day, with names and descriptions, for History's day view */
+function dayBadgesListHTML(d){
+  const earned=earnedBadges(S.entries), got=badgeList().filter(b=>earned[b.id]===d);
+  if(!got.length) return "";
+  return `<div class="dd-block badges-day"><div class="dd-head"><h3>🏅 Badges earned</h3></div><ul class="badge-day-list">${got.map(b=>
+    `<li><button class="bd-row" data-badge="${esc(b.id)}"><span class="bd-em" aria-hidden="true">${b.em}</span><span class="bd-text"><b>${esc(b.name)}</b><span class="small muted">${esc(b.desc)}</span></span></button></li>`).join("")}</ul></div>`;
 }
 function dayBadgesHTML(d){
   const earned=earnedBadges(S.entries), got=badgeList().filter(b=>earned[b.id]===d);
