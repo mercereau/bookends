@@ -637,3 +637,8 @@ html.text-xl .sl-top{grid-template-columns:1fr}html.text-xl .sl-res{grid-column:
 .de-visits{margin:8px 0 0;padding-top:8px;border-top:1px dashed var(--line)}
 .de-list+.de-visits{margin-top:0}
 .dd-visits{margin:-6px 0 12px}
+.share-note{display:flex;flex-direction:column;gap:6px;margin:12px 0 4px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--accent) 9%,transparent);font-size:.92rem}
+.share-note span{color:var(--muted)}
+.share-note span b{color:var(--ink)}
+.wheel-q{margin-top:14px}
+.wheel-q+.write-closed{margin-top:10px}

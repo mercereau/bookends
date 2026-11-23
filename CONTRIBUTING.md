@@ -121,6 +121,17 @@ The tap-to-add ideas under each question live in `data/suggestions.json`, under 
 
 Check that the file is still valid JSON with `python3 -m json.tool data/suggestions.json > /dev/null && echo OK`.
 
+## 3c. Editing the AI insights guide
+
+`data/insights-guide.md` is the set of instructions included in the **Data for AI or my provider** download. It tells an AI assistant what the data means, how to look for patterns, and how to talk with the person about them. It's plain Markdown, so you can edit it like any document.
+
+When you change it, keep these in place:
+
+- **The first section.** An AI assistant is not a substitute for a trained mental health clinician. It must say so, never diagnose or act as a therapist, and always point people toward real professionals. This section stays first, and changes that weaken it won't be merged.
+- **The safety section**, including how to respond if something sounds like a crisis.
+- **The no-guilt, no-shame tone.**
+- **Field names that match the data.** If you rename or add something in the export, update "What's in the data" to match.
+
 ## 4. Changing code or styles
 
 - Whenever you edit `css/styles.css` or `js/app.js`, **bump its `?v=` number in `index.html`**. Browsers cache these files for a year, so without the bump, returning visitors keep the old version.

@@ -107,6 +107,7 @@ const BADGES = [
   {id:"backup-first", em:"💾", name:"Safe Keeping",   desc:"Download a backup of your entries", test:s=>s.backups>=1},
   {id:"home-screen",  em:"📱", name:"Right at Home",  desc:"Open Bookends from your Home Screen", test:s=>s.homeScreen>=1},
   {id:"share-first",  em:"🤝", name:"In This Together", desc:"Download a summary to share with your provider", test:s=>s.shares>=1},
+  {id:"curious-mind", em:"🤖", name:"Curious Mind",    desc:"Download your data to explore it with an AI assistant", test:s=>s.insights>=1},
   {id:"reminder-set", em:"⏰", name:"Friendly Reminder", desc:"Add a check-in reminder to your calendar", test:s=>s.reminders>=1},
   {id:"skill-first",  em:"🧰", name:"Toolbox",       desc:"Open a coping skill", test:s=>s.skills>=1},
   {id:"full-picture", em:"🎯", name:"Full Picture",    desc:"Rate every wellness area in one check-in", test:s=>s.allScales>=1},
@@ -166,10 +167,38 @@ const HOLIDAYS = [
    Interface: list() -> entries[], save(entry), remove(key)
    ========================================================= */
 const LS_KEY = "ir_entries_v1";
+/* Everything on this device lives under one localStorage key. Safety rules:
+   - never save over data that couldn't be read (a damaged copy is set aside, and the last good copy is used if there is one)
+   - keep the previous good copy under LS_PREV_KEY as a safety net (dropped first if space runs out)
+   - a failed save throws and tells the person, instead of failing silently */
+const LS_PREV_KEY="ir_entries_v1_prev", LS_BAD_KEY="ir_entries_v1_unreadable";
+let storageWarned=0;
+function storageProblem(msg){ const now=Date.now(); if(now-storageWarned<15000) return; storageWarned=now; try{ toast(msg); }catch(e){} console.warn("[Bookends] "+msg); }
 const LocalStore = {
-  kind:"local",
-  _read(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||"{}"); }catch(e){ return {}; } },
-  _write(o){ try{ localStorage.setItem(LS_KEY, JSON.stringify(o)); }catch(e){} },
+  kind:"local", unreadable:false,
+  _parse(raw){ if(raw==null) return {}; const o=JSON.parse(raw); if(!o||typeof o!=="object"||Array.isArray(o)) throw new Error("not an object"); return o; },
+  _read(){
+    let raw; try{ raw=localStorage.getItem(LS_KEY); }catch(e){ return {}; }     // storage blocked: nothing to read, and writes will fail loudly
+    try{ const o=this._parse(raw); this.unreadable=false; return o; }
+    catch(e){
+      try{ if(!localStorage.getItem(LS_BAD_KEY)) localStorage.setItem(LS_BAD_KEY,raw); }catch(_){}
+      try{ const prev=this._parse(localStorage.getItem(LS_PREV_KEY)); if(Object.keys(prev).length){ this.unreadable=false; localStorage.setItem(LS_KEY,JSON.stringify(prev)); console.warn("[Bookends] Saved data couldn't be read; restored the previous copy."); return prev; } }catch(_){}
+      this.unreadable=true; return {};
+    }
+  },
+  _write(o){
+    if(this.unreadable){ const err=new Error("unreadable"); err.code="unreadable"; storageProblem("Bookends couldn't read your saved data, so it won't save over it. Nothing was changed."); throw err; }
+    const next=JSON.stringify(o);
+    let cur=null; try{ cur=localStorage.getItem(LS_KEY); }catch(_){}
+    try{ if(cur && cur!==next) localStorage.setItem(LS_PREV_KEY,cur); }catch(_){ try{ localStorage.removeItem(LS_PREV_KEY); }catch(__){} }
+    try{ localStorage.setItem(LS_KEY,next); }
+    catch(e){
+      try{ localStorage.removeItem(LS_PREV_KEY); localStorage.setItem(LS_KEY,next); return; }catch(_){}   // make room by dropping the safety copy, then try once more
+      const err=new Error("save failed"); err.code="quota_exceeded";
+      storageProblem("Couldn't save: this browser's storage is full or blocked. Download a backup in Settings.");
+      throw err;
+    }
+  },
   async list(){ return Object.values(this._read()); },
   async save(e){ const o=this._read(); o[e.key]=e; this._write(o); },
   async remove(k){ const o=this._read(); delete o[k]; this._write(o); },
@@ -273,7 +302,7 @@ const SKILL_GROUP_BADGES={
 };
 function skillBadges(out){
   const G=SKILLS.data?.groups; if(!G) return;
-  const uses=Object.entries(S.skillLog||{}).filter(([d])=>d<=today()).sort(([a],[b])=>a.localeCompare(b)).flatMap(([d,list])=>list.map(r=>({...r,d})));
+  const uses=Object.keys(S.skillLog||{}).filter(d=>d<=today()).sort().flatMap(d=>skillUsesOn(d).map(r=>({...r,d})));
   if(!uses.length) return;
   const add=(id,b,d)=>{ DYN_BADGES[id]={id,...b}; if(!out[id]) out[id]=d; };
   const groupOf={}; G.forEach(g=>g.skills.forEach(id=>groupOf[id]=g.id));
@@ -323,6 +352,7 @@ function computeStats(entries, asOf=today()){
     skills: S.skillDate && S.skillDate<=asOf ? 1 : 0,
     homeScreen: S.homeDate && S.homeDate<=asOf ? 1 : 0,
     started: S.startDate && S.startDate<=asOf ? 1 : 0,
+    insights: (S.insights||[]).filter(d=>d<=asOf).length,
     feelings: es.filter(e=>Array.isArray(e.answers.emotional_feelings) && e.answers.emotional_feelings.length).length,
     complete: es.filter(isComplete).length,
     holidays: new Set(dates.flatMap(d=>holidaysOn(d).map(h=>h.id))).size,
@@ -341,7 +371,7 @@ function affStats(asOf){
 }
 function earnedBadges(entries){
   // returns {badgeId: dateEarned}
-  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.shares||[],Object.values(S.reminders||{}).map(r=>r.date).filter(Boolean),S.homeDate?[S.homeDate]:[],S.startDate?[S.startDate]:[],S.skillDate?[S.skillDate]:[]))].filter(d=>d<=today()).sort();
+  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.shares||[],Object.values(S.reminders||{}).map(r=>r.date).filter(Boolean),S.homeDate?[S.homeDate]:[],S.startDate?[S.startDate]:[],S.insights||[],S.skillDate?[S.skillDate]:[]))].filter(d=>d<=today()).sort();
   for(const d of dates){
     const s=computeStats(entries,d);
     for(const b of BADGES) if(!out[b.id] && b.test(s)) out[b.id]=d;
@@ -355,7 +385,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, startDate:null, startAt:null, visits:{}, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,showWriting:false,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, startDate:null, startAt:null, visits:{}, insights:[], shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,showWriting:false,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -602,6 +632,17 @@ function noteStarted(date){ // First Steps badge: tapping "Get started" (or, for
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
   const after=earnedBadges(S.entries); return badgeList().filter(b=>after[b.id]&&!before[b.id]);
 }
+/* Days the data file (for AI or a provider) was downloaded, for the Curious Mind badge. */
+const INSIGHTS_META_KEY="meta_insights";
+function noteInsights(){
+  const before=earnedBadges(S.entries);
+  if(!S.insights.includes(today())){ S.insights=[...S.insights,today()].sort();
+    const doc={key:INSIGHTS_META_KEY,kind:"meta",days:S.insights,updatedAt:new Date().toISOString(),v:1};
+    affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{}); }
+  const after=earnedBadges(S.entries), fresh=badgeList().filter(b=>after[b.id]&&!before[b.id]);
+  if(fresh.length){ if(!S.form) render(); celebrate(fresh,computeStats(S.entries)); return true; }
+  return false;
+}
 /* Days a provider summary (report or data) was downloaded, for the In This Together badge. */
 const SHARES_META_KEY="meta_shares";
 function noteShare(){ // records today and celebrates any new badge; returns true if one was shown
@@ -653,14 +694,16 @@ function saveBackupLog(){ const doc={key:BACKUPS_META_KEY,kind:"meta",days:S.bac
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{}); }
 let affSaving=Promise.resolve();
 function saveAffLog(){ // one write at a time; kept with the user's entries (synced on the Claude-hosted copy)
-  const doc={key:AFF_META_KEY,kind:"meta",days:S.affLog,updatedAt:new Date().toISOString(),v:1};
+  const doc={key:AFF_META_KEY,kind:"meta",days:S.affLog,times:S.affTimes||{},updatedAt:new Date().toISOString(),v:1};
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
 }
 function revealAffirmation(){
   const st=affState(), lim=affLimit(); if(st.shown.length>=lim) return;
   const order=dailyOrder(), id=order[st.shown.length%order.length].id; st.shown.push(id); affSave(st); AFF.viewIdx=null;
   const before=earnedBadges(S.entries);
-  const day=today(); S.affLog[day]=[...new Set([...(S.affLog[day]||[]),id])]; saveAffLog();
+  const day=today(); S.affLog[day]=[...new Set([...(S.affLog[day]||[]),id])];
+  ((S.affTimes||(S.affTimes={}))[day] ||= {})[id] ||= new Date().toISOString();   // when it was read, for later analysis
+  saveAffLog();
   const now=earnedBadges(S.entries), fresh=badgeList().filter(b=>now[b.id] && !before[b.id]);
   const el=document.getElementById("aff"); if(el){ el.outerHTML=affirmCardHTML(); document.getElementById("aff").classList.add("aff-in"); bindAffirm(); }
   refreshAffEntry();
@@ -777,7 +820,7 @@ function requestClose(){
 }
 function openForm(kind,date,step=0){
   const ex=getEntry(date,kind);
-  S.form={kind,date,answers:{...(ex?.answers||{})},existing:!!ex,step,dirty:false,readOnly:date<today() || (date===today() && !isOpen(kind)),ideas:{},writeOpen:{},wheelCore:null,wheelOpen:false}; // locked once its window has closed (and on finished days). A check-in started while open can still be saved after the window closes.
+  S.form={kind,date,answers:{...(ex?.answers||{})},existing:!!ex,startedAt:ex?.startedAt||new Date().toISOString(),step,dirty:false,readOnly:date<today() || (date===today() && !isOpen(kind)),ideas:{},writeOpen:{},wheelCore:null,wheelOpen:false}; // locked once its window has closed (and on finished days). A check-in started while open can still be saved after the window closes.
   const F=S.form; F.feel=Array.isArray(F.answers[FEEL_KEY])?[...F.answers[FEEL_KEY]]:[]; F.feelLine=feelLine(F.feel,F.kind);
   renderForm();
 }
@@ -847,7 +890,10 @@ function wheelHTML(F){
 /* Writing is optional: the questions, ideas and feelings wheel stay tucked away until someone opens them
    (or already wrote something, or turned on "Always show writing questions" in Settings). */
 function writingHTML(F,sec){
-  const answered=sec.prompts.some(p=>hasVal(F.answers[p.id]));
+  // feelings picked on the wheel don't count as writing, so the note area stays closed
+  const own=p=>{ let v=String(F.answers[p.id]||""); if(p.id===WHEEL_ID && F.feelLine && v.startsWith(F.feelLine)) v=v.slice(F.feelLine.length); return v.trim(); };
+  const answered=sec.prompts.some(p=>own(p));
+  const wheelHere=!F.readOnly && wheelData() && sec.prompts.some(p=>p.id===WHEEL_ID);
   const promptHTML=p=>{ const sg=sugFor(F.kind,p.id), wheel=!F.readOnly && p.id===WHEEL_ID && wheelData();
     if(!F.readOnly && sg && !F.ideas[p.id]) F.ideas[p.id]=pickIdeas(F.kind,p.id);
     return `<div class="q"><label class="qt" for="${p.id}">${esc(p.q)}</label>
@@ -861,7 +907,9 @@ function writingHTML(F,sec){
   }
   if(S.prefs.showWriting || answered || F.writeOpen[F.step])
     return sec.prompts.map(promptHTML).join("")+(!S.prefs.showWriting && !answered?`<div class="write-hide-row"><button type="button" class="linkbtn write-hide">Hide writing</button></div>`:"");
-  return `<div class="write-closed">${sec.scale?"":sec.prompts.map(p=>`<p class="qt">${esc(p.q)}</p>`).join("")}
+  return `${wheelHere?`<div class="q wheel-q"><button type="button" class="wheel-toggle ${F.wheelOpen?"open":""}" aria-expanded="${F.wheelOpen}">🎡 ${F.wheelOpen?"Hide the feelings wheel":"Name it with the feelings wheel"}</button>
+      <div class="wheel-panel" ${F.wheelOpen?"":"hidden"}>${F.wheelOpen?wheelHTML(F):""}</div></div>`:""}
+    <div class="write-closed">${sec.scale?"":sec.prompts.map(p=>`<p class="qt">${esc(p.q)}</p>`).join("")}
     <button type="button" class="write-toggle" aria-expanded="false">✏️ ${sec.scale?"Add a note":"Write about it"} <span class="muted">(optional)</span></button></div>`;
 }
 function renderForm(){
@@ -936,11 +984,12 @@ function renderForm(){
     if(F.feel.includes(f)) F.feel=F.feel.filter(x=>x!==f);
     else if(F.feel.length>=max) return toast(`Pick up to ${max}. Tap one you chose to swap it out.`);
     else F.feel=[...F.feel,f];
-    const ta=$s.querySelector(`textarea[data-id="${WHEEL_ID}"]`); let v=ta.value;
+    const ta=$s.querySelector(`textarea[data-id="${WHEEL_ID}"]`); let v=ta?ta.value:(F.answers[WHEEL_ID]||"");
     if(F.feelLine && v.startsWith(F.feelLine)) v=v.slice(F.feelLine.length).replace(/^[ \n]+/,"");
     F.feelLine=feelLine(F.feel,F.kind);
     F.answers[FEEL_KEY]=F.feel.length?[...F.feel]:undefined;
-    setText(WHEEL_ID, F.feelLine?(v?F.feelLine+"\n"+v:F.feelLine):v);
+    const nv=F.feelLine?(v?F.feelLine+"\n"+v:F.feelLine):v;
+    if(ta) setText(WHEEL_ID,nv); else { F.answers[WHEEL_ID]=nv||undefined; refreshDot(); }
     drawWheel();
   }
   if(wt){ wt.onclick=()=>{ F.wheelOpen=!F.wheelOpen; if(F.wheelOpen&&F.wheelCore==null) F.wheelCore=null; drawWheel(); }; if(F.wheelOpen) drawWheel(); }
@@ -970,10 +1019,10 @@ async function saveForm(){
   const answers={}; Object.entries(F.answers).forEach(([k,v])=>{ if(v!==undefined && String(v).trim()!=="") answers[k]=typeof v==="string"?v.trim():v; });
   if(!Object.keys(answers).length){ btn.disabled=false; return toast("Answer at least one question first."); }
   const key=`${F.date}_${F.kind}`; const prev=getEntry(F.date,F.kind); const now=new Date().toISOString();
-  const entry={key,date:F.date,kind:F.kind,answers,createdAt:prev?.createdAt||now,updatedAt:now,v:1};
+  const entry={key,date:F.date,kind:F.kind,answers,...((prev?.startedAt||!prev)?{startedAt:prev?.startedAt||F.startedAt}:{}),createdAt:prev?.createdAt||now,updatedAt:now,v:1};
   const before=earnedBadges(S.entries);
   try{ await S.store.save(entry); }
-  catch(e){ btn.disabled=false; return toast(e?.code==="quota_exceeded"?"Storage is full — export and clear old data.":"Couldn't save — check your connection and try again."); }
+  catch(e){ btn.disabled=false; return toast(e?.code==="quota_exceeded"?"Couldn't save: this browser's storage is full or blocked. Download a backup in Settings.":e?.code==="unreadable"?"Bookends couldn't read your saved data, so it won't save over it. Nothing was changed.":"Couldn't save — check your connection and try again."); }
   S.entries=S.entries.filter(e=>e.key!==key).concat(entry);
   const after=earnedBadges(S.entries);
   const fresh=badgeList().filter(b=>after[b.id] && !before[b.id]);
@@ -998,7 +1047,7 @@ const CRISIS_LINE=`<p class="small muted skill-crisis">If you're in crisis or th
 /* Which skills have helped: counts from the skill log, best first ("yes" counts fully, "a little" counts half) */
 function helpedSkills(){
   const m={};
-  for(const [d,list] of Object.entries(S.skillLog)) for(const r of list){
+  for(const d of Object.keys(S.skillLog)) for(const r of skillUsesOn(d)){
     if(r.helped!=="yes"&&r.helped!=="little") continue;
     const x=m[r.id] ||= {id:r.id,yes:0,little:0,last:""}; x[r.helped]++; if(d>x.last) x.last=d; }
   return Object.values(m).filter(x=>skillById(x.id)).sort((a,b)=>(b.yes+b.little/2)-(a.yes+a.little/2)||b.last.localeCompare(a.last));
@@ -1061,6 +1110,7 @@ function openSkill(id){
   };
   // at the end, ask if it helped; the answer goes in today's log
   const ask=()=>{
+    if(!rec.completed){ rec.completed=true; saveSkillLog(); }
     const body=skillBg.querySelector("#skBody"), foot=skillBg.querySelector("#skFoot");
     body.innerHTML=`<div class="skill-step skill-ask"><div class="skill-key big" aria-hidden="true">💭</div><h3 id="skAskQ">Did this help?</h3>
         <p class="muted">Your answer goes in today's log, so over time you can see which skills work best for you.</p>
@@ -1100,8 +1150,11 @@ function openSkill(id){
   };
   draw();
   // opening a skill counts as using it: log it now, and the first one earns a badge (shown after the skill closes)
-  const before=earnedBadges(S.entries), day=today(), rec={id, at:new Date().toISOString()};
-  (S.skillLog[day] ||= []).push(rec);
+  const before=earnedBadges(S.entries), day=today(), nowIso=new Date().toISOString();
+  const prevUse=(S.skillLog[day]||[]).filter(r=>r.id===id).pop();
+  let rec;
+  if(prevUse && new Date(nowIso)-new Date(prevUse.at)<=REPEAT_MS && !prevUse.helped && !prevUse.note) rec=prevUse;   // a quick re-open is the same use
+  else { rec={id, at:nowIso}; (S.skillLog[day] ||= []).push(rec); }
   if(!S.skillDate) S.skillDate=day;
   saveSkillLog();
   const after=earnedBadges(S.entries); skillPendingBadges=badgeList().filter(b=>after[b.id]&&!before[b.id]);
@@ -1122,20 +1175,36 @@ function saveSkillLog(){
 function cleanSkillLog(log){
   const out={}; if(!log||typeof log!=="object") return out;
   for(const [d,list] of Object.entries(log)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(list)){
-    const ok=list.filter(r=>r&&typeof r.id==="string").map(r=>({id:r.id,at:String(r.at||""),...(HELPED_LABEL[r.helped]?{helped:r.helped}:{}),...(typeof r.note==="string"&&r.note.trim()?{note:r.note.trim().slice(0,1000)}:{})}));
-    if(ok.length) out[d]=ok; }
+    const ok=list.filter(r=>r&&typeof r.id==="string").map(r=>({id:r.id,at:String(r.at||""),...(r.completed?{completed:true}:{}),...(HELPED_LABEL[r.helped]?{helped:r.helped}:{}),...(typeof r.note==="string"&&r.note.trim()?{note:r.note.trim().slice(0,1000)}:{})}));
+    if(ok.length) out[d]=ok; }        // kept exactly as saved; quick repeats are merged only when reading (skillUsesOn)
+  return out;
+}
+/* Opening the same skill again within 2 minutes counts as one use (quick re-taps, accidental double opens).
+   The merged use keeps the first time and any answer or note from either. */
+const REPEAT_MS=2*60*1000;
+const hasInfo=r=>!!(r.helped||r.note||r.completed);
+const skillUsesOn=d=>mergeQuickRepeats(S.skillLog[d]||[]);   // the merged view used for display, counts, badges and exports
+function mergeQuickRepeats(list){
+  const out=[];
+  for(const r of [...list].sort((a,b)=>a.at.localeCompare(b.at))){
+    const k=out.findLast?.(x=>x.id===r.id) ?? [...out].reverse().find(x=>x.id===r.id);
+    const close=k && Math.abs(new Date(r.at)-new Date(k.at))<=REPEAT_MS;
+    if(close && (!hasInfo(k)||!hasInfo(r))){
+      Object.assign(k,{...(r.completed||k.completed?{completed:true}:{}),...((k.helped||r.helped)?{helped:k.helped||r.helped}:{}),...((k.note||r.note)?{note:k.note||r.note}:{})});
+    } else out.push({...r});
+  }
   return out;
 }
 /* Full skill log for one day in History: every skill, when, how it went, and any note */
 function skillsDayLogHTML(d){
-  const list=[...(S.skillLog[d]||[])].sort((a,b)=>String(a.at).localeCompare(String(b.at))); if(!list.length) return "";
+  const list=skillUsesOn(d); if(!list.length) return "";
   const rows=list.map(r=>{ const k=skillById(r.id), good=r.helped==="yes"||r.helped==="little";
     return `<li class="${good?"good":""}"><div class="sl-top"><span class="sl-time">${clock(r.at)||""}</span><b class="sl-name">${esc(k?k.name:r.id)}</b><span class="sl-res">${good?"💛 ":""}${r.helped?HELPED_LABEL[r.helped]:"Used"}</span></div>${r.note?`<p class="sl-note">${esc(r.note)}</p>`:""}</li>`; }).join("");
   return `<div class="dd-block skills-used"><div class="dd-head"><h3>🧰 Skills I used</h3></div><ul class="skill-log">${rows}</ul></div>`;
 }
 function skillsDayHTML(d){
   // only skills that helped, once each, as small tags ("a little" gets a lighter tag)
-  const best={}; for(const r of S.skillLog[d]||[]) if(r.helped==="yes"||r.helped==="little") best[r.id]=best[r.id]==="yes"?"yes":r.helped;
+  const best={}; for(const r of skillUsesOn(d)) if(r.helped==="yes"||r.helped==="little") best[r.id]=best[r.id]==="yes"?"yes":r.helped;
   const ids=Object.keys(best); if(!ids.length) return "";
   const tags=ids.map(id=>{ const k=skillById(id); const lab=esc(k?k.name:id);
     return `<li class="sk-tag ${best[id]}" title="${best[id]==="yes"?"Helped":"Helped a little"}">${lab}${best[id]==="little"?'<span class="sr-only"> (helped a little)</span>':""}</li>`; }).join("");
@@ -1227,7 +1296,7 @@ function dayEntryHTML(d){
   for(const k of ["morning","night"]){ const e=getEntry(d,k); if(!e) continue;
     const edited=e.updatedAt&&e.createdAt&&new Date(e.updatedAt)-new Date(e.createdAt)>60000;
     ev.push({at:e.createdAt||"", sort:e.createdAt||(k==="morning"?"0":"2"), html:`<li><button class="entry-row" data-k="${e.key}"><span class="er-time">${clock(e.createdAt)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">${FORMS[k].icon}</span><span class="er-text"><b>${FORMS[k].title}</b>${edited?`<span class="small muted"> · edited ${clock(e.updatedAt)}</span>`:""}</span><span class="avg">${avgRating(e)?.toFixed(1)??"–"}</span></button></li>`}); }
-  for(const r of S.skillLog[d]||[]){ const k=skillById(r.id);
+  for(const r of skillUsesOn(d)){ const k=skillById(r.id);
     ev.push({sort:r.at||"1", html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(r.at)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">🧰</span><span class="er-text"><b>${esc(k?k.name:r.id)}</b><span class="small muted"> · ${r.helped?HELPED_LABEL[r.helped]:"Used"}</span>${r.note?`<span class="er-note">${esc(r.note)}</span>`:""}</span></div></li>`}); }
   if(S.startAt && S.startDate===d) ev.push({sort:S.startAt, html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(S.startAt)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">👣</span><span class="er-text"><b>First visit</b><span class="small muted"> · Started Bookends</span></span></div></li>`});
   ev.sort((a,b)=>a.sort.localeCompare(b.sort));
@@ -1462,9 +1531,9 @@ function renderAbout(){
         <h2 class="sec">Sharing your check-ins with your provider<a class="anchor" href="#about-sharing" aria-label="Link to this section">#</a></h2>
         <p>Your check-ins are private. Nothing is shared unless you decide to share it.</p>
         <ol>
-          <li>Go to <b>Settings</b> and find <b>Share with your provider</b>.</li>
+          <li>Go to <b>Settings</b> and find <b>Share or explore your data</b>.</li>
           <li>Pick a time period (7, 14, 30, or 90 days) and choose whether to include your written notes or just your ratings.</li>
-          <li>Tap <b>Download as Report (HTML)</b> for a simple page with charts you can open, print, or save as a PDF. If your provider would rather have the raw numbers, tap <b>Download as Data (JSON)</b> instead.</li>
+          <li>Tap <b>Report for my provider</b> for a simple page with charts you can open, print, or save as a PDF. If your provider would rather have the raw data, tap <b>Data for AI or my provider</b> instead. The same file can be uploaded to an AI assistant to help you spot patterns, though AI is never a substitute for your provider.</li>
           <li>Share it the way you and your provider prefer: show it during a session, bring a printed copy, or upload it through your provider's secure patient portal.</li>
         </ol>
         <p class="small muted">Tip: regular email and text messages aren't very private. If your provider has a secure portal, use that instead. You can also just open <b>History</b> together and walk through a day.</p>
@@ -1510,7 +1579,7 @@ const BACKUP_KEY="ir_last_backup";
 const hasData=()=>S.entries.length>0 || Object.keys(S.affLog).length>0 || Object.keys(S.skillLog).length>0;
 function backupJSON(){
   const all=[...S.entries].sort((a,b)=>a.key.localeCompare(b.key));
-  if(Object.keys(S.affLog).length) all.push({key:AFF_META_KEY,kind:"meta",days:S.affLog,v:1});
+  if(Object.keys(S.affLog).length) all.push({key:AFF_META_KEY,kind:"meta",days:S.affLog,times:S.affTimes||{},v:1});
   if(Object.keys(S.skillLog).length) all.push({key:SKILLS_META_KEY,kind:"meta",date:S.skillDate,log:S.skillLog,v:2});
   if(Object.keys(S.visits).length) all.push({key:VISITS_META_KEY,kind:"meta",visits:S.visits,v:1});
   return JSON.stringify(all,null,2);
@@ -1536,10 +1605,32 @@ async function saveFile(filename,data,mime){
 }
 
 /* ---------- Provider summary: a readable, printable page the client chooses to share ---------- */
+/* Every timestamp in exports is ISO 8601 in UTC ("...Z"), whatever format it was saved in */
+const utc=t=>{ const d=t?new Date(t):null; return d&&!isNaN(d)?d.toISOString():null; };
+/* Shared by the report and the data file. days=0 means everything since the first entry. */
+function exportRange(days){
+  const end=today();
+  if(!days){ const first=[...S.entries.map(e=>e.date),...Object.keys(S.skillLog),...Object.keys(S.visits)].filter(d=>d<=end).sort()[0]||end;
+    days=Math.round((parse(end)-parse(first))/86400000)+1; }
+  return {start:addDays(end,-(days-1)), end, days};
+}
+const HELPED_WORD={yes:"yes",little:"a little",no:"no"};
+let affIndex=null;
+const affById=id=>{ if(!AFF.data) return null; if(!affIndex){ affIndex={}; AFF.data.affirmations.forEach(a=>affIndex[a.id]=a); } return affIndex[id]||null; };
+function skillsInRange(start,end){
+  return Object.keys(S.skillLog).filter(d=>d>=start&&d<=end).sort().flatMap(d=>skillUsesOn(d).map(r=>({...r,d})));
+}
+function skillSummary(uses){
+  const m={}; for(const u of uses){ const k=skillById(u.id); const x=m[u.id] ||= {id:u.id,name:k?k.name:u.id,group:groupOfSkill(u.id)?.title||"",used:0,completed:0,helped:0,helpedALittle:0,didNotHelp:0,noAnswer:0};
+    x.used++; if(u.completed||u.helped) x.completed++; if(u.helped==="yes") x.helped++; else if(u.helped==="little") x.helpedALittle++; else if(u.helped==="no") x.didNotHelp++; else x.noAnswer++; }
+  return Object.values(m).sort((a,b)=>b.used-a.used||a.name.localeCompare(b.name));
+}
 function providerSummaryHTML(days, withNotes){
-  const end=today(), start=addDays(end,-(days-1));
+  const R=exportRange(days), end=R.end, start=R.start; days=R.days;
   const ents=S.entries.filter(e=>e.date>=start && e.date<=end).sort((a,b)=>(a.date+a.kind).localeCompare(b.date+b.kind));
-  const dates=[...new Set(ents.map(e=>e.date))];
+  const uses=skillsInRange(start,end), visitDays=Object.keys(S.visits).filter(d=>d>=start&&d<=end);
+  const totalVisits=visitDays.reduce((n,d)=>n+S.visits[d].length,0);
+  const dates=[...new Set(ents.map(e=>e.date).concat(uses.map(u=>u.d)))].sort();
   const range=[...Array(days)].map((_,i)=>addDays(start,i));
   const dims=Object.keys(DIMENSIONS).filter(k=>FORMS.morning.sections.concat(FORMS.night.sections).some(x=>x.dim===k&&x.scale));
   const AM="#d98b3a", PM="#4a5b9b", GRID="#e6ddd0", INK="#23302a", MUTED="#6b7570";
@@ -1590,7 +1681,9 @@ function providerSummaryHTML(days, withNotes){
       }).join("");
       return rows?`<h4><span class="dot" style="background:${col}"></span>${k==="morning"?"Morning intention":"Nightly reflection"}</h4><table>${rows}</table>`:"";
     }).join("");
-    return `<section><h3>${e2(fmtDate(d))}</h3>${parts}</section>`;
+    const su=uses.filter(u=>u.d===d), vc=(S.visits[d]||[]).length;
+    const sk=su.length?`<h4><span class="dot" style="background:#2f6b52"></span>Coping skills</h4><table>${su.map(u=>`<tr><td class="a">${e2(skillById(u.id)?.name||u.id)}</td><td class="r">${e2(u.helped==="yes"?"Helped":u.helped==="little"?"Helped a little":u.helped==="no"?"Didn't help":"No answer")}</td><td>${withNotes&&u.note?e2(u.note):""}</td></tr>`).join("")}</table>`:"";
+    return `<section><h3>${e2(fmtDate(d))}</h3>${parts}${sk}${vc?`<p class="meta">Opened Bookends ${vc===1?"once":vc+" times"}</p>`:""}</section>`;
   }).join("");
 
   const nM=ents.filter(e=>e.kind==="morning").length, nN=ents.filter(e=>e.kind==="night").length;
@@ -1613,16 +1706,23 @@ table{border-collapse:collapse;width:100%;margin-bottom:6px}td{border-top:1px so
 <h2>Check-ins</h2>
 <p style="margin:0 0 6px">Checked in on <b>${dates.length}</b> of ${days} days · ${nM} morning intention${nM===1?"":"s"} · ${nN} nightly reflection${nN===1?"":"s"}</p>
 ${strip}
+${totalVisits?`<p class="meta" style="margin:6px 0 0">Opened Bookends on ${visitDays.length} of ${days} days (${totalVisits} visit${totalVisits===1?"":"s"} in total)</p>`:""}
 <h2>Average by wellness area</h2>${bars}
 <h2>Trends over time</h2><div class="trends">${trends}</div>
+${uses.length?`<h2>Coping skills</h2><p style="margin:0 0 6px">Used ${uses.length} time${uses.length===1?"":"s"} in this period. After each one, the person was asked whether it helped.</p>
+<table><tr><td class="a"><b>Skill</b></td><td><b>Group</b></td><td><b>Used</b></td><td><b>Helped</b></td><td><b>A little</b></td><td><b>Didn't help</b></td></tr>${skillSummary(uses).map(x=>`<tr><td class="a">${e2(x.name)}</td><td>${e2(x.group)}</td><td>${x.used}</td><td>${x.helped}</td><td>${x.helpedALittle}</td><td>${x.didNotHelp}</td></tr>`).join("")}</table>`:""}
 <h2>Day by day</h2>${dayBlocks||"<p>No check-ins in this range.</p>"}
 </body></html>`;
 }
 /* Same period and notes choice as the report, as structured data a provider's tools can read. */
-function providerSummaryJSON(days, withNotes){
-  const end=today(), start=addDays(end,-(days-1));
+function providerSummaryData(days, withNotes){
+  const R=exportRange(days), end=R.end, start=R.start; days=R.days;
   const ents=S.entries.filter(e=>e.date>=start && e.date<=end);
-  const dates=[...new Set(ents.map(e=>e.date))].sort();
+  const uses=skillsInRange(start,end), inR=d=>d>=start&&d<=end;
+  const visitDays=Object.keys(S.visits).filter(inR);
+  const earned=earnedBadges(S.entries), bl=badgeList();
+  const affDays=Object.keys(S.affLog).filter(d=>inR(d)&&S.affLog[d].length);
+  const dates=[...new Set(ents.map(e=>e.date).concat(uses.map(u=>u.d),visitDays,affDays))].sort();
   const areaLabel=dim=>dim==="closing"?"Proud of":(DIMENSIONS[dim]?.label||dim);
   const questions={};
   for(const k of ["morning","night"]){
@@ -1630,13 +1730,19 @@ function providerSummaryJSON(days, withNotes){
     for(const sec of FORMS[k].sections){
       if(sec.scale) questions[k][sec.scale.id]={area:areaLabel(sec.dim),type:"rating",question:sec.scale.q,low:sec.scale.low,high:sec.scale.high};
       if(withNotes) for(const pr of sec.prompts||[]) questions[k][pr.id]={area:areaLabel(sec.dim),type:"note",question:pr.q};
-      if(withNotes && sec.dim==="emotional") questions[k][FEEL_KEY]={area:areaLabel(sec.dim),type:"feelings",question:"Feelings picked from the feelings wheel (up to 3)"};
+      if(sec.dim==="emotional") questions[k][FEEL_KEY]={area:areaLabel(sec.dim),type:"feelings",question:"Feelings picked from the feelings wheel (up to 3). Optional, so many check-ins won't have any. Appears as `feelings` on a check-in."};
     }
   }
   const averages={};
   for(const k of ["morning","night"]) for(const sec of FORMS[k].sections){ if(!sec.scale) continue;
     const v=ents.filter(e=>e.kind===k).map(e=>+e.answers[sec.scale.id]).filter(Boolean);
     (averages[sec.dim] ||= {area:areaLabel(sec.dim)})[k]=v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*100)/100:null; }
+  // the same "updated" time on check-ins from different days means a backup import, not edits
+  const stampDays={}; S.entries.forEach(e=>{ const u=utc(e.updatedAt); if(u && u!==utc(e.createdAt)) (stampDays[u] ||= new Set()).add(e.date); });
+  const bulkStamps=new Set(Object.keys(stampDays).filter(u=>stampDays[u].size>=2));
+  // the same "submitted" time on check-ins from different days means older imports filled in the import time
+  const subDays={}; S.entries.forEach(e=>{ const c=utc(e.createdAt); if(c) (subDays[c] ||= new Set()).add(e.date); });
+  const bulkSubmitted=new Set(Object.keys(subDays).filter(c=>subDays[c].size>=2));
   const dayList=dates.map(d=>{
     const out={date:d};
     for(const k of ["morning","night"]){
@@ -1645,25 +1751,85 @@ function providerSummaryJSON(days, withNotes){
       for(const sec of FORMS[k].sections){
         if(sec.scale){ const r=+e.answers[sec.scale.id]; if(r) ratings[sec.scale.id]=r; }
         if(withNotes) for(const pr of sec.prompts||[]){ const t=String(e.answers[pr.id]||"").trim(); if(t) notes[pr.id]=t; }
-        if(withNotes && sec.dim==="emotional" && Array.isArray(e.answers[FEEL_KEY]) && e.answers[FEEL_KEY].length) notes[FEEL_KEY]=[...e.answers[FEEL_KEY]];
       }
       out[k]=withNotes?{ratings,notes}:{ratings};
+      if(Array.isArray(e.answers[FEEL_KEY]) && e.answers[FEEL_KEY].length) out[k].feelings=[...e.answers[FEEL_KEY]];   // tapped, not written, so included either way
+      if(utc(e.startedAt)) out[k].startedAt=utc(e.startedAt);
+      out[k].submittedAt=utc(e.createdAt);
+      const up=utc(e.updatedAt), bulk=up&&bulkStamps.has(up);
+      if(e.importedAt||bulk) out[k].importedAt=utc(e.importedAt)||up;          // older imports stamped every entry's "updated" time with the import time
+      if(up && up!==utc(e.createdAt) && !bulk && up!==utc(e.importedAt)) out[k].updatedAt=up;
+      if(e.noOriginalTime||(e.importedAt&&e.importedAt===e.createdAt)||bulkSubmitted.has(utc(e.createdAt))) out[k].timeIsImportTime=true;
     }
+    const su=uses.filter(u=>u.d===d);
+    if(su.length) out.skills=su.map(u=>({id:u.id, name:skillById(u.id)?.name||u.id, at:utc(u.at), completed:!!(u.completed||u.helped), helped:HELPED_WORD[u.helped]||"no answer", ...(withNotes&&u.note?{note:u.note}:{})}));
+    if(S.visits[d]?.length) out.visits=S.visits[d].map(utc).filter(Boolean);
+    const af=(S.affLog[d]||[]).map(id=>{ const a=affById(id); const at=utc(S.affTimes?.[d]?.[id]);
+      return a?{text:a.text, type:a.type, area:a.area, ...(at?{at}:{})}:null; }).filter(Boolean);
+    if(af.length) out.affirmations=af;
+    const bd=bl.filter(b=>earned[b.id]===d); if(bd.length) out.badges=bd.map(b=>({name:b.name,description:b.desc}));
     return out;
   });
-  return JSON.stringify({
-    source:"Bookends (bookends.day)", format:"bookends-provider-summary", version:1,
+  const catalog={}; (SKILLS.data?.skills||[]).forEach(k=>{ catalog[k.id]={name:k.name, group:groupOfSkill(k.id)?.title||"", origin:k.origin||"Adapted from DBT."}; });
+  const entryDays=new Set(ents.map(e=>e.date));
+  return {
+    source:"Bookends (bookends.day)", format:"bookends-summary", version:3,
+    timestamps:"ISO 8601, all in UTC",
     created:new Date().toISOString(),
+    timeZone:(()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone||null; }catch(e){ return null; } })(),
     period:{start,end,days}, includesNotes:withNotes,
+    checkInWindows:{note:"Hours on a 24-hour clock",morning:{opens:S.prefs.morningStart,closes:S.prefs.morningEnd},night:{opens:S.prefs.nightStart,closes:S.prefs.nightEnd}},
     scale:{min:1,max:5,description:"5 is the most positive end of each scale"},
-    summary:{daysCheckedIn:dates.length, morningIntentions:ents.filter(e=>e.kind==="morning").length, nightlyReflections:ents.filter(e=>e.kind==="night").length, averages},
-    questions, days:dayList
-  },null,2);
+    summary:{daysCheckedIn:entryDays.size, morningIntentions:ents.filter(e=>e.kind==="morning").length, nightlyReflections:ents.filter(e=>e.kind==="night").length, averages,
+      skillUses:uses.length, distinctSkillsUsed:new Set(uses.map(u=>u.id)).size, skills:skillSummary(uses).map(({id,...x})=>x),
+      visitTrackingSince:Object.keys(S.visits).sort()[0]||null,
+      affirmationsRead:affDays.reduce((n,d)=>n+S.affLog[d].length,0), daysWithAffirmations:affDays.length,
+      affirmationTimesSince:Object.keys(S.affTimes||{}).sort()[0]||null,
+      checkInsWithFeelings:ents.filter(e=>Array.isArray(e.answers[FEEL_KEY])&&e.answers[FEEL_KEY].length).length,
+      daysOpened:visitDays.length, totalVisits:visitDays.reduce((n,d)=>n+S.visits[d].length,0),
+      badgesEarned:bl.filter(b=>earned[b.id]&&inR(earned[b.id])).length},
+    questions, skillsCatalog:catalog, days:dayList
+  };
 }
-async function downloadProviderData(days,withNotes){
-  if(!S.entries.length) return toast("No check-ins to share yet.");
-  const ok=await saveFile(`bookends-summary-${today()}.json`, providerSummaryJSON(days,withNotes), "application/json");
-  if(ok && !noteShare()) toast("Data saved. You decide who sees it.");
+const providerSummaryJSON=(days,withNotes)=>JSON.stringify(providerSummaryData(days,withNotes),null,2);
+
+/* One file for AI assistants and providers: plain-language instructions (data/insights-guide.md) plus the data as JSON */
+let insightsGuide=null;
+async function loadInsightsGuide(){
+  if(insightsGuide) return insightsGuide;
+  try{ const r=await fetch("data/insights-guide.md",{cache:"no-cache"}); if(!r.ok) throw 0; insightsGuide=(await r.text()).trim(); }
+  catch(e){ insightsGuide="# Instructions for the AI assistant\n\nMost important: you are not a substitute for a trained mental health clinician. Say so at the start, don't diagnose or act as a therapist, and encourage the person to bring anything important to a therapist, counselor, or doctor.\n\nThis is data from Bookends, a private journaling app with morning intentions and nightly reflections rated 1 to 5 (5 is most positive) across eight areas of wellness, plus coping skills and app visits. Help the person find patterns kindly: no guilt or shame, lead with what's working, keep suggestions small, don't diagnose, and if anything sounds like a crisis, gently share the 988 Suicide & Crisis Lifeline (US) or local emergency services."; }
+  return insightsGuide;
+}
+async function insightsMarkdown(days,withNotes){
+  const data=providerSummaryData(days,withNotes), guide=await loadInsightsGuide();
+  return `# My Bookends data
+
+Created ${new Date().toLocaleString()} · ${fmtDate(data.period.start)} to ${fmtDate(data.period.end)} (${data.period.days} days)${withNotes?"":" · Written notes left out"}
+
+> **Important:** an AI assistant is not a substitute for a trained mental health clinician. Use it to notice patterns, and bring anything important to a therapist, counselor, or doctor. If you're in crisis, call or text 988 in the US, or contact local emergency services.
+>
+> **How to use this file:** Upload it to an AI assistant (like Claude, ChatGPT, or Gemini) and ask something like *"What patterns do you see in my check-ins?"* or *"Which coping skills seem to help me most, and when?"* You can also share it with your therapist or counselor. The instructions below tell an AI how to read your data and how to talk with you about it.
+>
+> **Before you share:** this file includes everything from this period${withNotes?", including your written notes":""}. Once you upload it somewhere, that service's privacy terms apply, not Bookends'. You might want to remove other people's names first.
+
+---
+
+${guide}
+
+---
+
+## My data
+
+\`\`\`json
+${JSON.stringify(data)}
+\`\`\`
+`;
+}
+async function downloadInsights(days,withNotes){
+  if(!S.entries.length && !Object.keys(S.skillLog).length) return toast("No check-ins to share yet.");
+  const ok=await saveFile(`bookends-data-${today()}.md`, await insightsMarkdown(days,withNotes), "text/markdown");
+  if(ok && !noteInsights()) toast("Saved. You decide who sees it.");
 }
 async function downloadProviderSummary(days,withNotes){
   if(!S.entries.length) return toast("No check-ins to share yet.");
@@ -1720,14 +1886,17 @@ function renderSettings(){
       <p class="small muted" style="margin-top:10px">On iPhone, open the downloaded file and tap <b>Add to Calendar</b>. If you change your check-in windows later, set the reminder again.</p>
     </div>
     <div class="card" style="margin-top:14px" id="shareCard">
-      <h2 style="font-size:1.15rem">Share with your provider</h2>
-      <p class="small muted">Make a simple, printable summary of your check-ins, with charts of your ratings over time, to share with a therapist or counselor. Nothing is sent anywhere. You download it and decide who sees it.</p>
+      <h2 style="font-size:1.15rem">Share or explore your data</h2>
+      <p class="small muted">Download your check-ins, skills and visits to share with a therapist or counselor, or to explore with an AI assistant. Nothing is sent anywhere. You download it and decide who sees it.</p>
       <div class="share-opts">
-        <label class="time-row"><span>Time period</span><select id="shDays">${[7,14,30,90].map(n=>`<option value="${n}" ${n===14?"selected":""}>Last ${n} days</option>`).join("")}</select></label>
-        <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Include my written notes</b><span class="small muted">Turn off to share ratings only.</span></span><input type="checkbox" class="switch" id="shNotes" checked></label>
+        <label class="time-row"><span>Time period</span><select id="shDays">${[[7,"Last 7 days"],[14,"Last 14 days"],[30,"Last 30 days"],[90,"Last 90 days"],[0,"Everything"]].map(([n,t])=>`<option value="${n}" ${n===90?"selected":""}>${t}</option>`).join("")}</select></label>
+        <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Include my written notes</b><span class="small muted">Turn off to share ratings, skills and visits only.</span></span><input type="checkbox" class="switch" id="shNotes" checked></label>
       </div>
-      <div class="actions" style="justify-content:flex-start"><button class="btn" id="shGo" ${S.entries.length?"":"disabled"}>⬇ Download as Report (HTML)</button><button class="btn ghost" id="shJson" ${S.entries.length?"":"disabled"}>⬇ Download as Data (JSON)</button></div>
-      <p class="small muted" style="margin-top:8px">The report is easy to read and print. The data file has the same ratings and notes (if included), as structured data that your provider's software can read.</p>
+      <div class="share-note"><b>Before you share</b>
+        <span>These files include everything from the time period, including your notes if that's on. Once you upload a file to an AI service or a patient portal, that service's privacy terms apply, not Bookends'. You might want to remove other people's names first.</span>
+        <span><b>AI is not a substitute for a trained mental health clinician.</b> Use it to notice patterns, and bring anything important to a therapist, counselor, or doctor.</span></div>
+      <div class="actions" style="justify-content:flex-start"><button class="btn" id="shGo" ${S.entries.length?"":"disabled"}>⬇ Report for my provider</button><button class="btn ghost" id="shAI" ${S.entries.length||Object.keys(S.skillLog).length?"":"disabled"}>🤖 Data for AI or my provider</button></div>
+      <p class="small muted" style="margin-top:8px">The <b>report</b> is a page with charts that's easy to read and print. The <b>data file</b> has the same information as structured data, plus instructions that tell an AI assistant how to read it and how to talk with you about it. Providers' tools can read it too.</p>
     </div>
     <div class="card" style="margin-top:14px">
       <h2 style="font-size:1.15rem">Where your entries live</h2>
@@ -1759,6 +1928,7 @@ function renderSettings(){
     try{ await S.store.remove(HOME_META_KEY); S.homeDate=null; }catch(err){}
     try{ await S.store.remove(START_META_KEY); S.startDate=null; }catch(err){}
     try{ await S.store.remove(VISITS_META_KEY); S.visits={}; }catch(err){}
+    try{ await S.store.remove(INSIGHTS_META_KEY); S.insights=[]; }catch(err){}
     try{ await S.store.remove(SKILLS_META_KEY); S.skillDate=null; S.skillLog={}; }catch(err){}
     try{ await S.store.remove(SHARES_META_KEY); S.shares=[]; }catch(err){}
     try{ await S.store.remove(REMINDERS_META_KEY); S.reminders={}; }catch(err){}
@@ -1783,7 +1953,7 @@ function renderSettings(){
   });
   document.getElementById("export").onclick=downloadBackup;
   document.getElementById("shGo").onclick=()=>downloadProviderSummary(+document.getElementById("shDays").value, document.getElementById("shNotes").checked);
-  document.getElementById("shJson").onclick=()=>downloadProviderData(+document.getElementById("shDays").value, document.getElementById("shNotes").checked);
+  document.getElementById("shAI").onclick=()=>downloadInsights(+document.getElementById("shDays").value, document.getElementById("shNotes").checked);
   document.getElementById("copy").onclick=async()=>{
     const json=backupJSON();
     try{ await navigator.clipboard.writeText(json); toast("Copied to clipboard"); }
@@ -1792,10 +1962,14 @@ function renderSettings(){
   document.getElementById("doimp").onclick=async()=>{
     let arr; try{ arr=JSON.parse(document.getElementById("imp").value); if(!Array.isArray(arr)) throw 0; }catch(e){ return toast("That doesn't look like a valid backup."); }
     const ok=arr.filter(e=>e&&/^\d{4}-\d{2}-\d{2}$/.test(e.date)&&FORMS[e.kind]&&e.answers&&typeof e.answers==="object")
-      .map(e=>({key:`${e.date}_${e.kind}`,date:e.date,kind:e.kind,answers:e.answers,createdAt:e.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),v:1}));
+      .map(e=>{ const c=utc(e.createdAt)||new Date().toISOString(), st=utc(e.startedAt);
+        const now=new Date().toISOString(), c2=utc(e.createdAt);
+        return {key:`${e.date}_${e.kind}`,date:e.date,kind:e.kind,answers:e.answers,...(st?{startedAt:st}:{}),createdAt:c2||now,updatedAt:utc(e.updatedAt)||c2||now,importedAt:now,...(c2?{}:{noOriginalTime:true}),v:1}; });
     let n=0; for(const e of ok){ try{ await S.store.save(e); S.entries=S.entries.filter(x=>x.key!==e.key).concat(e); n++; }catch(err){ break; } }
     const meta=arr.find(e=>e&&e.key===AFF_META_KEY&&e.days&&typeof e.days==="object");
-    if(meta){ for(const [d,ids] of Object.entries(meta.days)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(ids)) S.affLog[d]=[...new Set([...(S.affLog[d]||[]),...ids.map(String)])]; saveAffLog(); await affSaving; }
+    if(meta){ for(const [d,ids] of Object.entries(meta.days)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(ids)) S.affLog[d]=[...new Set([...(S.affLog[d]||[]),...ids.map(String)])];
+      if(meta.times&&typeof meta.times==="object") for(const [d,m] of Object.entries(meta.times)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&m&&typeof m==="object") for(const [id,t] of Object.entries(m)){ const u=utc(t); if(u) ((S.affTimes||(S.affTimes={}))[d] ||= {})[id] ||= u; }
+      saveAffLog(); await affSaving; }
     const skm=arr.find(e=>e&&e.key===SKILLS_META_KEY&&e.log&&typeof e.log==="object");
     if(skm){ const inc=cleanSkillLog(skm.log);
       for(const [d,list] of Object.entries(inc)){ const have=new Set((S.skillLog[d]||[]).map(r=>r.id+r.at)); S.skillLog[d]=(S.skillLog[d]||[]).concat(list.filter(r=>!have.has(r.id+r.at))); }
@@ -1919,10 +2093,12 @@ function confetti(count){
   S.store = await pickStore();
   await affReady;
   try{ const all = await S.store.list(); const meta=all.find(e=>e.key===AFF_META_KEY);
-    S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{}; S.entries = all.filter(e=>FORMS[e.kind]);
+    S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{};
+    S.affTimes = (meta&&meta.times&&typeof meta.times==="object")?{...meta.times}:{}; S.entries = all.filter(e=>FORMS[e.kind]);
     const sk=all.find(e=>e.key===SKILLS_META_KEY); S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(sk?.date||"")?sk.date:null; S.skillLog=cleanSkillLog(sk?.log);
     const hm=all.find(e=>e.key===HOME_META_KEY); S.homeDate=/^\d{4}-\d{2}-\d{2}$/.test(hm?.date||"")?hm.date:null;
     const vm=all.find(e=>e.key===VISITS_META_KEY); S.visits=cleanVisits(vm?.visits);
+    const im=all.find(e=>e.key===INSIGHTS_META_KEY); S.insights=Array.isArray(im?.days)?im.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
     const sm=all.find(e=>e.key===START_META_KEY); S.startDate=/^\d{4}-\d{2}-\d{2}$/.test(sm?.date||"")?sm.date:null; S.startAt=sm?.firstVisit&&sm.at?String(sm.at):null;
     const rm=all.find(e=>e.key===REMINDERS_META_KEY); S.reminders=(rm?.reminders&&typeof rm.reminders==="object")?rm.reminders:{};
     const sh=all.find(e=>e.key===SHARES_META_KEY); S.shares=Array.isArray(sh?.days)?sh.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
