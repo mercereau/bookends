@@ -1700,6 +1700,9 @@ function providerSummaryData(days, withNotes){
   // the same "updated" time on check-ins from different days means a backup import, not edits
   const stampDays={}; S.entries.forEach(e=>{ const u=utc(e.updatedAt); if(u && u!==utc(e.createdAt)) (stampDays[u] ||= new Set()).add(e.date); });
   const bulkStamps=new Set(Object.keys(stampDays).filter(u=>stampDays[u].size>=2));
+  // the same "submitted" time on check-ins from different days means older imports filled in the import time
+  const subDays={}; S.entries.forEach(e=>{ const c=utc(e.createdAt); if(c) (subDays[c] ||= new Set()).add(e.date); });
+  const bulkSubmitted=new Set(Object.keys(subDays).filter(c=>subDays[c].size>=2));
   const dayList=dates.map(d=>{
     const out={date:d};
     for(const k of ["morning","night"]){
@@ -1716,7 +1719,7 @@ function providerSummaryData(days, withNotes){
       const up=utc(e.updatedAt), bulk=up&&bulkStamps.has(up);
       if(e.importedAt||bulk) out[k].importedAt=utc(e.importedAt)||up;          // older imports stamped every entry's "updated" time with the import time
       if(up && up!==utc(e.createdAt) && !bulk && up!==utc(e.importedAt)) out[k].updatedAt=up;
-      if(e.noOriginalTime||(e.importedAt&&e.importedAt===e.createdAt)) out[k].timeIsImportTime=true;
+      if(e.noOriginalTime||(e.importedAt&&e.importedAt===e.createdAt)||bulkSubmitted.has(utc(e.createdAt))) out[k].timeIsImportTime=true;
     }
     const su=uses.filter(u=>u.d===d);
     if(su.length) out.skills=su.map(u=>({id:u.id, name:skillById(u.id)?.name||u.id, at:utc(u.at), completed:!!(u.completed||u.helped), helped:HELPED_WORD[u.helped]||"no answer", ...(withNotes&&u.note?{note:u.note}:{})}));
