@@ -458,11 +458,12 @@ function holidayBannerHTML(earned){
   const h=hs[0], got=earned["holiday-"+h.id] && S.entries.some(e=>e.date===today());
   return `<div class="note holiday">${h.em} <b>Happy ${h.name}.</b> ${got?"You checked in today. Be gentle with yourself and enjoy the day.":"Holidays can be a lot. A few minutes for yourself today earns a holiday badge."}</div>`;
 }
+const BOOK_HEIGHTS=[74,82,66,78,84,70,76];   // Sun..Sat, in px
 /* Last 7 days as books on a shelf, between two bookends. Top of the spine = morning, bottom = night. */
 function shelfHTML(days,s,t){
   const books=days.map(d=>{
     const r=s.byDate[d]||{}, m=!!r.morning, n=!!r.night;
-    const h=66+(parseInt(d.slice(8),10)*7%4)*6;         // gentle height variety, stable per date
+    const h=BOOK_HEIGHTS[parse(d).getDay()];            // each weekday keeps its own height as the week rolls along
     const name=parse(d).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});
     const what=m&&n?"morning and night":m?"morning":n?"night":"no check-ins";
     return `<button class="book ${m||n?"":"empty"} ${d===t?"today":""}" data-d="${d}" style="height:${h}px" aria-label="${name}: ${what}">
