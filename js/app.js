@@ -107,6 +107,7 @@ const BADGES = [
   {id:"backup-first", em:"💾", name:"Safe Keeping",   desc:"Download a backup of your entries", test:s=>s.backups>=1},
   {id:"home-screen",  em:"📱", name:"Right at Home",  desc:"Open Bookends from your Home Screen", test:s=>s.homeScreen>=1},
   {id:"share-first",  em:"🤝", name:"In This Together", desc:"Download a summary to share with your provider", test:s=>s.shares>=1},
+  {id:"curious-mind", em:"🤖", name:"Curious Mind",    desc:"Download your data to explore it with an AI assistant", test:s=>s.insights>=1},
   {id:"reminder-set", em:"⏰", name:"Friendly Reminder", desc:"Add a check-in reminder to your calendar", test:s=>s.reminders>=1},
   {id:"skill-first",  em:"🧰", name:"Toolbox",       desc:"Open a coping skill", test:s=>s.skills>=1},
   {id:"full-picture", em:"🎯", name:"Full Picture",    desc:"Rate every wellness area in one check-in", test:s=>s.allScales>=1},
@@ -323,6 +324,7 @@ function computeStats(entries, asOf=today()){
     skills: S.skillDate && S.skillDate<=asOf ? 1 : 0,
     homeScreen: S.homeDate && S.homeDate<=asOf ? 1 : 0,
     started: S.startDate && S.startDate<=asOf ? 1 : 0,
+    insights: (S.insights||[]).filter(d=>d<=asOf).length,
     feelings: es.filter(e=>Array.isArray(e.answers.emotional_feelings) && e.answers.emotional_feelings.length).length,
     complete: es.filter(isComplete).length,
     holidays: new Set(dates.flatMap(d=>holidaysOn(d).map(h=>h.id))).size,
@@ -341,7 +343,7 @@ function affStats(asOf){
 }
 function earnedBadges(entries){
   // returns {badgeId: dateEarned}
-  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.shares||[],Object.values(S.reminders||{}).map(r=>r.date).filter(Boolean),S.homeDate?[S.homeDate]:[],S.startDate?[S.startDate]:[],S.skillDate?[S.skillDate]:[]))].filter(d=>d<=today()).sort();
+  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.shares||[],Object.values(S.reminders||{}).map(r=>r.date).filter(Boolean),S.homeDate?[S.homeDate]:[],S.startDate?[S.startDate]:[],S.insights||[],S.skillDate?[S.skillDate]:[]))].filter(d=>d<=today()).sort();
   for(const d of dates){
     const s=computeStats(entries,d);
     for(const b of BADGES) if(!out[b.id] && b.test(s)) out[b.id]=d;
@@ -355,7 +357,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, startDate:null, startAt:null, visits:{}, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,showWriting:false,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, startDate:null, startAt:null, visits:{}, insights:[], shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,showWriting:false,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -601,6 +603,17 @@ function noteStarted(date){ // First Steps badge: tapping "Get started" (or, for
   if(S.startAt) console.info(`[Bookends] First visit: started ${S.startAt}`);
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
   const after=earnedBadges(S.entries); return badgeList().filter(b=>after[b.id]&&!before[b.id]);
+}
+/* Days the data file (for AI or a provider) was downloaded, for the Curious Mind badge. */
+const INSIGHTS_META_KEY="meta_insights";
+function noteInsights(){
+  const before=earnedBadges(S.entries);
+  if(!S.insights.includes(today())){ S.insights=[...S.insights,today()].sort();
+    const doc={key:INSIGHTS_META_KEY,kind:"meta",days:S.insights,updatedAt:new Date().toISOString(),v:1};
+    affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{}); }
+  const after=earnedBadges(S.entries), fresh=badgeList().filter(b=>after[b.id]&&!before[b.id]);
+  if(fresh.length){ if(!S.form) render(); celebrate(fresh,computeStats(S.entries)); return true; }
+  return false;
 }
 /* Days a provider summary (report or data) was downloaded, for the In This Together badge. */
 const SHARES_META_KEY="meta_shares";
@@ -1462,9 +1475,9 @@ function renderAbout(){
         <h2 class="sec">Sharing your check-ins with your provider<a class="anchor" href="#about-sharing" aria-label="Link to this section">#</a></h2>
         <p>Your check-ins are private. Nothing is shared unless you decide to share it.</p>
         <ol>
-          <li>Go to <b>Settings</b> and find <b>Share with your provider</b>.</li>
+          <li>Go to <b>Settings</b> and find <b>Share or explore your data</b>.</li>
           <li>Pick a time period (7, 14, 30, or 90 days) and choose whether to include your written notes or just your ratings.</li>
-          <li>Tap <b>Download as Report (HTML)</b> for a simple page with charts you can open, print, or save as a PDF. If your provider would rather have the raw numbers, tap <b>Download as Data (JSON)</b> instead.</li>
+          <li>Tap <b>Report for my provider</b> for a simple page with charts you can open, print, or save as a PDF. If your provider would rather have the raw data, tap <b>Data for AI or my provider</b> instead. The same file can be uploaded to an AI assistant to help you spot patterns, though AI is never a substitute for your provider.</li>
           <li>Share it the way you and your provider prefer: show it during a session, bring a printed copy, or upload it through your provider's secure patient portal.</li>
         </ol>
         <p class="small muted">Tip: regular email and text messages aren't very private. If your provider has a secure portal, use that instead. You can also just open <b>History</b> together and walk through a day.</p>
@@ -1536,10 +1549,28 @@ async function saveFile(filename,data,mime){
 }
 
 /* ---------- Provider summary: a readable, printable page the client chooses to share ---------- */
+/* Shared by the report and the data file. days=0 means everything since the first entry. */
+function exportRange(days){
+  const end=today();
+  if(!days){ const first=[...S.entries.map(e=>e.date),...Object.keys(S.skillLog),...Object.keys(S.visits)].filter(d=>d<=end).sort()[0]||end;
+    days=Math.round((parse(end)-parse(first))/86400000)+1; }
+  return {start:addDays(end,-(days-1)), end, days};
+}
+const HELPED_WORD={yes:"yes",little:"a little",no:"no"};
+function skillsInRange(start,end){
+  return Object.entries(S.skillLog).filter(([d])=>d>=start&&d<=end).sort(([a],[b])=>a.localeCompare(b)).flatMap(([d,list])=>list.map(r=>({...r,d})));
+}
+function skillSummary(uses){
+  const m={}; for(const u of uses){ const k=skillById(u.id); const x=m[u.id] ||= {id:u.id,name:k?k.name:u.id,group:groupOfSkill(u.id)?.title||"",used:0,helped:0,helpedALittle:0,didNotHelp:0,noAnswer:0};
+    x.used++; if(u.helped==="yes") x.helped++; else if(u.helped==="little") x.helpedALittle++; else if(u.helped==="no") x.didNotHelp++; else x.noAnswer++; }
+  return Object.values(m).sort((a,b)=>b.used-a.used||a.name.localeCompare(b.name));
+}
 function providerSummaryHTML(days, withNotes){
-  const end=today(), start=addDays(end,-(days-1));
+  const R=exportRange(days), end=R.end, start=R.start; days=R.days;
   const ents=S.entries.filter(e=>e.date>=start && e.date<=end).sort((a,b)=>(a.date+a.kind).localeCompare(b.date+b.kind));
-  const dates=[...new Set(ents.map(e=>e.date))];
+  const uses=skillsInRange(start,end), visitDays=Object.keys(S.visits).filter(d=>d>=start&&d<=end);
+  const totalVisits=visitDays.reduce((n,d)=>n+S.visits[d].length,0);
+  const dates=[...new Set(ents.map(e=>e.date).concat(uses.map(u=>u.d)))].sort();
   const range=[...Array(days)].map((_,i)=>addDays(start,i));
   const dims=Object.keys(DIMENSIONS).filter(k=>FORMS.morning.sections.concat(FORMS.night.sections).some(x=>x.dim===k&&x.scale));
   const AM="#d98b3a", PM="#4a5b9b", GRID="#e6ddd0", INK="#23302a", MUTED="#6b7570";
@@ -1590,7 +1621,9 @@ function providerSummaryHTML(days, withNotes){
       }).join("");
       return rows?`<h4><span class="dot" style="background:${col}"></span>${k==="morning"?"Morning intention":"Nightly reflection"}</h4><table>${rows}</table>`:"";
     }).join("");
-    return `<section><h3>${e2(fmtDate(d))}</h3>${parts}</section>`;
+    const su=uses.filter(u=>u.d===d), vc=(S.visits[d]||[]).length;
+    const sk=su.length?`<h4><span class="dot" style="background:#2f6b52"></span>Coping skills</h4><table>${su.map(u=>`<tr><td class="a">${e2(skillById(u.id)?.name||u.id)}</td><td class="r">${e2(u.helped==="yes"?"Helped":u.helped==="little"?"Helped a little":u.helped==="no"?"Didn't help":"No answer")}</td><td>${withNotes&&u.note?e2(u.note):""}</td></tr>`).join("")}</table>`:"";
+    return `<section><h3>${e2(fmtDate(d))}</h3>${parts}${sk}${vc?`<p class="meta">Opened Bookends ${vc===1?"once":vc+" times"}</p>`:""}</section>`;
   }).join("");
 
   const nM=ents.filter(e=>e.kind==="morning").length, nN=ents.filter(e=>e.kind==="night").length;
@@ -1613,16 +1646,22 @@ table{border-collapse:collapse;width:100%;margin-bottom:6px}td{border-top:1px so
 <h2>Check-ins</h2>
 <p style="margin:0 0 6px">Checked in on <b>${dates.length}</b> of ${days} days · ${nM} morning intention${nM===1?"":"s"} · ${nN} nightly reflection${nN===1?"":"s"}</p>
 ${strip}
+${totalVisits?`<p class="meta" style="margin:6px 0 0">Opened Bookends on ${visitDays.length} of ${days} days (${totalVisits} visit${totalVisits===1?"":"s"} in total)</p>`:""}
 <h2>Average by wellness area</h2>${bars}
 <h2>Trends over time</h2><div class="trends">${trends}</div>
+${uses.length?`<h2>Coping skills</h2><p style="margin:0 0 6px">Used ${uses.length} time${uses.length===1?"":"s"} in this period. After each one, the person was asked whether it helped.</p>
+<table><tr><td class="a"><b>Skill</b></td><td><b>Group</b></td><td><b>Used</b></td><td><b>Helped</b></td><td><b>A little</b></td><td><b>Didn't help</b></td></tr>${skillSummary(uses).map(x=>`<tr><td class="a">${e2(x.name)}</td><td>${e2(x.group)}</td><td>${x.used}</td><td>${x.helped}</td><td>${x.helpedALittle}</td><td>${x.didNotHelp}</td></tr>`).join("")}</table>`:""}
 <h2>Day by day</h2>${dayBlocks||"<p>No check-ins in this range.</p>"}
 </body></html>`;
 }
 /* Same period and notes choice as the report, as structured data a provider's tools can read. */
-function providerSummaryJSON(days, withNotes){
-  const end=today(), start=addDays(end,-(days-1));
+function providerSummaryData(days, withNotes){
+  const R=exportRange(days), end=R.end, start=R.start; days=R.days;
   const ents=S.entries.filter(e=>e.date>=start && e.date<=end);
-  const dates=[...new Set(ents.map(e=>e.date))].sort();
+  const uses=skillsInRange(start,end), inR=d=>d>=start&&d<=end;
+  const visitDays=Object.keys(S.visits).filter(inR);
+  const earned=earnedBadges(S.entries), bl=badgeList();
+  const dates=[...new Set(ents.map(e=>e.date).concat(uses.map(u=>u.d),visitDays))].sort();
   const areaLabel=dim=>dim==="closing"?"Proud of":(DIMENSIONS[dim]?.label||dim);
   const questions={};
   for(const k of ["morning","night"]){
@@ -1648,22 +1687,69 @@ function providerSummaryJSON(days, withNotes){
         if(withNotes && sec.dim==="emotional" && Array.isArray(e.answers[FEEL_KEY]) && e.answers[FEEL_KEY].length) notes[FEEL_KEY]=[...e.answers[FEEL_KEY]];
       }
       out[k]=withNotes?{ratings,notes}:{ratings};
+      out[k].submittedAt=e.createdAt; if(e.updatedAt&&e.updatedAt!==e.createdAt) out[k].updatedAt=e.updatedAt;
     }
+    const su=uses.filter(u=>u.d===d);
+    if(su.length) out.skills=su.map(u=>({id:u.id, name:skillById(u.id)?.name||u.id, at:u.at, helped:HELPED_WORD[u.helped]||"no answer", ...(withNotes&&u.note?{note:u.note}:{})}));
+    if(S.visits[d]?.length) out.visits=[...S.visits[d]];
+    const bd=bl.filter(b=>earned[b.id]===d); if(bd.length) out.badges=bd.map(b=>({name:b.name,description:b.desc}));
     return out;
   });
-  return JSON.stringify({
-    source:"Bookends (bookends.day)", format:"bookends-provider-summary", version:1,
+  const catalog={}; (SKILLS.data?.skills||[]).forEach(k=>{ catalog[k.id]={name:k.name, group:groupOfSkill(k.id)?.title||"", origin:k.origin||"Adapted from DBT."}; });
+  const entryDays=new Set(ents.map(e=>e.date));
+  return {
+    source:"Bookends (bookends.day)", format:"bookends-summary", version:2,
     created:new Date().toISOString(),
+    timeZone:(()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone||null; }catch(e){ return null; } })(),
     period:{start,end,days}, includesNotes:withNotes,
+    checkInWindows:{note:"Hours on a 24-hour clock",morning:{opens:S.prefs.morningStart,closes:S.prefs.morningEnd},night:{opens:S.prefs.nightStart,closes:S.prefs.nightEnd}},
     scale:{min:1,max:5,description:"5 is the most positive end of each scale"},
-    summary:{daysCheckedIn:dates.length, morningIntentions:ents.filter(e=>e.kind==="morning").length, nightlyReflections:ents.filter(e=>e.kind==="night").length, averages},
-    questions, days:dayList
-  },null,2);
+    summary:{daysCheckedIn:entryDays.size, morningIntentions:ents.filter(e=>e.kind==="morning").length, nightlyReflections:ents.filter(e=>e.kind==="night").length, averages,
+      skillsUsed:uses.length, skills:skillSummary(uses).map(({id,...x})=>x),
+      daysOpened:visitDays.length, totalVisits:visitDays.reduce((n,d)=>n+S.visits[d].length,0),
+      badgesEarned:bl.filter(b=>earned[b.id]&&inR(earned[b.id])).length},
+    questions, skillsCatalog:catalog, days:dayList
+  };
 }
-async function downloadProviderData(days,withNotes){
-  if(!S.entries.length) return toast("No check-ins to share yet.");
-  const ok=await saveFile(`bookends-summary-${today()}.json`, providerSummaryJSON(days,withNotes), "application/json");
-  if(ok && !noteShare()) toast("Data saved. You decide who sees it.");
+const providerSummaryJSON=(days,withNotes)=>JSON.stringify(providerSummaryData(days,withNotes),null,2);
+
+/* One file for AI assistants and providers: plain-language instructions (data/insights-guide.md) plus the data as JSON */
+let insightsGuide=null;
+async function loadInsightsGuide(){
+  if(insightsGuide) return insightsGuide;
+  try{ const r=await fetch("data/insights-guide.md",{cache:"no-cache"}); if(!r.ok) throw 0; insightsGuide=(await r.text()).trim(); }
+  catch(e){ insightsGuide="# Instructions for the AI assistant\n\nMost important: you are not a substitute for a trained mental health clinician. Say so at the start, don't diagnose or act as a therapist, and encourage the person to bring anything important to a therapist, counselor, or doctor.\n\nThis is data from Bookends, a private journaling app with morning intentions and nightly reflections rated 1 to 5 (5 is most positive) across eight areas of wellness, plus coping skills and app visits. Help the person find patterns kindly: no guilt or shame, lead with what's working, keep suggestions small, don't diagnose, and if anything sounds like a crisis, gently share the 988 Suicide & Crisis Lifeline (US) or local emergency services."; }
+  return insightsGuide;
+}
+async function insightsMarkdown(days,withNotes){
+  const data=providerSummaryData(days,withNotes), guide=await loadInsightsGuide();
+  return `# My Bookends data
+
+Created ${new Date().toLocaleString()} · ${fmtDate(data.period.start)} to ${fmtDate(data.period.end)} (${data.period.days} days)${withNotes?"":" · Written notes left out"}
+
+> **Important:** an AI assistant is not a substitute for a trained mental health clinician. Use it to notice patterns, and bring anything important to a therapist, counselor, or doctor. If you're in crisis, call or text 988 in the US, or contact local emergency services.
+>
+> **How to use this file:** Upload it to an AI assistant (like Claude, ChatGPT, or Gemini) and ask something like *"What patterns do you see in my check-ins?"* or *"Which coping skills seem to help me most, and when?"* You can also share it with your therapist or counselor. The instructions below tell an AI how to read your data and how to talk with you about it.
+>
+> **Before you share:** this file includes everything from this period${withNotes?", including your written notes":""}. Once you upload it somewhere, that service's privacy terms apply, not Bookends'. You might want to remove other people's names first.
+
+---
+
+${guide}
+
+---
+
+## My data
+
+\`\`\`json
+${JSON.stringify(data)}
+\`\`\`
+`;
+}
+async function downloadInsights(days,withNotes){
+  if(!S.entries.length && !Object.keys(S.skillLog).length) return toast("No check-ins to share yet.");
+  const ok=await saveFile(`bookends-data-${today()}.md`, await insightsMarkdown(days,withNotes), "text/markdown");
+  if(ok && !noteInsights()) toast("Saved. You decide who sees it.");
 }
 async function downloadProviderSummary(days,withNotes){
   if(!S.entries.length) return toast("No check-ins to share yet.");
@@ -1720,14 +1806,17 @@ function renderSettings(){
       <p class="small muted" style="margin-top:10px">On iPhone, open the downloaded file and tap <b>Add to Calendar</b>. If you change your check-in windows later, set the reminder again.</p>
     </div>
     <div class="card" style="margin-top:14px" id="shareCard">
-      <h2 style="font-size:1.15rem">Share with your provider</h2>
-      <p class="small muted">Make a simple, printable summary of your check-ins, with charts of your ratings over time, to share with a therapist or counselor. Nothing is sent anywhere. You download it and decide who sees it.</p>
+      <h2 style="font-size:1.15rem">Share or explore your data</h2>
+      <p class="small muted">Download your check-ins, skills and visits to share with a therapist or counselor, or to explore with an AI assistant. Nothing is sent anywhere. You download it and decide who sees it.</p>
       <div class="share-opts">
-        <label class="time-row"><span>Time period</span><select id="shDays">${[7,14,30,90].map(n=>`<option value="${n}" ${n===14?"selected":""}>Last ${n} days</option>`).join("")}</select></label>
-        <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Include my written notes</b><span class="small muted">Turn off to share ratings only.</span></span><input type="checkbox" class="switch" id="shNotes" checked></label>
+        <label class="time-row"><span>Time period</span><select id="shDays">${[[7,"Last 7 days"],[14,"Last 14 days"],[30,"Last 30 days"],[90,"Last 90 days"],[0,"Everything"]].map(([n,t])=>`<option value="${n}" ${n===90?"selected":""}>${t}</option>`).join("")}</select></label>
+        <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Include my written notes</b><span class="small muted">Turn off to share ratings, skills and visits only.</span></span><input type="checkbox" class="switch" id="shNotes" checked></label>
       </div>
-      <div class="actions" style="justify-content:flex-start"><button class="btn" id="shGo" ${S.entries.length?"":"disabled"}>⬇ Download as Report (HTML)</button><button class="btn ghost" id="shJson" ${S.entries.length?"":"disabled"}>⬇ Download as Data (JSON)</button></div>
-      <p class="small muted" style="margin-top:8px">The report is easy to read and print. The data file has the same ratings and notes (if included), as structured data that your provider's software can read.</p>
+      <div class="share-note"><b>Before you share</b>
+        <span>These files include everything from the time period, including your notes if that's on. Once you upload a file to an AI service or a patient portal, that service's privacy terms apply, not Bookends'. You might want to remove other people's names first.</span>
+        <span><b>AI is not a substitute for a trained mental health clinician.</b> Use it to notice patterns, and bring anything important to a therapist, counselor, or doctor.</span></div>
+      <div class="actions" style="justify-content:flex-start"><button class="btn" id="shGo" ${S.entries.length?"":"disabled"}>⬇ Report for my provider</button><button class="btn ghost" id="shAI" ${S.entries.length||Object.keys(S.skillLog).length?"":"disabled"}>🤖 Data for AI or my provider</button></div>
+      <p class="small muted" style="margin-top:8px">The <b>report</b> is a page with charts that's easy to read and print. The <b>data file</b> has the same information as structured data, plus instructions that tell an AI assistant how to read it and how to talk with you about it. Providers' tools can read it too.</p>
     </div>
     <div class="card" style="margin-top:14px">
       <h2 style="font-size:1.15rem">Where your entries live</h2>
@@ -1759,6 +1848,7 @@ function renderSettings(){
     try{ await S.store.remove(HOME_META_KEY); S.homeDate=null; }catch(err){}
     try{ await S.store.remove(START_META_KEY); S.startDate=null; }catch(err){}
     try{ await S.store.remove(VISITS_META_KEY); S.visits={}; }catch(err){}
+    try{ await S.store.remove(INSIGHTS_META_KEY); S.insights=[]; }catch(err){}
     try{ await S.store.remove(SKILLS_META_KEY); S.skillDate=null; S.skillLog={}; }catch(err){}
     try{ await S.store.remove(SHARES_META_KEY); S.shares=[]; }catch(err){}
     try{ await S.store.remove(REMINDERS_META_KEY); S.reminders={}; }catch(err){}
@@ -1783,7 +1873,7 @@ function renderSettings(){
   });
   document.getElementById("export").onclick=downloadBackup;
   document.getElementById("shGo").onclick=()=>downloadProviderSummary(+document.getElementById("shDays").value, document.getElementById("shNotes").checked);
-  document.getElementById("shJson").onclick=()=>downloadProviderData(+document.getElementById("shDays").value, document.getElementById("shNotes").checked);
+  document.getElementById("shAI").onclick=()=>downloadInsights(+document.getElementById("shDays").value, document.getElementById("shNotes").checked);
   document.getElementById("copy").onclick=async()=>{
     const json=backupJSON();
     try{ await navigator.clipboard.writeText(json); toast("Copied to clipboard"); }
@@ -1923,6 +2013,7 @@ function confetti(count){
     const sk=all.find(e=>e.key===SKILLS_META_KEY); S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(sk?.date||"")?sk.date:null; S.skillLog=cleanSkillLog(sk?.log);
     const hm=all.find(e=>e.key===HOME_META_KEY); S.homeDate=/^\d{4}-\d{2}-\d{2}$/.test(hm?.date||"")?hm.date:null;
     const vm=all.find(e=>e.key===VISITS_META_KEY); S.visits=cleanVisits(vm?.visits);
+    const im=all.find(e=>e.key===INSIGHTS_META_KEY); S.insights=Array.isArray(im?.days)?im.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
     const sm=all.find(e=>e.key===START_META_KEY); S.startDate=/^\d{4}-\d{2}-\d{2}$/.test(sm?.date||"")?sm.date:null; S.startAt=sm?.firstVisit&&sm.at?String(sm.at):null;
     const rm=all.find(e=>e.key===REMINDERS_META_KEY); S.reminders=(rm?.reminders&&typeof rm.reminders==="object")?rm.reminders:{};
     const sh=all.find(e=>e.key===SHARES_META_KEY); S.shares=Array.isArray(sh?.days)?sh.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];

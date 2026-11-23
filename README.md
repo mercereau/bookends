@@ -23,7 +23,7 @@ The app has no accounts and no tracking, and it doesn't send your entries anywhe
 - **Daily affirmations**, three a day at most. If you keep coming back, the app nudges you to take a break from the screen. You can turn affirmations off, show them on the Today screen, or get a pop-up once a day.
 - **Your week on the shelf.** Each day is a book, colored by which check-ins you did. Tap a book to see that day's highlights.
 - **History.** Trends, past entries and a calendar.
-- **Share with your provider.** Download a printable report with charts (HTML), or the same ratings as structured data (JSON). You choose the time period and whether notes are included.
+- **Share or explore your data.** Download a printable **report for your provider** (charts, ratings, skills and visits), or a **data file for AI or your provider**: one Markdown file with your data as JSON plus plain-language instructions ([`data/insights-guide.md`](data/insights-guide.md)) that tell any AI assistant how to read it and how to talk with you about it. You choose the time period (up to everything) and whether notes are included. The guide's first rule is that an AI is not a substitute for a trained mental health clinician. Downloading the data file earns the 🤖 **Curious Mind** badge.
 - **Backup and restore** as a JSON file.
 - **Installable** on a phone's Home Screen (web app manifest and icons), with light and dark themes.
 - **Color-blind friendly mode** (Settings → Display): a palette based on Okabe & Ito, plus stripes on night marks, dashed night trend lines and check marks on answered steps, so color is never the only cue.
@@ -64,6 +64,7 @@ js/app.js               The whole app, in plain JavaScript with no dependencies
 data/affirmations.json  Affirmations, suggestions and take-a-break messages
 data/suggestions.json   Writing hints, tap-to-add ideas and the feelings wheel
 data/skills.json        Coping skills (grounding, DBT, CBT, ACT and more) for the Skills tab
+data/insights-guide.md  Instructions for AI assistants, included in the data download
 fonts/                  Self-hosted DM Sans and Fraunces (variable, Latin subset) + OFL licenses
 favicon.*, icon-*.png, apple-touch-icon.png, site.webmanifest
 _headers                Cloudflare security and caching headers
