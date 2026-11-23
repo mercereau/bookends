@@ -355,7 +355,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, startDate:null, startAt:null, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,showWriting:false,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, startDate:null, startAt:null, visits:{}, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,showWriting:false,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -569,6 +569,30 @@ function noteHomeScreen(){ // returns any badges this newly earns
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
   const after=earnedBadges(S.entries); return badgeList().filter(b=>after[b.id]&&!before[b.id]);
 }
+/* Visits: when Bookends was opened, kept privately with the rest of the data (same storage, backups, Delete all).
+   History shows only how many times per day; the timestamps are kept for later analysis (by you, an AI, or a provider).
+   A visit counts at most once per 30 minutes, so reloads and quick app switches don't inflate it. */
+const VISITS_META_KEY="meta_visits", VISIT_GAP_MS=30*60*1000, VISITS_PER_DAY_MAX=48;
+function cleanVisits(v){
+  const out={}; if(!v||typeof v!=="object") return out;
+  for(const [d,list] of Object.entries(v)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(list)){
+    const ok=[...new Set(list.map(String).filter(t=>!isNaN(new Date(t))))].sort().slice(-VISITS_PER_DAY_MAX); if(ok.length) out[d]=ok; }
+  return out;
+}
+function saveVisits(){
+  const doc={key:VISITS_META_KEY,kind:"meta",visits:S.visits,updatedAt:new Date().toISOString(),v:1};
+  affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
+}
+function lastVisitAt(){ let m=""; for(const list of Object.values(S.visits)) { const t=list[list.length-1]; if(t>m) m=t; } return m; }
+function recordVisit(){
+  if(!S.store) return false;
+  const now=new Date(), last=lastVisitAt();
+  if(last && now-new Date(last)<VISIT_GAP_MS) return false;
+  const d=today(); (S.visits[d] ||= []).push(now.toISOString()); S.visits[d]=S.visits[d].slice(-VISITS_PER_DAY_MAX);
+  saveVisits(); return true;
+}
+const visitCount=d=>(S.visits[d]||[]).length;
+const visitText=n=>n===1?"Opened Bookends once":`Opened Bookends ${n} times`;
 const START_META_KEY="meta_started";
 function noteStarted(date){ // First Steps badge: tapping "Get started" (or, for people who were here before the welcome, their first day)
   if(S.startDate) return [];
@@ -1150,9 +1174,10 @@ function dayDetailHTML(d){
     return `<div class="dd-block ${k}"><div class="dd-head"><h3>${FORMS[k].icon} ${FORMS[k].title}</h3><button class="linkbtn" data-open-k="${k}">Open</button></div>
       ${rows?`<ul class="dd-list">${rows}</ul>`:`<p class="muted small">Checked in, no answers recorded.</p>`}</div>`;
   }).join("");
-  const none=!ents.some(([,e])=>e), sk=skillsDayLogHTML(d), bd=dayBadgesListHTML(d);
+  const none=!ents.some(([,e])=>e), sk=skillsDayLogHTML(d), bd=dayBadgesListHTML(d), vc=visitCount(d);
   return `<section class="card day-detail" id="dayDetail">
       <div class="dd-top"><h2>${isToday?"Today · ":""}${fmtDate(d)}</h2><button class="xbtn" id="ddClose" aria-label="Close day">✕</button></div>
+      ${vc?`<p class="dd-visits small muted"><span aria-hidden="true">📖</span> ${visitText(vc)}</p>`:""}
       ${none&&!sk&&!bd?`<p class="muted">${isToday?"Nothing logged yet today.":"No check-ins this day. That's okay. There's always tomorrow."}</p>`:parts+sk+bd}
     </section>`;
 }
@@ -1194,7 +1219,7 @@ function renderHistory(){
 }
 /* Entries grouped by day: check-ins and skills, in the order they happened, with times */
 function historyDays(){
-  return [...new Set(S.entries.map(e=>e.date).concat(Object.keys(S.skillLog).filter(d=>S.skillLog[d].length),S.startAt&&S.startDate?[S.startDate]:[]))].filter(d=>d<=today()).sort().reverse();
+  return [...new Set(S.entries.map(e=>e.date).concat(Object.keys(S.skillLog).filter(d=>S.skillLog[d].length),S.startAt&&S.startDate?[S.startDate]:[],Object.keys(S.visits)))].filter(d=>d<=today()).sort().reverse();
 }
 const clock=iso=>{ const t=iso?new Date(iso):null; return t&&!isNaN(t)?t.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):""; };
 function dayEntryHTML(d){
@@ -1206,7 +1231,8 @@ function dayEntryHTML(d){
     ev.push({sort:r.at||"1", html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(r.at)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">🧰</span><span class="er-text"><b>${esc(k?k.name:r.id)}</b><span class="small muted"> · ${r.helped?HELPED_LABEL[r.helped]:"Used"}</span>${r.note?`<span class="er-note">${esc(r.note)}</span>`:""}</span></div></li>`}); }
   if(S.startAt && S.startDate===d) ev.push({sort:S.startAt, html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(S.startAt)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">👣</span><span class="er-text"><b>First visit</b><span class="small muted"> · Started Bookends</span></span></div></li>`});
   ev.sort((a,b)=>a.sort.localeCompare(b.sort));
-  return `<section class="card day-entry"><button class="de-head" data-day-open="${d}"><h3>${d===today()?"Today · ":""}${fmtDate(d)}</h3><span class="small muted">View day →</span></button><ul class="de-list">${ev.map(x=>x.html).join("")}</ul></section>`;
+  const vc=visitCount(d);
+  return `<section class="card day-entry"><button class="de-head" data-day-open="${d}"><h3>${d===today()?"Today · ":""}${fmtDate(d)}</h3><span class="small muted">View day →</span></button>${ev.length?`<ul class="de-list">${ev.map(x=>x.html).join("")}</ul>`:""}${vc?`<p class="de-visits small muted"><span aria-hidden="true">📖</span> ${visitText(vc)}</p>`:""}</section>`;
 }
 function trendsHTML(){
   const t=today(), days=[...Array(30)].map((_,i)=>addDays(t,i-29));
@@ -1369,6 +1395,7 @@ function renderAbout(){
   const privacy = S.store.kind==="cloud"
     ? "Your check-ins are saved to your own private space. Only you can read them. Nobody else who opens this page can see them."
     : "Your check-ins never leave this device. There's no account and no server storing them, so nobody else can read them, including me. That also means if you clear your browser data, they're gone, so use the <b>Settings</b> tab to download a backup now and then.";
+  const visitsNote=" Bookends also keeps a private record of when you open it, so History can show how often you came back. It's stored alongside your check-ins, included in your backups, and erased by Delete all.";
   $app.innerHTML = `
     <article class="about">
       <nav class="card about-toc" aria-label="On this page"><span class="small muted">On this page</span>
@@ -1409,7 +1436,7 @@ function renderAbout(){
 
       <section class="card about-privacy" id="about-privacy">
         <h2 class="sec">Your privacy<a class="anchor" href="#about-privacy" aria-label="Link to this section">#</a></h2>
-        <p>${privacy}</p>
+        <p>${privacy}${visitsNote}</p>
       </section>
 
       <section class="card about-free" id="about-free">
@@ -1485,6 +1512,7 @@ function backupJSON(){
   const all=[...S.entries].sort((a,b)=>a.key.localeCompare(b.key));
   if(Object.keys(S.affLog).length) all.push({key:AFF_META_KEY,kind:"meta",days:S.affLog,v:1});
   if(Object.keys(S.skillLog).length) all.push({key:SKILLS_META_KEY,kind:"meta",date:S.skillDate,log:S.skillLog,v:2});
+  if(Object.keys(S.visits).length) all.push({key:VISITS_META_KEY,kind:"meta",visits:S.visits,v:1});
   return JSON.stringify(all,null,2);
 }
 function lastBackup(){ try{ return localStorage.getItem(BACKUP_KEY); }catch(e){ return null; } }
@@ -1730,6 +1758,7 @@ function renderSettings(){
     try{ await S.store.remove(BACKUPS_META_KEY); S.backups=[]; }catch(err){}
     try{ await S.store.remove(HOME_META_KEY); S.homeDate=null; }catch(err){}
     try{ await S.store.remove(START_META_KEY); S.startDate=null; }catch(err){}
+    try{ await S.store.remove(VISITS_META_KEY); S.visits={}; }catch(err){}
     try{ await S.store.remove(SKILLS_META_KEY); S.skillDate=null; S.skillLog={}; }catch(err){}
     try{ await S.store.remove(SHARES_META_KEY); S.shares=[]; }catch(err){}
     try{ await S.store.remove(REMINDERS_META_KEY); S.reminders={}; }catch(err){}
@@ -1772,7 +1801,9 @@ function renderSettings(){
       for(const [d,list] of Object.entries(inc)){ const have=new Set((S.skillLog[d]||[]).map(r=>r.id+r.at)); S.skillLog[d]=(S.skillLog[d]||[]).concat(list.filter(r=>!have.has(r.id+r.at))); }
       if(!S.skillDate||(/^\d{4}-\d{2}-\d{2}$/.test(skm.date||"")&&skm.date<S.skillDate)) S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(skm.date||"")?skm.date:(Object.keys(inc).sort()[0]||S.skillDate);
       saveSkillLog(); await affSaving; }
-    toast(`Imported ${n} check-ins${meta?" + affirmation history":""}${skm?" + skills log":""}`); render();
+    const vim=arr.find(e=>e&&e.key===VISITS_META_KEY&&e.visits&&typeof e.visits==="object");
+    if(vim){ const inc=cleanVisits(vim.visits); for(const [d,list] of Object.entries(inc)) S.visits[d]=cleanVisits({[d]:(S.visits[d]||[]).concat(list)})[d]; saveVisits(); await affSaving; }
+    toast(`Imported ${n} check-ins${meta?" + affirmation history":""}${skm?" + skills log":""}${vim?" + visits":""}`); render();
   };
 }
 
@@ -1891,6 +1922,7 @@ function confetti(count){
     S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{}; S.entries = all.filter(e=>FORMS[e.kind]);
     const sk=all.find(e=>e.key===SKILLS_META_KEY); S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(sk?.date||"")?sk.date:null; S.skillLog=cleanSkillLog(sk?.log);
     const hm=all.find(e=>e.key===HOME_META_KEY); S.homeDate=/^\d{4}-\d{2}-\d{2}$/.test(hm?.date||"")?hm.date:null;
+    const vm=all.find(e=>e.key===VISITS_META_KEY); S.visits=cleanVisits(vm?.visits);
     const sm=all.find(e=>e.key===START_META_KEY); S.startDate=/^\d{4}-\d{2}-\d{2}$/.test(sm?.date||"")?sm.date:null; S.startAt=sm?.firstVisit&&sm.at?String(sm.at):null;
     const rm=all.find(e=>e.key===REMINDERS_META_KEY); S.reminders=(rm?.reminders&&typeof rm.reminders==="object")?rm.reminders:{};
     const sh=all.find(e=>e.key===SHARES_META_KEY); S.shares=Array.isArray(sh?.days)?sh.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
@@ -1899,6 +1931,8 @@ function confetti(count){
     S.prefs=normalizePrefs({...(lp||{}), ...((p&&p.prefs)||{})}); applyColorMode(S.prefs.colorMode); }
   catch(e){ S.entries=[]; toast("Couldn't load your entries — check your connection."); }
   if(/^#about-/.test(location.hash)){ S.view="about"; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v==="about")); }
+  recordVisit();
+  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && recordVisit() && S.view==="history" && !S.form){ const y=scrollY; render(); scrollTo(0,y); } });
   render();
   const homeFresh=noteHomeScreen();
   if(homeFresh.length){ render(); setTimeout(()=>celebrate(homeFresh,computeStats(S.entries)),400); } // affirmation pop-up waits until next visit

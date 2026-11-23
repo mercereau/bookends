@@ -634,3 +634,6 @@ html.text-xl .sl-top{grid-template-columns:1fr}html.text-xl .sl-res{grid-column:
 .bd-row:hover b{text-decoration:underline}
 .bd-em{font-size:1.6rem;flex:none}
 .bd-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.de-visits{margin:8px 0 0;padding-top:8px;border-top:1px dashed var(--line)}
+.de-list+.de-visits{margin-top:0}
+.dd-visits{margin:-6px 0 12px}
