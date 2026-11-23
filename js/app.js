@@ -666,14 +666,16 @@ function saveBackupLog(){ const doc={key:BACKUPS_META_KEY,kind:"meta",days:S.bac
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{}); }
 let affSaving=Promise.resolve();
 function saveAffLog(){ // one write at a time; kept with the user's entries (synced on the Claude-hosted copy)
-  const doc={key:AFF_META_KEY,kind:"meta",days:S.affLog,updatedAt:new Date().toISOString(),v:1};
+  const doc={key:AFF_META_KEY,kind:"meta",days:S.affLog,times:S.affTimes||{},updatedAt:new Date().toISOString(),v:1};
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
 }
 function revealAffirmation(){
   const st=affState(), lim=affLimit(); if(st.shown.length>=lim) return;
   const order=dailyOrder(), id=order[st.shown.length%order.length].id; st.shown.push(id); affSave(st); AFF.viewIdx=null;
   const before=earnedBadges(S.entries);
-  const day=today(); S.affLog[day]=[...new Set([...(S.affLog[day]||[]),id])]; saveAffLog();
+  const day=today(); S.affLog[day]=[...new Set([...(S.affLog[day]||[]),id])];
+  ((S.affTimes||(S.affTimes={}))[day] ||= {})[id] ||= new Date().toISOString();   // when it was read, for later analysis
+  saveAffLog();
   const now=earnedBadges(S.entries), fresh=badgeList().filter(b=>now[b.id] && !before[b.id]);
   const el=document.getElementById("aff"); if(el){ el.outerHTML=affirmCardHTML(); document.getElementById("aff").classList.add("aff-in"); bindAffirm(); }
   refreshAffEntry();
@@ -860,7 +862,10 @@ function wheelHTML(F){
 /* Writing is optional: the questions, ideas and feelings wheel stay tucked away until someone opens them
    (or already wrote something, or turned on "Always show writing questions" in Settings). */
 function writingHTML(F,sec){
-  const answered=sec.prompts.some(p=>hasVal(F.answers[p.id]));
+  // feelings picked on the wheel don't count as writing, so the note area stays closed
+  const own=p=>{ let v=String(F.answers[p.id]||""); if(p.id===WHEEL_ID && F.feelLine && v.startsWith(F.feelLine)) v=v.slice(F.feelLine.length); return v.trim(); };
+  const answered=sec.prompts.some(p=>own(p));
+  const wheelHere=!F.readOnly && wheelData() && sec.prompts.some(p=>p.id===WHEEL_ID);
   const promptHTML=p=>{ const sg=sugFor(F.kind,p.id), wheel=!F.readOnly && p.id===WHEEL_ID && wheelData();
     if(!F.readOnly && sg && !F.ideas[p.id]) F.ideas[p.id]=pickIdeas(F.kind,p.id);
     return `<div class="q"><label class="qt" for="${p.id}">${esc(p.q)}</label>
@@ -874,7 +879,9 @@ function writingHTML(F,sec){
   }
   if(S.prefs.showWriting || answered || F.writeOpen[F.step])
     return sec.prompts.map(promptHTML).join("")+(!S.prefs.showWriting && !answered?`<div class="write-hide-row"><button type="button" class="linkbtn write-hide">Hide writing</button></div>`:"");
-  return `<div class="write-closed">${sec.scale?"":sec.prompts.map(p=>`<p class="qt">${esc(p.q)}</p>`).join("")}
+  return `${wheelHere?`<div class="q wheel-q"><button type="button" class="wheel-toggle ${F.wheelOpen?"open":""}" aria-expanded="${F.wheelOpen}">🎡 ${F.wheelOpen?"Hide the feelings wheel":"Name it with the feelings wheel"}</button>
+      <div class="wheel-panel" ${F.wheelOpen?"":"hidden"}>${F.wheelOpen?wheelHTML(F):""}</div></div>`:""}
+    <div class="write-closed">${sec.scale?"":sec.prompts.map(p=>`<p class="qt">${esc(p.q)}</p>`).join("")}
     <button type="button" class="write-toggle" aria-expanded="false">✏️ ${sec.scale?"Add a note":"Write about it"} <span class="muted">(optional)</span></button></div>`;
 }
 function renderForm(){
@@ -949,11 +956,12 @@ function renderForm(){
     if(F.feel.includes(f)) F.feel=F.feel.filter(x=>x!==f);
     else if(F.feel.length>=max) return toast(`Pick up to ${max}. Tap one you chose to swap it out.`);
     else F.feel=[...F.feel,f];
-    const ta=$s.querySelector(`textarea[data-id="${WHEEL_ID}"]`); let v=ta.value;
+    const ta=$s.querySelector(`textarea[data-id="${WHEEL_ID}"]`); let v=ta?ta.value:(F.answers[WHEEL_ID]||"");
     if(F.feelLine && v.startsWith(F.feelLine)) v=v.slice(F.feelLine.length).replace(/^[ \n]+/,"");
     F.feelLine=feelLine(F.feel,F.kind);
     F.answers[FEEL_KEY]=F.feel.length?[...F.feel]:undefined;
-    setText(WHEEL_ID, F.feelLine?(v?F.feelLine+"\n"+v:F.feelLine):v);
+    const nv=F.feelLine?(v?F.feelLine+"\n"+v:F.feelLine):v;
+    if(ta) setText(WHEEL_ID,nv); else { F.answers[WHEEL_ID]=nv||undefined; refreshDot(); }
     drawWheel();
   }
   if(wt){ wt.onclick=()=>{ F.wheelOpen=!F.wheelOpen; if(F.wheelOpen&&F.wheelCore==null) F.wheelCore=null; drawWheel(); }; if(F.wheelOpen) drawWheel(); }
@@ -1542,7 +1550,7 @@ const BACKUP_KEY="ir_last_backup";
 const hasData=()=>S.entries.length>0 || Object.keys(S.affLog).length>0 || Object.keys(S.skillLog).length>0;
 function backupJSON(){
   const all=[...S.entries].sort((a,b)=>a.key.localeCompare(b.key));
-  if(Object.keys(S.affLog).length) all.push({key:AFF_META_KEY,kind:"meta",days:S.affLog,v:1});
+  if(Object.keys(S.affLog).length) all.push({key:AFF_META_KEY,kind:"meta",days:S.affLog,times:S.affTimes||{},v:1});
   if(Object.keys(S.skillLog).length) all.push({key:SKILLS_META_KEY,kind:"meta",date:S.skillDate,log:S.skillLog,v:2});
   if(Object.keys(S.visits).length) all.push({key:VISITS_META_KEY,kind:"meta",visits:S.visits,v:1});
   return JSON.stringify(all,null,2);
@@ -1578,6 +1586,8 @@ function exportRange(days){
   return {start:addDays(end,-(days-1)), end, days};
 }
 const HELPED_WORD={yes:"yes",little:"a little",no:"no"};
+let affIndex=null;
+const affById=id=>{ if(!AFF.data) return null; if(!affIndex){ affIndex={}; AFF.data.affirmations.forEach(a=>affIndex[a.id]=a); } return affIndex[id]||null; };
 function skillsInRange(start,end){
   return Object.entries(S.skillLog).filter(([d])=>d>=start&&d<=end).sort(([a],[b])=>a.localeCompare(b)).flatMap(([d,list])=>list.map(r=>({...r,d})));
 }
@@ -1682,7 +1692,8 @@ function providerSummaryData(days, withNotes){
   const uses=skillsInRange(start,end), inR=d=>d>=start&&d<=end;
   const visitDays=Object.keys(S.visits).filter(inR);
   const earned=earnedBadges(S.entries), bl=badgeList();
-  const dates=[...new Set(ents.map(e=>e.date).concat(uses.map(u=>u.d),visitDays))].sort();
+  const affDays=Object.keys(S.affLog).filter(d=>inR(d)&&S.affLog[d].length);
+  const dates=[...new Set(ents.map(e=>e.date).concat(uses.map(u=>u.d),visitDays,affDays))].sort();
   const areaLabel=dim=>dim==="closing"?"Proud of":(DIMENSIONS[dim]?.label||dim);
   const questions={};
   for(const k of ["morning","night"]){
@@ -1690,7 +1701,7 @@ function providerSummaryData(days, withNotes){
     for(const sec of FORMS[k].sections){
       if(sec.scale) questions[k][sec.scale.id]={area:areaLabel(sec.dim),type:"rating",question:sec.scale.q,low:sec.scale.low,high:sec.scale.high};
       if(withNotes) for(const pr of sec.prompts||[]) questions[k][pr.id]={area:areaLabel(sec.dim),type:"note",question:pr.q};
-      if(withNotes && sec.dim==="emotional") questions[k][FEEL_KEY]={area:areaLabel(sec.dim),type:"feelings",question:"Feelings picked from the feelings wheel (up to 3)"};
+      if(sec.dim==="emotional") questions[k][FEEL_KEY]={area:areaLabel(sec.dim),type:"feelings",question:"Feelings picked from the feelings wheel (up to 3). Optional, so many check-ins won't have any. Appears as `feelings` on a check-in."};
     }
   }
   const averages={};
@@ -1711,9 +1722,9 @@ function providerSummaryData(days, withNotes){
       for(const sec of FORMS[k].sections){
         if(sec.scale){ const r=+e.answers[sec.scale.id]; if(r) ratings[sec.scale.id]=r; }
         if(withNotes) for(const pr of sec.prompts||[]){ const t=String(e.answers[pr.id]||"").trim(); if(t) notes[pr.id]=t; }
-        if(withNotes && sec.dim==="emotional" && Array.isArray(e.answers[FEEL_KEY]) && e.answers[FEEL_KEY].length) notes[FEEL_KEY]=[...e.answers[FEEL_KEY]];
       }
       out[k]=withNotes?{ratings,notes}:{ratings};
+      if(Array.isArray(e.answers[FEEL_KEY]) && e.answers[FEEL_KEY].length) out[k].feelings=[...e.answers[FEEL_KEY]];   // tapped, not written, so included either way
       if(utc(e.startedAt)) out[k].startedAt=utc(e.startedAt);
       out[k].submittedAt=utc(e.createdAt);
       const up=utc(e.updatedAt), bulk=up&&bulkStamps.has(up);
@@ -1724,6 +1735,9 @@ function providerSummaryData(days, withNotes){
     const su=uses.filter(u=>u.d===d);
     if(su.length) out.skills=su.map(u=>({id:u.id, name:skillById(u.id)?.name||u.id, at:utc(u.at), completed:!!(u.completed||u.helped), helped:HELPED_WORD[u.helped]||"no answer", ...(withNotes&&u.note?{note:u.note}:{})}));
     if(S.visits[d]?.length) out.visits=S.visits[d].map(utc).filter(Boolean);
+    const af=(S.affLog[d]||[]).map(id=>{ const a=affById(id); const at=utc(S.affTimes?.[d]?.[id]);
+      return a?{text:a.text, type:a.type, area:a.area, ...(at?{at}:{})}:null; }).filter(Boolean);
+    if(af.length) out.affirmations=af;
     const bd=bl.filter(b=>earned[b.id]===d); if(bd.length) out.badges=bd.map(b=>({name:b.name,description:b.desc}));
     return out;
   });
@@ -1740,6 +1754,9 @@ function providerSummaryData(days, withNotes){
     summary:{daysCheckedIn:entryDays.size, morningIntentions:ents.filter(e=>e.kind==="morning").length, nightlyReflections:ents.filter(e=>e.kind==="night").length, averages,
       skillUses:uses.length, distinctSkillsUsed:new Set(uses.map(u=>u.id)).size, skills:skillSummary(uses).map(({id,...x})=>x),
       visitTrackingSince:Object.keys(S.visits).sort()[0]||null,
+      affirmationsRead:affDays.reduce((n,d)=>n+S.affLog[d].length,0), daysWithAffirmations:affDays.length,
+      affirmationTimesSince:Object.keys(S.affTimes||{}).sort()[0]||null,
+      checkInsWithFeelings:ents.filter(e=>Array.isArray(e.answers[FEEL_KEY])&&e.answers[FEEL_KEY].length).length,
       daysOpened:visitDays.length, totalVisits:visitDays.reduce((n,d)=>n+S.visits[d].length,0),
       badgesEarned:bl.filter(b=>earned[b.id]&&inR(earned[b.id])).length},
     questions, skillsCatalog:catalog, days:dayList
@@ -1921,7 +1938,9 @@ function renderSettings(){
         return {key:`${e.date}_${e.kind}`,date:e.date,kind:e.kind,answers:e.answers,...(st?{startedAt:st}:{}),createdAt:c2||now,updatedAt:utc(e.updatedAt)||c2||now,importedAt:now,...(c2?{}:{noOriginalTime:true}),v:1}; });
     let n=0; for(const e of ok){ try{ await S.store.save(e); S.entries=S.entries.filter(x=>x.key!==e.key).concat(e); n++; }catch(err){ break; } }
     const meta=arr.find(e=>e&&e.key===AFF_META_KEY&&e.days&&typeof e.days==="object");
-    if(meta){ for(const [d,ids] of Object.entries(meta.days)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(ids)) S.affLog[d]=[...new Set([...(S.affLog[d]||[]),...ids.map(String)])]; saveAffLog(); await affSaving; }
+    if(meta){ for(const [d,ids] of Object.entries(meta.days)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(ids)) S.affLog[d]=[...new Set([...(S.affLog[d]||[]),...ids.map(String)])];
+      if(meta.times&&typeof meta.times==="object") for(const [d,m] of Object.entries(meta.times)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&m&&typeof m==="object") for(const [id,t] of Object.entries(m)){ const u=utc(t); if(u) ((S.affTimes||(S.affTimes={}))[d] ||= {})[id] ||= u; }
+      saveAffLog(); await affSaving; }
     const skm=arr.find(e=>e&&e.key===SKILLS_META_KEY&&e.log&&typeof e.log==="object");
     if(skm){ const inc=cleanSkillLog(skm.log);
       for(const [d,list] of Object.entries(inc)){ const have=new Set((S.skillLog[d]||[]).map(r=>r.id+r.at)); S.skillLog[d]=(S.skillLog[d]||[]).concat(list.filter(r=>!have.has(r.id+r.at))); }
@@ -2045,7 +2064,8 @@ function confetti(count){
   S.store = await pickStore();
   await affReady;
   try{ const all = await S.store.list(); const meta=all.find(e=>e.key===AFF_META_KEY);
-    S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{}; S.entries = all.filter(e=>FORMS[e.kind]);
+    S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{};
+    S.affTimes = (meta&&meta.times&&typeof meta.times==="object")?{...meta.times}:{}; S.entries = all.filter(e=>FORMS[e.kind]);
     const sk=all.find(e=>e.key===SKILLS_META_KEY); S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(sk?.date||"")?sk.date:null; S.skillLog=cleanSkillLog(sk?.log);
     const hm=all.find(e=>e.key===HOME_META_KEY); S.homeDate=/^\d{4}-\d{2}-\d{2}$/.test(hm?.date||"")?hm.date:null;
     const vm=all.find(e=>e.key===VISITS_META_KEY); S.visits=cleanVisits(vm?.visits);

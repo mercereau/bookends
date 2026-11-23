@@ -36,7 +36,7 @@ The data is a JSON object at the end of this file. Here's what each part means:
 
 - **`period`**: the date range included, and **`timeZone`**: the person's time zone. **Every timestamp is in UTC** (ending in `Z`), so convert to their time zone before talking about times of day.
 - **`checkInWindows`**: the hours when their morning intention and nightly reflection are open.
-- **`scale`**: every rating is 1 to 5, where 5 is the most positive end. **`questions`** lists each question with its own labels for 1 and 5 (for example, 1 = "Overwhelmed" and 5 = "Balanced and Insightful").
+- **`scale`**: every rating is 1 to 5, where 5 is the most positive end. Every rating and note is optional, so expect gaps; a missing answer just means they skipped it. **`questions`** lists each question with its own labels for 1 and 5 (for example, 1 = "Overwhelmed" and 5 = "Balanced and Insightful").
 - **`days`**: one entry per day with activity. Each can include:
   - **`morning`** and **`night`**: the check-ins, with `ratings`, `notes` (if included), and `submittedAt`. The times mean:
     - `startedAt` (newer check-ins only): when they opened the check-in.
@@ -46,6 +46,8 @@ The data is a JSON object at the end of this file. Here's what each part means:
     - `timeIsImportTime: true`: the backup had no original time, so `submittedAt` is the import time. Don't read anything into it.
   - **`skills`**: coping skills used that day. Each has the time, `completed` (whether they reached the end), whether it helped (`yes`, `a little`, `no`, or `no answer`), and an optional note about what happened. Opening a skill counts as using it, even if they didn't finish. Re-opening the same skill within two minutes counts as one use.
   - **`visits`**: when they opened Bookends (counted at most once every 30 minutes). Visits are only recorded from `summary.visitTrackingSince` onward, so missing visits before that date mean nothing.
+  - **`feelings`** (on a check-in): up to three feelings they tapped on a feelings wheel. It's optional and only appears when they used it, so most check-ins won't have it. When present, it's a great window into how they felt beyond the 1 to 5 rating.
+  - **`affirmations`**: affirmations and small suggestions they read that day, each with its text, `type` (`affirmation` or `suggestion`), wellness `area`, and `at` (when it was read, recorded from `summary.affirmationTimesSince` onward). The app shows a few a day, so this shows what they chose to read, not a goal to hit.
   - **`badges`**: badges earned that day. Badges reward showing up, never the ratings.
 - **`skillsCatalog`**: every skill with its group (like "Calm my body" or "Check my thinking") and where it comes from (DBT, CBT, ACT, mindfulness, and others).
 - **`summary`**: totals and averages for the period. `skillUses` counts every use, and `distinctSkillsUsed` counts different skills. `skills` lists each one with how often it was used, completed, and helped.
@@ -61,6 +63,7 @@ Pick what's most interesting in their data. You don't need to cover everything.
 - **Connections between areas.** For example, do low sleep or physical ratings tend to come with lower emotional ratings the same day or the next day?
 - **What comes before good days and hard days.** Look at the day before, the morning intention, skills used, and themes in the notes.
 - **Coping skills.** Which skills help most, and in what situations? Do they reach for skills on hard days? Are there helpful skills they haven't used in a while?
+- **Feelings and affirmations.** Which feelings come up most, and with which ratings? Which affirmation areas do they read, and on what kinds of days?
 - **Visits.** How often do they open the app, and when? Do they come back more on harder days, even when they don't check in? That can be a sign they're looking for support.
 - **Themes in their notes** (if included). What do they keep coming back to? What helps them feel regulated? What are they proud of?
 - **Consistency, gently.** Notice when they show up, never criticize when they don't.
