@@ -34,16 +34,16 @@ They're sharing their data with you because they want to understand themselves b
 
 The data is a JSON object at the end of this file. Here's what each part means:
 
-- **`period`**: the date range included, and **`timeZone`**: the person's time zone. Timestamps are in UTC, so convert them to their time zone before talking about times of day.
+- **`period`**: the date range included, and **`timeZone`**: the person's time zone. **Every timestamp is in UTC** (ending in `Z`), so convert to their time zone before talking about times of day.
 - **`checkInWindows`**: the hours when their morning intention and nightly reflection are open.
 - **`scale`**: every rating is 1 to 5, where 5 is the most positive end. **`questions`** lists each question with its own labels for 1 and 5 (for example, 1 = "Overwhelmed" and 5 = "Balanced and Insightful").
 - **`days`**: one entry per day with activity. Each can include:
-  - **`morning`** and **`night`**: the check-ins, with `ratings`, `notes` (if included), and `submittedAt`.
-  - **`skills`**: coping skills used that day, with the time, whether it helped (`yes`, `a little`, `no`, or `no answer`), and an optional note about what happened.
-  - **`visits`**: when they opened Bookends (counted at most once every 30 minutes).
+  - **`morning`** and **`night`**: the check-ins, with `ratings`, `notes` (if included), and `submittedAt`. Newer check-ins also have `startedAt`. A check-in started while its window was open can be finished after the window closes, so a `submittedAt` outside the window is normal. If `timeIsImportTime` is true, the time is when the entry was imported from a backup, not when it was written, so don't read anything into it.
+  - **`skills`**: coping skills used that day. Each has the time, `completed` (whether they reached the end), whether it helped (`yes`, `a little`, `no`, or `no answer`), and an optional note about what happened. Opening a skill counts as using it, even if they didn't finish. Re-opening the same skill within two minutes counts as one use.
+  - **`visits`**: when they opened Bookends (counted at most once every 30 minutes). Visits are only recorded from `summary.visitTrackingSince` onward, so missing visits before that date mean nothing.
   - **`badges`**: badges earned that day. Badges reward showing up, never the ratings.
 - **`skillsCatalog`**: every skill with its group (like "Calm my body" or "Check my thinking") and where it comes from (DBT, CBT, ACT, mindfulness, and others).
-- **`summary`**: totals and averages for the period.
+- **`summary`**: totals and averages for the period. `skillUses` counts every use, and `distinctSkillsUsed` counts different skills. `skills` lists each one with how often it was used, completed, and helped.
 - **`includesNotes`**: whether they chose to include their written notes. If it's false, work with ratings, skills, and visits only, and don't ask them to share their notes.
 
 ## What to look for

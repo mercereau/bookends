@@ -790,7 +790,7 @@ function requestClose(){
 }
 function openForm(kind,date,step=0){
   const ex=getEntry(date,kind);
-  S.form={kind,date,answers:{...(ex?.answers||{})},existing:!!ex,step,dirty:false,readOnly:date<today() || (date===today() && !isOpen(kind)),ideas:{},writeOpen:{},wheelCore:null,wheelOpen:false}; // locked once its window has closed (and on finished days). A check-in started while open can still be saved after the window closes.
+  S.form={kind,date,answers:{...(ex?.answers||{})},existing:!!ex,startedAt:ex?.startedAt||new Date().toISOString(),step,dirty:false,readOnly:date<today() || (date===today() && !isOpen(kind)),ideas:{},writeOpen:{},wheelCore:null,wheelOpen:false}; // locked once its window has closed (and on finished days). A check-in started while open can still be saved after the window closes.
   const F=S.form; F.feel=Array.isArray(F.answers[FEEL_KEY])?[...F.answers[FEEL_KEY]]:[]; F.feelLine=feelLine(F.feel,F.kind);
   renderForm();
 }
@@ -983,7 +983,7 @@ async function saveForm(){
   const answers={}; Object.entries(F.answers).forEach(([k,v])=>{ if(v!==undefined && String(v).trim()!=="") answers[k]=typeof v==="string"?v.trim():v; });
   if(!Object.keys(answers).length){ btn.disabled=false; return toast("Answer at least one question first."); }
   const key=`${F.date}_${F.kind}`; const prev=getEntry(F.date,F.kind); const now=new Date().toISOString();
-  const entry={key,date:F.date,kind:F.kind,answers,createdAt:prev?.createdAt||now,updatedAt:now,v:1};
+  const entry={key,date:F.date,kind:F.kind,answers,...((prev?.startedAt||!prev)?{startedAt:prev?.startedAt||F.startedAt}:{}),createdAt:prev?.createdAt||now,updatedAt:now,v:1};
   const before=earnedBadges(S.entries);
   try{ await S.store.save(entry); }
   catch(e){ btn.disabled=false; return toast(e?.code==="quota_exceeded"?"Storage is full — export and clear old data.":"Couldn't save — check your connection and try again."); }
@@ -1074,6 +1074,7 @@ function openSkill(id){
   };
   // at the end, ask if it helped; the answer goes in today's log
   const ask=()=>{
+    if(!rec.completed){ rec.completed=true; saveSkillLog(); }
     const body=skillBg.querySelector("#skBody"), foot=skillBg.querySelector("#skFoot");
     body.innerHTML=`<div class="skill-step skill-ask"><div class="skill-key big" aria-hidden="true">💭</div><h3 id="skAskQ">Did this help?</h3>
         <p class="muted">Your answer goes in today's log, so over time you can see which skills work best for you.</p>
@@ -1113,8 +1114,11 @@ function openSkill(id){
   };
   draw();
   // opening a skill counts as using it: log it now, and the first one earns a badge (shown after the skill closes)
-  const before=earnedBadges(S.entries), day=today(), rec={id, at:new Date().toISOString()};
-  (S.skillLog[day] ||= []).push(rec);
+  const before=earnedBadges(S.entries), day=today(), nowIso=new Date().toISOString();
+  const prevUse=(S.skillLog[day]||[]).filter(r=>r.id===id).pop();
+  let rec;
+  if(prevUse && new Date(nowIso)-new Date(prevUse.at)<=REPEAT_MS && !prevUse.helped && !prevUse.note) rec=prevUse;   // a quick re-open is the same use
+  else { rec={id, at:nowIso}; (S.skillLog[day] ||= []).push(rec); }
   if(!S.skillDate) S.skillDate=day;
   saveSkillLog();
   const after=earnedBadges(S.entries); skillPendingBadges=badgeList().filter(b=>after[b.id]&&!before[b.id]);
@@ -1135,8 +1139,23 @@ function saveSkillLog(){
 function cleanSkillLog(log){
   const out={}; if(!log||typeof log!=="object") return out;
   for(const [d,list] of Object.entries(log)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(list)){
-    const ok=list.filter(r=>r&&typeof r.id==="string").map(r=>({id:r.id,at:String(r.at||""),...(HELPED_LABEL[r.helped]?{helped:r.helped}:{}),...(typeof r.note==="string"&&r.note.trim()?{note:r.note.trim().slice(0,1000)}:{})}));
-    if(ok.length) out[d]=ok; }
+    const ok=list.filter(r=>r&&typeof r.id==="string").map(r=>({id:r.id,at:String(r.at||""),...(r.completed?{completed:true}:{}),...(HELPED_LABEL[r.helped]?{helped:r.helped}:{}),...(typeof r.note==="string"&&r.note.trim()?{note:r.note.trim().slice(0,1000)}:{})}));
+    const merged=mergeQuickRepeats(ok); if(merged.length) out[d]=merged; }
+  return out;
+}
+/* Opening the same skill again within 2 minutes counts as one use (quick re-taps, accidental double opens).
+   The merged use keeps the first time and any answer or note from either. */
+const REPEAT_MS=2*60*1000;
+const hasInfo=r=>!!(r.helped||r.note||r.completed);
+function mergeQuickRepeats(list){
+  const out=[];
+  for(const r of [...list].sort((a,b)=>a.at.localeCompare(b.at))){
+    const k=out.findLast?.(x=>x.id===r.id) ?? [...out].reverse().find(x=>x.id===r.id);
+    const close=k && Math.abs(new Date(r.at)-new Date(k.at))<=REPEAT_MS;
+    if(close && (!hasInfo(k)||!hasInfo(r))){
+      Object.assign(k,{...(r.completed||k.completed?{completed:true}:{}),...((k.helped||r.helped)?{helped:k.helped||r.helped}:{}),...((k.note||r.note)?{note:k.note||r.note}:{})});
+    } else out.push({...r});
+  }
   return out;
 }
 /* Full skill log for one day in History: every skill, when, how it went, and any note */
@@ -1549,6 +1568,8 @@ async function saveFile(filename,data,mime){
 }
 
 /* ---------- Provider summary: a readable, printable page the client chooses to share ---------- */
+/* Every timestamp in exports is ISO 8601 in UTC ("...Z"), whatever format it was saved in */
+const utc=t=>{ const d=t?new Date(t):null; return d&&!isNaN(d)?d.toISOString():null; };
 /* Shared by the report and the data file. days=0 means everything since the first entry. */
 function exportRange(days){
   const end=today();
@@ -1561,8 +1582,8 @@ function skillsInRange(start,end){
   return Object.entries(S.skillLog).filter(([d])=>d>=start&&d<=end).sort(([a],[b])=>a.localeCompare(b)).flatMap(([d,list])=>list.map(r=>({...r,d})));
 }
 function skillSummary(uses){
-  const m={}; for(const u of uses){ const k=skillById(u.id); const x=m[u.id] ||= {id:u.id,name:k?k.name:u.id,group:groupOfSkill(u.id)?.title||"",used:0,helped:0,helpedALittle:0,didNotHelp:0,noAnswer:0};
-    x.used++; if(u.helped==="yes") x.helped++; else if(u.helped==="little") x.helpedALittle++; else if(u.helped==="no") x.didNotHelp++; else x.noAnswer++; }
+  const m={}; for(const u of uses){ const k=skillById(u.id); const x=m[u.id] ||= {id:u.id,name:k?k.name:u.id,group:groupOfSkill(u.id)?.title||"",used:0,completed:0,helped:0,helpedALittle:0,didNotHelp:0,noAnswer:0};
+    x.used++; if(u.completed||u.helped) x.completed++; if(u.helped==="yes") x.helped++; else if(u.helped==="little") x.helpedALittle++; else if(u.helped==="no") x.didNotHelp++; else x.noAnswer++; }
   return Object.values(m).sort((a,b)=>b.used-a.used||a.name.localeCompare(b.name));
 }
 function providerSummaryHTML(days, withNotes){
@@ -1687,25 +1708,29 @@ function providerSummaryData(days, withNotes){
         if(withNotes && sec.dim==="emotional" && Array.isArray(e.answers[FEEL_KEY]) && e.answers[FEEL_KEY].length) notes[FEEL_KEY]=[...e.answers[FEEL_KEY]];
       }
       out[k]=withNotes?{ratings,notes}:{ratings};
-      out[k].submittedAt=e.createdAt; if(e.updatedAt&&e.updatedAt!==e.createdAt) out[k].updatedAt=e.updatedAt;
+      if(utc(e.startedAt)) out[k].startedAt=utc(e.startedAt);
+      out[k].submittedAt=utc(e.createdAt); if(utc(e.updatedAt)&&utc(e.updatedAt)!==utc(e.createdAt)) out[k].updatedAt=utc(e.updatedAt);
+      if(e.importedAt) out[k].timeIsImportTime=true;
     }
     const su=uses.filter(u=>u.d===d);
-    if(su.length) out.skills=su.map(u=>({id:u.id, name:skillById(u.id)?.name||u.id, at:u.at, helped:HELPED_WORD[u.helped]||"no answer", ...(withNotes&&u.note?{note:u.note}:{})}));
-    if(S.visits[d]?.length) out.visits=[...S.visits[d]];
+    if(su.length) out.skills=su.map(u=>({id:u.id, name:skillById(u.id)?.name||u.id, at:utc(u.at), completed:!!(u.completed||u.helped), helped:HELPED_WORD[u.helped]||"no answer", ...(withNotes&&u.note?{note:u.note}:{})}));
+    if(S.visits[d]?.length) out.visits=S.visits[d].map(utc).filter(Boolean);
     const bd=bl.filter(b=>earned[b.id]===d); if(bd.length) out.badges=bd.map(b=>({name:b.name,description:b.desc}));
     return out;
   });
   const catalog={}; (SKILLS.data?.skills||[]).forEach(k=>{ catalog[k.id]={name:k.name, group:groupOfSkill(k.id)?.title||"", origin:k.origin||"Adapted from DBT."}; });
   const entryDays=new Set(ents.map(e=>e.date));
   return {
-    source:"Bookends (bookends.day)", format:"bookends-summary", version:2,
+    source:"Bookends (bookends.day)", format:"bookends-summary", version:3,
+    timestamps:"ISO 8601, all in UTC",
     created:new Date().toISOString(),
     timeZone:(()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone||null; }catch(e){ return null; } })(),
     period:{start,end,days}, includesNotes:withNotes,
     checkInWindows:{note:"Hours on a 24-hour clock",morning:{opens:S.prefs.morningStart,closes:S.prefs.morningEnd},night:{opens:S.prefs.nightStart,closes:S.prefs.nightEnd}},
     scale:{min:1,max:5,description:"5 is the most positive end of each scale"},
     summary:{daysCheckedIn:entryDays.size, morningIntentions:ents.filter(e=>e.kind==="morning").length, nightlyReflections:ents.filter(e=>e.kind==="night").length, averages,
-      skillsUsed:uses.length, skills:skillSummary(uses).map(({id,...x})=>x),
+      skillUses:uses.length, distinctSkillsUsed:new Set(uses.map(u=>u.id)).size, skills:skillSummary(uses).map(({id,...x})=>x),
+      visitTrackingSince:Object.keys(S.visits).sort()[0]||null,
       daysOpened:visitDays.length, totalVisits:visitDays.reduce((n,d)=>n+S.visits[d].length,0),
       badgesEarned:bl.filter(b=>earned[b.id]&&inR(earned[b.id])).length},
     questions, skillsCatalog:catalog, days:dayList
@@ -1882,7 +1907,8 @@ function renderSettings(){
   document.getElementById("doimp").onclick=async()=>{
     let arr; try{ arr=JSON.parse(document.getElementById("imp").value); if(!Array.isArray(arr)) throw 0; }catch(e){ return toast("That doesn't look like a valid backup."); }
     const ok=arr.filter(e=>e&&/^\d{4}-\d{2}-\d{2}$/.test(e.date)&&FORMS[e.kind]&&e.answers&&typeof e.answers==="object")
-      .map(e=>({key:`${e.date}_${e.kind}`,date:e.date,kind:e.kind,answers:e.answers,createdAt:e.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),v:1}));
+      .map(e=>{ const c=utc(e.createdAt)||new Date().toISOString(), st=utc(e.startedAt);
+        return {key:`${e.date}_${e.kind}`,date:e.date,kind:e.kind,answers:e.answers,...(st?{startedAt:st}:{}),createdAt:c,updatedAt:utc(e.updatedAt)||c,...(e.createdAt?{}:{importedAt:c}),v:1}; });
     let n=0; for(const e of ok){ try{ await S.store.save(e); S.entries=S.entries.filter(x=>x.key!==e.key).concat(e); n++; }catch(err){ break; } }
     const meta=arr.find(e=>e&&e.key===AFF_META_KEY&&e.days&&typeof e.days==="object");
     if(meta){ for(const [d,ids] of Object.entries(meta.days)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(ids)) S.affLog[d]=[...new Set([...(S.affLog[d]||[]),...ids.map(String)])]; saveAffLog(); await affSaving; }
