@@ -98,6 +98,7 @@ const FORMS = {
    Badges reward showing up, never the ratings themselves.
    ========================================================= */
 const BADGES = [
+  {id:"first-steps",  em:"👣", name:"First Steps",     desc:"Got started with Bookends. Showing up for yourself starts here.", test:s=>s.started>=1},
   {id:"first-light",  em:"🌅", name:"First Light",     desc:"Log your first morning intention", test:s=>s.mornings>=1},
   {id:"evening-glow", em:"🌙", name:"Evening Glow",    desc:"Log your first nightly reflection", test:s=>s.nights>=1},
   {id:"full-circle",  em:"⭕", name:"Full Circle",     desc:"Morning and night on the same day", test:s=>s.fullDays>=1},
@@ -321,6 +322,7 @@ function computeStats(entries, asOf=today()){
     reminders: Object.values(S.reminders||{}).filter(r=>r?.date && r.date<=asOf).length,
     skills: S.skillDate && S.skillDate<=asOf ? 1 : 0,
     homeScreen: S.homeDate && S.homeDate<=asOf ? 1 : 0,
+    started: S.startDate && S.startDate<=asOf ? 1 : 0,
     feelings: es.filter(e=>Array.isArray(e.answers.emotional_feelings) && e.answers.emotional_feelings.length).length,
     complete: es.filter(isComplete).length,
     holidays: new Set(dates.flatMap(d=>holidaysOn(d).map(h=>h.id))).size,
@@ -339,7 +341,7 @@ function affStats(asOf){
 }
 function earnedBadges(entries){
   // returns {badgeId: dateEarned}
-  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.shares||[],Object.values(S.reminders||{}).map(r=>r.date).filter(Boolean),S.homeDate?[S.homeDate]:[],S.skillDate?[S.skillDate]:[]))].filter(d=>d<=today()).sort();
+  const out={}; const dates=[...new Set(entries.map(e=>e.date).concat(Object.keys(S.affLog||{}),S.backups||[],S.shares||[],Object.values(S.reminders||{}).map(r=>r.date).filter(Boolean),S.homeDate?[S.homeDate]:[],S.startDate?[S.startDate]:[],S.skillDate?[S.skillDate]:[]))].filter(d=>d<=today()).sort();
   for(const d of dates){
     const s=computeStats(entries,d);
     for(const b of BADGES) if(!out[b.id] && b.test(s)) out[b.id]=d;
@@ -353,7 +355,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,showWriting:false,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, startDate:null, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,showWriting:false,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -564,6 +566,14 @@ function noteHomeScreen(){ // returns any badges this newly earns
   if(S.homeDate || !isHomeScreenApp()) return [];
   const before=earnedBadges(S.entries); S.homeDate=today();
   const doc={key:HOME_META_KEY,kind:"meta",date:S.homeDate,updatedAt:new Date().toISOString(),v:1};
+  affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
+  const after=earnedBadges(S.entries); return badgeList().filter(b=>after[b.id]&&!before[b.id]);
+}
+const START_META_KEY="meta_started";
+function noteStarted(date){ // First Steps badge: tapping "Get started" (or, for people who were here before the welcome, their first day)
+  if(S.startDate) return [];
+  const before=earnedBadges(S.entries); S.startDate=date||today();
+  const doc={key:START_META_KEY,kind:"meta",date:S.startDate,updatedAt:new Date().toISOString(),v:1};
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
   const after=earnedBadges(S.entries); return badgeList().filter(b=>after[b.id]&&!before[b.id]);
 }
@@ -1709,6 +1719,7 @@ function renderSettings(){
     try{ await affSaving; await S.store.remove(AFF_META_KEY); S.affLog={}; }catch(err){}
     try{ await S.store.remove(BACKUPS_META_KEY); S.backups=[]; }catch(err){}
     try{ await S.store.remove(HOME_META_KEY); S.homeDate=null; }catch(err){}
+    try{ await S.store.remove(START_META_KEY); S.startDate=null; }catch(err){}
     try{ await S.store.remove(SKILLS_META_KEY); S.skillDate=null; S.skillLog={}; }catch(err){}
     try{ await S.store.remove(SHARES_META_KEY); S.shares=[]; }catch(err){}
     try{ await S.store.remove(REMINDERS_META_KEY); S.reminders={}; }catch(err){}
@@ -1837,15 +1848,18 @@ function showWelcome(){
     <p>Bookends is a free, private place to start each day with an intention and end it with a reflection. Everything you enter ${where} with no account needed, so nobody else can read it, not even me.</p>
     ${isHomeScreenApp()?"":`<div class="welcome-home"><b>📱 For the best experience, add Bookends to your Home Screen.</b>
       <span>It opens like an app, one tap away when it's time to check in. ${how}</span></div>`}
-    <div class="actions" style="justify-content:center">${isHomeScreenApp()?"":`<button class="btn ghost" id="wHow">Show me how</button>`}<button class="btn" data-close>Get started</button></div>`,
-    el=>{ const h=el.querySelector("#wHow"); if(h) h.onclick=()=>{ closeModal(); location.hash="about-homescreen"; setView("about"); setTimeout(scrollToHash,60); };
-      setTimeout(()=>el.querySelector("[data-close]")?.focus(),30); });
+    <div class="actions" style="justify-content:center">${isHomeScreenApp()?"":`<button class="btn ghost" id="wHow">Show me how</button>`}<button class="btn" id="wGo">Get started</button></div>`,
+    el=>{ const start=()=>{ const got=noteStarted(); closeModal(); if(S.view==="today"){ const y=scrollY; render(); scrollTo(0,y); } if(got.length) setTimeout(()=>celebrate(got,computeStats(S.entries)),200); };
+      el.querySelector("#wGo").onclick=start;
+      const h=el.querySelector("#wHow"); if(h) h.onclick=()=>{ noteStarted(); closeModal(); location.hash="about-homescreen"; setView("about"); setTimeout(scrollToHash,60); };
+      setTimeout(()=>el.querySelector("#wGo")?.focus(),30); });
 }
 function celebrate(badges,s){
   confetti(160);
   modal(`<div class="big">${badges[0].em}</div><h2>${badges.length>1?"New badges!":"Badge unlocked!"}</h2>
     <p class="muted">${s.current>0?`You're on a ${s.current}-day check-in streak. `:""}Keep showing up for yourself.</p>
     <div class="list">${badges.map(b=>`<div><span class="em">${b.em}</span><span><b>${b.name}</b><br><span class="small muted">${b.desc}</span></span></div>`).join("")}</div>
+    ${badges.some(b=>b.id==="first-steps")?`<div class="badge-intro"><b>About badges</b><span>We want you to feel rewarded every time you take care of yourself. You'll earn badges for showing up, like checking in, trying a skill, or coming back after a break, never for how your day went. You can find them all in <b>History</b>.</span></div>`:""}
     <button class="btn" data-close>Thanks!</button>`);
 }
 function confetti(count){
@@ -1867,6 +1881,7 @@ function confetti(count){
     S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{}; S.entries = all.filter(e=>FORMS[e.kind]);
     const sk=all.find(e=>e.key===SKILLS_META_KEY); S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(sk?.date||"")?sk.date:null; S.skillLog=cleanSkillLog(sk?.log);
     const hm=all.find(e=>e.key===HOME_META_KEY); S.homeDate=/^\d{4}-\d{2}-\d{2}$/.test(hm?.date||"")?hm.date:null;
+    const sm=all.find(e=>e.key===START_META_KEY); S.startDate=/^\d{4}-\d{2}-\d{2}$/.test(sm?.date||"")?sm.date:null;
     const rm=all.find(e=>e.key===REMINDERS_META_KEY); S.reminders=(rm?.reminders&&typeof rm.reminders==="object")?rm.reminders:{};
     const sh=all.find(e=>e.key===SHARES_META_KEY); S.shares=Array.isArray(sh?.days)?sh.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
     const bk=all.find(e=>e.key===BACKUPS_META_KEY); S.backups=Array.isArray(bk?.days)?bk.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
@@ -1878,6 +1893,7 @@ function confetti(count){
   const homeFresh=noteHomeScreen();
   if(homeFresh.length){ render(); setTimeout(()=>celebrate(homeFresh,computeStats(S.entries)),400); } // affirmation pop-up waits until next visit
   else if(S.view==="about") setTimeout(scrollToHash,60);
-  else if(!welcomeSeen()){ if(S.entries.length||Object.keys(S.affLog).length) markWelcomed(); else showWelcome(); }   // brand-new visitors only
+  else if(!welcomeSeen()){ if(S.entries.length||Object.keys(S.affLog).length){ markWelcomed(); noteStarted(S.entries.map(e=>e.date).concat(Object.keys(S.affLog)).sort()[0]); } else showWelcome(); }   // brand-new visitors only
   else maybeAutoAffirm();
+  if(welcomeSeen() && !S.startDate && S.entries.length) noteStarted(S.entries.map(e=>e.date).sort()[0]);   // people who arrived before the welcome existed
 })();
