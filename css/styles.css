@@ -618,3 +618,9 @@ html.text-l .badges{grid-template-columns:1fr!important}
 .sl-res{grid-column:2;font-size:.88rem;color:var(--muted)}
 .sl-note{margin:6px 0 0 calc(4.6rem + 10px);white-space:pre-wrap;overflow-wrap:anywhere;font-size:.95rem}
 html.text-xl .sl-top{grid-template-columns:1fr}html.text-xl .sl-res{grid-column:1}html.text-xl .sl-note{margin-left:0}
+.write-closed{margin-top:14px}
+.write-closed .qt{display:block;margin-bottom:10px}
+.write-toggle{display:inline-flex;align-items:center;gap:6px;font:inherit;font-weight:600;padding:10px 16px;border-radius:999px;border:1.5px dashed color-mix(in srgb,var(--dc,var(--accent)) 55%,transparent);background:transparent;color:var(--ink);cursor:pointer}
+.write-toggle:hover{background:color-mix(in srgb,var(--dc,var(--accent)) 8%,transparent)}
+.write-toggle .muted{font-weight:400}
+.write-hide-row{text-align:right;margin-top:6px}

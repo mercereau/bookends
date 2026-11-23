@@ -353,7 +353,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,showWriting:false,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -699,7 +699,7 @@ function maybeAutoAffirm(){ // once per day, on the first visit, unless turned o
 
 /* ---------- Preferences (kept with the user's data; synced on the Claude-hosted copy) ---------- */
 const PREFS_KEY="meta_prefs";
-const DEFAULT_PREFS={affMode:"popup", colorMode:"standard", skillNudge:true, morningStart:5, morningEnd:12, nightStart:17, nightEnd:24};
+const DEFAULT_PREFS={affMode:"popup", colorMode:"standard", skillNudge:true, showWriting:false, morningStart:5, morningEnd:12, nightStart:17, nightEnd:24};
 const AFF_MODES=["off","embedded","popup"];
 function normalizePrefs(p){ // also upgrades the earlier on/off switches
   const out={...DEFAULT_PREFS, ...p};
@@ -707,6 +707,7 @@ function normalizePrefs(p){ // also upgrades the earlier on/off switches
   if(!("affMode" in p) && p.affEnabled===false) out.affMode="off";
   if(!["standard","cvd"].includes(out.colorMode)) out.colorMode="standard";
   out.skillNudge = out.skillNudge!==false;
+  out.showWriting = out.showWriting===true;
   for(const k of ["morningStart","morningEnd","nightStart","nightEnd"]) out[k]=Number.isInteger(+out[k])?+out[k]:DEFAULT_PREFS[k];
   fixWindows(out);
   delete out.affEnabled; delete out.affAuto; return out;
@@ -740,7 +741,7 @@ function requestClose(){
 }
 function openForm(kind,date,step=0){
   const ex=getEntry(date,kind);
-  S.form={kind,date,answers:{...(ex?.answers||{})},existing:!!ex,step,dirty:false,readOnly:date<today() || (date===today() && !isOpen(kind)),ideas:{},wheelCore:null,wheelOpen:false}; // locked once its window has closed (and on finished days). A check-in started while open can still be saved after the window closes.
+  S.form={kind,date,answers:{...(ex?.answers||{})},existing:!!ex,step,dirty:false,readOnly:date<today() || (date===today() && !isOpen(kind)),ideas:{},writeOpen:{},wheelCore:null,wheelOpen:false}; // locked once its window has closed (and on finished days). A check-in started while open can still be saved after the window closes.
   const F=S.form; F.feel=Array.isArray(F.answers[FEEL_KEY])?[...F.answers[FEEL_KEY]]:[]; F.feelLine=feelLine(F.feel,F.kind);
   renderForm();
 }
@@ -807,6 +808,26 @@ function wheelHTML(F){
       ${F.feel.length?`<div class="feel-chosen">${F.feel.map(f=>`<button type="button" class="feel on" data-f="${esc(f)}" aria-label="Remove ${esc(f)}">${esc(f)} ✕</button>`).join("")}</div>`:""}
     </div></div>`;
 }
+/* Writing is optional: the questions, ideas and feelings wheel stay tucked away until someone opens them
+   (or already wrote something, or turned on "Always show writing questions" in Settings). */
+function writingHTML(F,sec){
+  const answered=sec.prompts.some(p=>hasVal(F.answers[p.id]));
+  const promptHTML=p=>{ const sg=sugFor(F.kind,p.id), wheel=!F.readOnly && p.id===WHEEL_ID && wheelData();
+    if(!F.readOnly && sg && !F.ideas[p.id]) F.ideas[p.id]=pickIdeas(F.kind,p.id);
+    return `<div class="q"><label class="qt" for="${p.id}">${esc(p.q)}</label>
+      ${wheel?`<button type="button" class="wheel-toggle ${F.wheelOpen?"open":""}" aria-expanded="${F.wheelOpen}">🎡 ${F.wheelOpen?"Hide the feelings wheel":"Name it with the feelings wheel"}</button>
+        <div class="wheel-panel" ${F.wheelOpen?"":"hidden"}>${F.wheelOpen?wheelHTML(F):""}</div>`:""}
+      <textarea id="${p.id}" data-id="${p.id}" placeholder="${F.readOnly?"No answer":esc(sg?.hint?sg.hint+" Or skip.":"Write freely… or skip")}" ${F.readOnly?"readonly":""}>${esc(F.answers[p.id]||"")}</textarea>
+      ${F.readOnly?"":ideasHTML(F,p.id)}</div>`; };
+  if(F.readOnly){
+    const done=sec.prompts.filter(p=>hasVal(F.answers[p.id]));
+    return done.length?done.map(promptHTML).join(""):(sec.scale?"":`<p class="muted">No answer</p>`);
+  }
+  if(S.prefs.showWriting || answered || F.writeOpen[F.step])
+    return sec.prompts.map(promptHTML).join("")+(!S.prefs.showWriting && !answered?`<div class="write-hide-row"><button type="button" class="linkbtn write-hide">Hide writing</button></div>`:"");
+  return `<div class="write-closed">${sec.scale?"":sec.prompts.map(p=>`<p class="qt">${esc(p.q)}</p>`).join("")}
+    <button type="button" class="write-toggle" aria-expanded="false">✏️ ${sec.scale?"Add a note":"Write about it"} <span class="muted">(optional)</span></button></div>`;
+}
 function renderForm(){
   const F=S.form, def=FORMS[F.kind], N=def.sections.length, sec=def.sections[F.step], D=DIMENSIONS[sec.dim];
   const last=F.step===N-1, $s=sheetEl();
@@ -822,18 +843,12 @@ function renderForm(){
       return `<button class="stepdot ${i===F.step?"cur":""} ${done?"done":""}" style="--dc:${XD.color}" data-step="${i}" title="${XD.label}" aria-label="${XD.label}${done?", answered":""}" ${i===F.step?'aria-current="step"':""}>${XD.icon}</button>`;}).join("")}</div>
     <div class="sheet-body">
       <div class="stepcount">Step ${F.step+1} of ${N}</div>
-      <section class="dim step-in ${F.dir==="back"?"from-left":""}" style="--dc:${D.color}">
+      <section class="dim ${F.noAnim?"":"step-in"} ${F.dir==="back"?"from-left":""}" style="--dc:${D.color}">
         <h3><span>${D.icon}</span>${D.label}${sec.dim==="closing"?"":" Wellness"}</h3>
         ${sec.scale?`<div class="q"><label class="qt">${esc(sec.scale.q)}</label>
           <div class="scale" data-id="${sec.scale.id}">${[1,2,3,4,5].map(v=>`<button type="button" data-v="${v}" class="${+F.answers[sec.scale.id]===v?"on":""}" aria-label="${v}" ${F.readOnly?"disabled":""}>${v}</button>`).join("")}</div>
           <div class="anchors"><span>1 = ${esc(sec.scale.low)}</span><span>5 = ${esc(sec.scale.high)}</span></div></div>`:""}
-        ${sec.prompts.map(p=>{ const sg=sugFor(F.kind,p.id), wheel=!F.readOnly && p.id===WHEEL_ID && wheelData();
-          if(!F.readOnly && sg && !F.ideas[p.id]) F.ideas[p.id]=pickIdeas(F.kind,p.id);
-          return `<div class="q"><label class="qt" for="${p.id}">${esc(p.q)}</label>
-          ${wheel?`<button type="button" class="wheel-toggle ${F.wheelOpen?"open":""}" aria-expanded="${F.wheelOpen}">🎡 ${F.wheelOpen?"Hide the feelings wheel":"Name it with the feelings wheel"}</button>
-            <div class="wheel-panel" ${F.wheelOpen?"":"hidden"}>${F.wheelOpen?wheelHTML(F):""}</div>`:""}
-          <textarea id="${p.id}" data-id="${p.id}" placeholder="${F.readOnly?"No answer":esc(sg?.hint?sg.hint+" Or skip.":"Write freely… or skip")}" ${F.readOnly?"readonly":""}>${esc(F.answers[p.id]||"")}</textarea>
-          ${F.readOnly?"":ideasHTML(F,p.id)}</div>`; }).join("")}
+        ${writingHTML(F,sec)}
       </section>
       ${F.existing&&!last&&!F.readOnly?`<div style="text-align:right;margin-top:10px"><button class="linkbtn" id="savenow">Save changes now</button></div>`:""}
     </div>
@@ -844,7 +859,10 @@ function renderForm(){
         ?(F.readOnly?`<button class="btn" id="roClose">Close</button>`:`<button class="btn" id="save">${F.existing?"Save changes":"Complete ✓"}</button>`)
         :`<button class="btn" id="next">Next: ${DIMENSIONS[def.sections[F.step+1].dim].label} →</button>`}
     </div>`;
-  $s.querySelector(".sheet-body").scrollTop=0;
+  const keepScroll=F.noAnim; F.noAnim=false;
+  if(!keepScroll) $s.querySelector(".sheet-body").scrollTop=0;
+  const wo=$s.querySelector(".write-toggle"); if(wo) wo.onclick=()=>{ F.writeOpen[F.step]=true; F.noAnim=true; renderForm(); sheetEl().querySelector(".dim textarea")?.focus(); };
+  const wh=$s.querySelector(".write-hide"); if(wh) wh.onclick=()=>{ F.writeOpen[F.step]=false; F.noAnim=true; renderForm(); sheetEl().querySelector(".write-toggle")?.focus(); };
   $s.querySelector(".stepdot.cur")?.scrollIntoView({block:"nearest",inline:"nearest"});
   if(!$s.contains(document.activeElement)) setTimeout(()=>{ if(sheetBg && !$s.contains(document.activeElement)) $s.focus({preventScroll:true}); },0);
   const rc=$s.querySelector("#roClose"); if(rc) rc.onclick=()=>{ S.form=null; render(); };
@@ -1636,6 +1654,8 @@ function renderSettings(){
         ${[["off","🚫","Off","No affirmations."],["embedded","📌","On the Today screen","Shown right on the main page."],["popup","🌤️","Pop-up","Opens once a day on your first visit. A small row on the Today screen reopens it."]]
           .map(([v,ic,t,d])=>`<label class="choice ${P.affMode===v?"on":""}"><input type="radio" name="affMode" value="${v}" ${P.affMode===v?"checked":""}><span class="c-ic">${ic}</span><span class="c-t"><b>${t}</b><span class="small muted">${d}</span></span></label>`).join("")}
       </div>
+      <div class="pref-label" style="margin-top:18px"><b>Check-ins</b></div>
+      <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Always show writing questions</b><span class="small muted">Off: check-ins are just quick ratings, and you can tap "Add a note" to write. On: the questions and ideas are always open.</span></span><input type="checkbox" class="switch" id="pWrite" ${P.showWriting?"checked":""}></label>
       <div class="pref-label" style="margin-top:18px"><b>Skills</b></div>
       <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Suggest a skill on rough days</b><span class="small muted">After a low Emotional rating, Today shows a gentle link to the Skills tab.</span></span><input type="checkbox" class="switch" id="pSkill" ${P.skillNudge?"checked":""}></label>
       <div class="pref-label" style="margin-top:18px"><b>Display</b></div>
@@ -1700,6 +1720,7 @@ function renderSettings(){
   document.getElementById("pNS").onchange=setWin("nightStart","night");
   document.getElementById("pNE").onchange=setWin("nightEnd","night");
   ["morning","night"].forEach(k=>document.getElementById(`rem-${k}`).onclick=()=>setReminder(k));
+  document.getElementById("pWrite").onchange=e=>{ S.prefs.showWriting=e.target.checked; savePrefs(); };
   document.getElementById("pSkill").onchange=e=>{ S.prefs.skillNudge=e.target.checked; savePrefs(); };
   document.getElementById("pCvd").onchange=e=>{
     S.prefs.colorMode=e.target.checked?"cvd":"standard"; applyColorMode(S.prefs.colorMode); savePrefs(); render();
