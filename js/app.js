@@ -1697,6 +1697,9 @@ function providerSummaryData(days, withNotes){
   for(const k of ["morning","night"]) for(const sec of FORMS[k].sections){ if(!sec.scale) continue;
     const v=ents.filter(e=>e.kind===k).map(e=>+e.answers[sec.scale.id]).filter(Boolean);
     (averages[sec.dim] ||= {area:areaLabel(sec.dim)})[k]=v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*100)/100:null; }
+  // the same "updated" time on check-ins from different days means a backup import, not edits
+  const stampDays={}; S.entries.forEach(e=>{ const u=utc(e.updatedAt); if(u && u!==utc(e.createdAt)) (stampDays[u] ||= new Set()).add(e.date); });
+  const bulkStamps=new Set(Object.keys(stampDays).filter(u=>stampDays[u].size>=2));
   const dayList=dates.map(d=>{
     const out={date:d};
     for(const k of ["morning","night"]){
@@ -1709,8 +1712,11 @@ function providerSummaryData(days, withNotes){
       }
       out[k]=withNotes?{ratings,notes}:{ratings};
       if(utc(e.startedAt)) out[k].startedAt=utc(e.startedAt);
-      out[k].submittedAt=utc(e.createdAt); if(utc(e.updatedAt)&&utc(e.updatedAt)!==utc(e.createdAt)) out[k].updatedAt=utc(e.updatedAt);
-      if(e.importedAt) out[k].timeIsImportTime=true;
+      out[k].submittedAt=utc(e.createdAt);
+      const up=utc(e.updatedAt), bulk=up&&bulkStamps.has(up);
+      if(e.importedAt||bulk) out[k].importedAt=utc(e.importedAt)||up;          // older imports stamped every entry's "updated" time with the import time
+      if(up && up!==utc(e.createdAt) && !bulk && up!==utc(e.importedAt)) out[k].updatedAt=up;
+      if(e.noOriginalTime||(e.importedAt&&e.importedAt===e.createdAt)) out[k].timeIsImportTime=true;
     }
     const su=uses.filter(u=>u.d===d);
     if(su.length) out.skills=su.map(u=>({id:u.id, name:skillById(u.id)?.name||u.id, at:utc(u.at), completed:!!(u.completed||u.helped), helped:HELPED_WORD[u.helped]||"no answer", ...(withNotes&&u.note?{note:u.note}:{})}));
@@ -1908,7 +1914,8 @@ function renderSettings(){
     let arr; try{ arr=JSON.parse(document.getElementById("imp").value); if(!Array.isArray(arr)) throw 0; }catch(e){ return toast("That doesn't look like a valid backup."); }
     const ok=arr.filter(e=>e&&/^\d{4}-\d{2}-\d{2}$/.test(e.date)&&FORMS[e.kind]&&e.answers&&typeof e.answers==="object")
       .map(e=>{ const c=utc(e.createdAt)||new Date().toISOString(), st=utc(e.startedAt);
-        return {key:`${e.date}_${e.kind}`,date:e.date,kind:e.kind,answers:e.answers,...(st?{startedAt:st}:{}),createdAt:c,updatedAt:utc(e.updatedAt)||c,...(e.createdAt?{}:{importedAt:c}),v:1}; });
+        const now=new Date().toISOString(), c2=utc(e.createdAt);
+        return {key:`${e.date}_${e.kind}`,date:e.date,kind:e.kind,answers:e.answers,...(st?{startedAt:st}:{}),createdAt:c2||now,updatedAt:utc(e.updatedAt)||c2||now,importedAt:now,...(c2?{}:{noOriginalTime:true}),v:1}; });
     let n=0; for(const e of ok){ try{ await S.store.save(e); S.entries=S.entries.filter(x=>x.key!==e.key).concat(e); n++; }catch(err){ break; } }
     const meta=arr.find(e=>e&&e.key===AFF_META_KEY&&e.days&&typeof e.days==="object");
     if(meta){ for(const [d,ids] of Object.entries(meta.days)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(ids)) S.affLog[d]=[...new Set([...(S.affLog[d]||[]),...ids.map(String)])]; saveAffLog(); await affSaving; }

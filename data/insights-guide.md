@@ -38,7 +38,12 @@ The data is a JSON object at the end of this file. Here's what each part means:
 - **`checkInWindows`**: the hours when their morning intention and nightly reflection are open.
 - **`scale`**: every rating is 1 to 5, where 5 is the most positive end. **`questions`** lists each question with its own labels for 1 and 5 (for example, 1 = "Overwhelmed" and 5 = "Balanced and Insightful").
 - **`days`**: one entry per day with activity. Each can include:
-  - **`morning`** and **`night`**: the check-ins, with `ratings`, `notes` (if included), and `submittedAt`. Newer check-ins also have `startedAt`. A check-in started while its window was open can be finished after the window closes, so a `submittedAt` outside the window is normal. If `timeIsImportTime` is true, the time is when the entry was imported from a backup, not when it was written, so don't read anything into it.
+  - **`morning`** and **`night`**: the check-ins, with `ratings`, `notes` (if included), and `submittedAt`. The times mean:
+    - `startedAt` (newer check-ins only): when they opened the check-in.
+    - `submittedAt`: when they first saved it. A check-in started while its window was open can be finished after the window closes, so a `submittedAt` outside the window is normal.
+    - `updatedAt` (only when present): the last time they edited it after submitting. It's left out when there were no edits.
+    - `importedAt`: when the entry was restored from a backup. It says nothing about when they wrote or edited it.
+    - `timeIsImportTime: true`: the backup had no original time, so `submittedAt` is the import time. Don't read anything into it.
   - **`skills`**: coping skills used that day. Each has the time, `completed` (whether they reached the end), whether it helped (`yes`, `a little`, `no`, or `no answer`), and an optional note about what happened. Opening a skill counts as using it, even if they didn't finish. Re-opening the same skill within two minutes counts as one use.
   - **`visits`**: when they opened Bookends (counted at most once every 30 minutes). Visits are only recorded from `summary.visitTrackingSince` onward, so missing visits before that date mean nothing.
   - **`badges`**: badges earned that day. Badges reward showing up, never the ratings.
