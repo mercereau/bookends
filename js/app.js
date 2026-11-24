@@ -1258,10 +1258,12 @@ function lowHeadline(lows){
 function roughDay(){
   if(!SKILLS.data) return null;
   const t=today(), ents=["morning","night"].map(k=>getEntry(t,k)).filter(Boolean);
-  let hidden=false; try{ hidden=localStorage.getItem(SKILL_NUDGE_KEY)===t; }catch(e){}
-  // the card stays for an hour after the latest check-in with a low rating was saved, then goes away on its own
+  // The card shows for an hour after today's latest change to a check-in, while any check-in today has a low rating.
+  // Saving or editing either check-in restarts the hour and brings it back, even after "Not now".
   const lowEnts=S.prefs.skillNudge?ents.filter(e=>lowAreas([e]).length):[];
-  const savedAt=Math.max(0,...lowEnts.map(e=>+new Date(e.updatedAt||e.createdAt)||0)), left=savedAt+SKILL_NUDGE_MS-Date.now();
+  const savedAt=lowEnts.length?Math.max(0,...ents.map(e=>+new Date(e.updatedAt||e.createdAt)||0)):0, left=savedAt+SKILL_NUDGE_MS-Date.now();
+  let hidden=false;
+  try{ const v=localStorage.getItem(SKILL_NUDGE_KEY)||"", at=/^\d{4}-\d{2}-\d{2}$/.test(v)?+parse(v):+new Date(v); hidden=!!v && at>=savedAt; }catch(e){}   // "Not now" only covers changes made before it was tapped
   clearTimeout(skillNudgeTimer);
   const fresh=lowEnts.length && left>0;
   if(fresh) skillNudgeTimer=setTimeout(()=>{ if(S.view==="today" && !S.form){ const y=scrollY; render(); scrollTo(0,y); } }, left+500);
@@ -1284,7 +1286,7 @@ function skillLinkHTML(){
 function bindSkillLink(){
   const b=document.getElementById("toSkills"); if(b) b.onclick=()=>setView("skills");
   document.querySelectorAll("[data-try]").forEach(b=>b.onclick=()=>openSkill(b.dataset.try));
-  const h=document.getElementById("hideNudge"); if(h) h.onclick=()=>{ try{ localStorage.setItem(SKILL_NUDGE_KEY,today()); }catch(e){} render(); };
+  const h=document.getElementById("hideNudge"); if(h) h.onclick=()=>{ try{ localStorage.setItem(SKILL_NUDGE_KEY,new Date().toISOString()); }catch(e){} render(); };
 }
 
 /* ---------- History ---------- */
