@@ -302,6 +302,9 @@ const SKILL_GROUP_BADGES={
 };
 function skillBadges(out){
   const G=SKILLS.data?.groups; if(!G) return;
+  // trying a suggested skill on a hard day: earned once, for the action, never for the rating
+  const tried=Object.keys(S.nudges||{}).filter(d=>d<=today()&&S.nudges[d].some(x=>x.action==="opened")).sort()[0];
+  if(tried){ DYN_BADGES["nudge-tried"]={id:"nudge-tried",em:"🫶",name:"Showed Up Anyway",desc:"Tried a suggested skill on a hard day"}; if(!out["nudge-tried"]) out["nudge-tried"]=tried; }
   const uses=Object.keys(S.skillLog||{}).filter(d=>d<=today()).sort().flatMap(d=>skillUsesOn(d).map(r=>({...r,d})));
   if(!uses.length) return;
   const add=(id,b,d)=>{ DYN_BADGES[id]={id,...b}; if(!out[id]) out[id]=d; };
@@ -1315,7 +1318,12 @@ function bindSkillLink(){
   const dismiss=()=>{ try{ localStorage.setItem(SKILL_NUDGE_KEY,new Date().toISOString()); }catch(e){} };
   const b=document.getElementById("toSkills"); if(b) b.onclick=()=>{ if(r) logNudge("all skills",r); setView("skills"); };
   // tapping the suggested skill opens it and clears the card from Today
-  document.querySelectorAll("[data-try]").forEach(b=>b.onclick=()=>{ if(r) logNudge("opened",r); dismiss(); openSkill(b.dataset.try,{fromNudge:true}); if(S.view==="today"&&!S.form){ const y=scrollY; render(); scrollTo(0,y); } });
+  document.querySelectorAll("[data-try]").forEach(b=>b.onclick=()=>{
+    const before=earnedBadges(S.entries);
+    if(r) logNudge("opened",r); dismiss(); openSkill(b.dataset.try,{fromNudge:true});
+    const after=earnedBadges(S.entries), got=badgeList().filter(x=>after[x.id]&&!before[x.id]&&!skillPendingBadges.some(y=>y.id===x.id));
+    skillPendingBadges=skillPendingBadges.concat(got);       // celebrated after the skill closes
+    if(S.view==="today"&&!S.form){ const y=scrollY; render(); scrollTo(0,y); } });
   const h=document.getElementById("hideNudge"); if(h) h.onclick=()=>{ if(r) logNudge("dismissed",r); dismiss(); render(); };
 }
 
@@ -2173,9 +2181,10 @@ function showWelcome(){
       setTimeout(()=>el.querySelector("#wGo")?.focus(),30); });
 }
 function celebrate(badges,s){
-  confetti(160);
-  modal(`<div class="big">${badges[0].em}</div><h2>${badges.length>1?"New badges!":"Badge unlocked!"}</h2>
-    <p class="muted">${s.current>0?`You're on a ${s.current}-day check-in streak. `:""}Keep showing up for yourself.</p>
+  const gentle=badges.some(b=>b.id==="nudge-tried");   // after a hard moment: less confetti, warmer words
+  confetti(gentle?35:160);
+  modal(`<div class="big">${(gentle?badges.find(b=>b.id==="nudge-tried"):badges[0]).em}</div><h2>${badges.length>1?"New badges!":"Badge unlocked!"}</h2>
+    <p class="muted">${gentle?"Taking care of yourself on a hard day counts, and it isn't always easy. ":s.current>0?`You're on a ${s.current}-day check-in streak. `:""}Keep showing up for yourself.</p>
     <div class="list">${badges.map(b=>`<div><span class="em">${b.em}</span><span><b>${b.name}</b><br><span class="small muted">${b.desc}</span></span></div>`).join("")}</div>
     ${badges.some(b=>b.id==="first-steps")?`<div class="badge-intro"><b>About badges</b><span>We want you to feel rewarded every time you take care of yourself. You'll earn badges for showing up, like checking in, trying a skill, or coming back after a break, never for how your day went. You can find them all in <b>History</b>.</span></div>`:""}
     <button class="btn" data-close>Thanks!</button>`);
