@@ -1214,58 +1214,74 @@ function skillsDayHTML(d){
 /* A gentle link on Today. After a low Emotional rating today, it gets a warmer message (can be turned off in Settings). */
 /* Skill suggestions after low ratings (1 or 2). The area-to-skill matches live in data/skills.json → "suggestions".
    Skills that have helped before come first; ones that keep not helping drop back. */
-const LOW_RATING=2;
+const LOW_RATING=2, SKILL_NUDGE_MS=60*60*1000;
+let skillNudgeTimer=null;
+// When areas tie on their rating, the more important one comes first. Everything else shares the last rank.
+const AREA_RANK={emotional:0, social:1, spiritual:2, physical:2};
+const areaRank=dim=>AREA_RANK[dim]??3;
 function lowAreas(entries){
   const A=SKILLS.data?.suggestions?.areas||{}, m={};
   for(const e of entries) for(const sec of FORMS[e.kind].sections){
     if(!sec.scale||!A[sec.dim]) continue; const v=+e.answers[sec.scale.id];
     if(v && v<=LOW_RATING) m[sec.dim]=Math.min(m[sec.dim]||9,v); }
-  return Object.entries(m).sort((x,y)=>x[1]-y[1]).map(([dim,v])=>({dim,v}));
+  const order=Object.keys(DIMENSIONS);
+  return Object.entries(m).sort((x,y)=>x[1]-y[1]||areaRank(x[0])-areaRank(y[0])||order.indexOf(x[0])-order.indexOf(y[0])).map(([dim,v])=>({dim,v}));
 }
 function skillHistory(){
   const h={}; for(const d of Object.keys(S.skillLog)) for(const r of skillUsesOn(d)){ const x=h[r.id] ||= {yes:0,little:0,no:0}; if(x[r.helped]!=null) x[r.helped]++; }
   return h;
 }
-function suggestSkills(lows,kind,max=2){
-  const SG=SKILLS.data?.suggestions; if(!SG||!lows.length) return [];
-  const hist=skillHistory(), score={}, why={};
-  lows.forEach(({dim,v})=>{ const list=SG.areas[dim]?.skills||[], w=LOW_RATING+1-v;   // a 1 counts double
-    list.forEach((id,i)=>{ score[id]=(score[id]||0)+w*(1+(list.length-i)/list.length); if(!why[id]) why[id]=dim; }); });
-  for(const id of Object.keys(score)){
-    if((SG[kind]||[]).includes(id)) score[id]+=0.75;                         // fits the time of day
-    const x=hist[id]; if(!x) continue;
-    if(x.no>=2 && !x.yes && !x.little){ delete score[id]; continue; }      // hasn't helped, more than once
-    score[id]+=Math.min(4,x.yes*1.5+x.little*0.75)-x.no*0.5; }
-  return Object.keys(score).filter(id=>skillById(id)).sort((a,b)=>score[b]-score[a]).slice(0,max)
-    .map(id=>({id,dim:why[id],helped:!!(hist[id]&&(hist[id].yes||hist[id].little))}));
+/* One suggestion: the lowest-rated area (ties go to the higher-ranked area), then the best skill for it:
+   one that has helped before, otherwise the first on that area's list (time of day breaks a near-tie).
+   A skill that didn't help two or more times, and never helped, is skipped. */
+function suggestSkill(lows,kind){
+  const SG=SKILLS.data?.suggestions; if(!SG) return null;
+  const hist=skillHistory();
+  const skip=id=>{ const x=hist[id]; return !skillById(id) || (x && x.no>=2 && !x.yes && !x.little); };
+  for(const {dim} of lows){
+    const list=(SG.areas[dim]?.skills||[]).filter(id=>!skip(id)); if(!list.length) continue;
+    const helped=list.filter(id=>hist[id]&&(hist[id].yes||hist[id].little))
+      .sort((a,b)=>(hist[b].yes*2+hist[b].little)-(hist[a].yes*2+hist[a].little)||list.indexOf(a)-list.indexOf(b));
+    if(helped.length) return {id:helped[0],dim,helped:true};
+    const tod=SG[kind]||[];
+    const pick=(list[1] && tod.includes(list[1]) && !tod.includes(list[0]))?list[1]:list[0];
+    return {id:pick,dim,helped:false};
+  }
+  return null;
 }
 const areaName=dim=>DIMENSIONS[dim]?.label||dim;
 function lowHeadline(lows){
   return lows.length===1?`${areaName(lows[0].dim)} sounds hard right now.`:lows.length===2?`${areaName(lows[0].dim)} and ${areaName(lows[1].dim)} sound hard right now.`:"A few areas sound hard right now.";
 }
-function suggestionHTML(lows,sugs){
-  if(!sugs.length) return "";
-  const note=SKILLS.data.suggestions.areas[lows[0].dim]?.note;
+function suggestionHTML(lows,sug){
+  if(!sug) return "";
+  const note=SKILLS.data.suggestions.areas[sug.dim]?.note, k=skillById(sug.id);
   return `<div class="suggest"><b>${esc(lowHeadline(lows))}</b>
     <span class="muted">Thanks for being honest. A short skill might help.${note?" "+esc(note):""}</span>
-    <div class="suggest-list">${sugs.map(x=>{ const k=skillById(x.id); return `<button class="suggest-skill" data-sk="${x.id}"><span class="sg-name">${esc(k.name)} <span aria-hidden="true">→</span></span><span class="small muted">${esc(k.tagline)}</span><span class="sg-why">${x.helped?"💛 Helped you before":`For ${esc(areaName(x.dim))}`}</span></button>`; }).join("")}</div>
+    <div class="suggest-list"><button class="suggest-skill" data-sk="${sug.id}"><span class="sg-name">${esc(k.name)} <span aria-hidden="true">→</span></span><span class="small muted">${esc(k.tagline)}</span><span class="sg-why">${sug.helped?`💛 Helped you before · For ${esc(areaName(sug.dim))}`:`For ${esc(areaName(sug.dim))}`}</span></button></div>
     ${lows.some(l=>l.dim==="emotional"&&l.v===1)?CRISIS_LINE:""}</div>`;
 }
 function bindSuggestions(el){ el.querySelectorAll("[data-sk]").forEach(b=>b.onclick=()=>{ closeModal(); openSkill(b.dataset.sk); }); }
 /* After saving a new check-in with low ratings: a gentle note with one or two skills */
 function postSaveSuggestion(entry){
   if(!S.prefs.skillNudge || !SKILLS.data) return null;
-  const lows=lowAreas([entry]), sugs=suggestSkills(lows,entry.kind);
-  return sugs.length?suggestionHTML(lows,sugs):null;
+  const lows=lowAreas([entry]), sug=suggestSkill(lows,entry.kind);
+  return sug?suggestionHTML(lows,sug):null;
 }
 /* Today: a "Rough day?" card when any check-in today has low ratings, otherwise a small link */
 function skillLinkHTML(){
   if(!SKILLS.data) return "";
   const t=today(), ents=["morning","night"].map(k=>getEntry(t,k)).filter(Boolean);
   let hidden=false; try{ hidden=localStorage.getItem(SKILL_NUDGE_KEY)===t; }catch(e){}
-  const lows=S.prefs.skillNudge?lowAreas(ents):[], kind=getEntry(t,"night")?"night":"morning", sugs=suggestSkills(lows,kind);
-  if(sugs.length && !hidden) return `<div class="card skill-nudge"><div><b>Rough day?</b> <span class="muted">${esc(lowHeadline(lows))} A short skill might help.</span></div>
-      <div class="skill-nudge-actions">${sugs.map((x,i)=>`<button class="btn ${i?"ghost":""}" data-try="${x.id}">${x.helped?"💛 ":""}Try ${esc(skillById(x.id).name)}</button>`).join("")}<button class="linkbtn" id="toSkills">All skills</button><button class="linkbtn" id="hideNudge">Not now</button></div></div>`;
+  // the card stays for an hour after the latest check-in with a low rating was saved, then goes away on its own
+  const lowEnts=S.prefs.skillNudge?ents.filter(e=>lowAreas([e]).length):[];
+  const savedAt=Math.max(0,...lowEnts.map(e=>+new Date(e.updatedAt||e.createdAt)||0)), left=savedAt+SKILL_NUDGE_MS-Date.now();
+  clearTimeout(skillNudgeTimer);
+  const fresh=lowEnts.length && left>0;
+  if(fresh) skillNudgeTimer=setTimeout(()=>{ if(S.view==="today" && !S.form){ const y=scrollY; render(); scrollTo(0,y); } }, left+500);
+  const lows=fresh?lowAreas(lowEnts):[], kind=getEntry(t,"night")?"night":"morning", sug=suggestSkill(lows,kind);
+  if(sug && !hidden) return `<div class="card skill-nudge"><div><b>Rough day?</b> <span class="muted">${esc(lowHeadline(lows))} A short skill might help.</span></div>
+      <div class="skill-nudge-actions"><button class="btn" data-try="${sug.id}">${sug.helped?"💛 ":""}Try ${esc(skillById(sug.id).name)}</button><button class="linkbtn" id="toSkills">All skills</button><button class="linkbtn" id="hideNudge">Not now</button></div></div>`;
   return `<button class="skill-link" id="toSkills">🧰 Feeling overwhelmed? Try a coping skill →</button>`;
 }
 function bindSkillLink(){

@@ -126,7 +126,9 @@ Check that the file is still valid JSON with `python3 -m json.tool data/suggesti
 `data/skills.json` has a `suggestions` section that decides which skills Bookends suggests after a rating of 1 or 2:
 
 - `areas`: for each wellness area, a list of skill ids, best fit first. An optional `note` softens the suggestion for areas where the cause is usually practical (like money or work).
-- `morning` and `night`: skills that get a small boost at that time of day.
+- `morning` and `night`: used to break a near-tie between the top two skills for an area.
+
+Bookends suggests one skill, from the lowest-rated area (ties go to Emotional, then Social, then Spiritual and Physical, then the rest). That ranking is `AREA_RANK` in `js/app.js`.
 
 Every id must match a skill in the same file. Keep suggestions gentle, and never suggest that a skill fixes a practical problem.
 
