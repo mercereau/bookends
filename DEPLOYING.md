@@ -50,7 +50,7 @@ From now on, **every push to `main` deploys automatically.**
 
 > **Workers vs. Pages:** depending on which screen you start from, Cloudflare creates either a *Pages* project (ending in `.pages.dev`) or a *Worker* (ending in `.workers.dev`). Either one works for Bookends.
 >
-> If you end up with a Worker, Cloudflare may open a pull request on your repo that adds a `wrangler.jsonc` config file. Merging it is fine.
+> If you end up with a Worker, edit `name` in the repo's `wrangler.jsonc` to match the name you gave it.
 
 ## 4. Add your own domain (optional)
 
@@ -91,6 +91,26 @@ Leave Cloudflare's automatic HTTPS turned on. Some browser features the app uses
 `_headers` sets a strict Content Security Policy: scripts, styles, fonts and data can only load from your own site.
 
 If you add something that loads from another site, add that site's address to the policy in `_headers`, or the browser will block it. For example, Cloudflare Web Analytics needs `https://static.cloudflareinsights.com` added to `script-src`.
+
+## Page not found (404)
+
+Bookends includes a friendly `404.html` for links that don't go anywhere.
+
+- **Pages project:** nothing to do. Pages serves `404.html` automatically.
+- **Worker:** the repo's `wrangler.jsonc` already sets `not_found_handling` to `"404-page"` under `assets`. Change its `name` to match your Worker's name in the Cloudflare dashboard. (Without this setting, a missing page shows a blank 404.) `.assetsignore` keeps files like `.git` and `wrangler.jsonc` from being served.
+
+```jsonc
+{
+  "name": "bookends",            // your Worker's name
+  "compatibility_date": "2026-11-24",
+  "assets": {
+    "directory": ".",
+    "not_found_handling": "404-page"
+  }
+}
+```
+
+If you deploy as a Pages project instead, you can delete `wrangler.jsonc` and `.assetsignore`.
 
 ## Other ways to deploy
 

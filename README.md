@@ -60,6 +60,7 @@ Before a release, run an automated check such as [axe](https://www.deque.com/axe
 
 ```
 index.html              The single page: header, tabs, footer, font loading
+404.html                Friendly "page not found" page (see DEPLOYING.md to turn it on for Workers)
 css/styles.css          All styles, including dark mode and phone layouts
 js/app.js               The whole app, in plain JavaScript with no dependencies
 data/affirmations.json  Affirmations, suggestions and take-a-break messages
@@ -69,6 +70,8 @@ data/insights-guide.md  Instructions for AI assistants, included in the data dow
 fonts/                  Self-hosted DM Sans and Fraunces (variable, Latin subset) + OFL licenses
 favicon.*, icon-*.png, apple-touch-icon.png, site.webmanifest
 _headers                Cloudflare security and caching headers
+wrangler.jsonc          Cloudflare Worker config (serves 404.html for missing pages)
+.assetsignore           Repo files that aren't served
 robots.txt
 ```
 
