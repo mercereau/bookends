@@ -60,6 +60,7 @@ Before a release, run an automated check such as [axe](https://www.deque.com/axe
 
 ```
 index.html              The single page: header, tabs, footer, font loading
+404.html                Friendly "page not found" page (see DEPLOYING.md to turn it on for Workers)
 css/styles.css          All styles, including dark mode and phone layouts
 js/app.js               The whole app, in plain JavaScript with no dependencies
 data/affirmations.json  Affirmations, suggestions and take-a-break messages

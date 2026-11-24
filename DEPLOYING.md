@@ -92,6 +92,26 @@ Leave Cloudflare's automatic HTTPS turned on. Some browser features the app uses
 
 If you add something that loads from another site, add that site's address to the policy in `_headers`, or the browser will block it. For example, Cloudflare Web Analytics needs `https://static.cloudflareinsights.com` added to `script-src`.
 
+## Page not found (404)
+
+Bookends includes a friendly `404.html` for links that don't go anywhere.
+
+- **Pages project:** nothing to do. Pages serves `404.html` automatically.
+- **Worker:** turn it on in your `wrangler.jsonc` by setting `not_found_handling` to `"404-page"` under `assets`. Without it, a missing page shows a blank 404.
+
+```jsonc
+{
+  "name": "bookends",            // your Worker's name
+  "compatibility_date": "2026-11-24",
+  "assets": {
+    "directory": ".",
+    "not_found_handling": "404-page"
+  }
+}
+```
+
+If Cloudflare already added a `wrangler.jsonc` to your repo, just add the `not_found_handling` line to its `assets` section.
+
 ## Other ways to deploy
 
 **Drag and drop:** In **Workers & Pages → Create → Pages**, choose **Drag and drop your files** and upload the folder. It's quick, but you'll have to upload again for every change, and the project can't be connected to Git later.

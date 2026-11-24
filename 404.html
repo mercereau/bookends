@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="text-scale" content="scale">
+<meta name="robots" content="noindex">
+<title>Page not found | Bookends</title>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#2f6b52">
+<style>
+/* Self-hosted fonts (SIL Open Font License, see fonts/LICENSE-*). Absolute paths, since this page can show up at any address. */
+@font-face{font-family:"DM Sans";src:url("/fonts/dm-sans.woff2") format("woff2");font-weight:100 1000;font-style:normal;font-display:swap}
+@font-face{font-family:"Fraunces";src:url("/fonts/fraunces-opsz.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+.nf{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px 16px;box-sizing:border-box}
+.nf-card{max-width:30rem;width:100%;text-align:center;padding:32px 24px}
+.nf-mark{width:56px;height:56px;display:block;margin:0 auto 10px}
+.nf h1{font-family:Fraunces,Georgia,serif;font-size:clamp(1.6rem,6vw,2.1rem);line-height:1.15;margin:0 0 10px}
+.nf p{margin:0 0 14px}
+.nf-shelf{display:block;width:100%;max-width:17rem;height:auto;margin:6px auto 18px}
+.nf-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:20px}
+.nf a.btn{display:inline-block;text-decoration:none}
+.nf a.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
+.nf-note{font-size:.92rem}
+</style>
+<!-- Keep the ?v= in step with index.html when you bump it -->
+<link rel="stylesheet" href="/css/styles.css?v=64">
+</head>
+<body>
+<main class="nf">
+  <div class="card nf-card">
+    <svg class="nf-mark" viewBox="60 50 120 120" aria-hidden="true">
+      <path d="M90 62H70V158H90" fill="none" stroke="var(--morning)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M150 62H170V158H150" fill="none" stroke="var(--night)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M120 80A30 30 0 0 0 120 140Z" fill="var(--morning)"/><path d="M120 80A30 30 0 0 1 120 140Z" fill="var(--night)"/>
+    </svg>
+    <h1>This page isn't on the shelf</h1>
+    <svg class="nf-shelf" viewBox="0 0 212 110" role="img" aria-label="A bookshelf with one empty spot where a book is missing">
+      <path d="M22 18H10V92H22" fill="none" stroke="var(--morning)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M190 18H202V92H190" fill="none" stroke="var(--night)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="30" y="30" width="28" height="62" rx="4" fill="var(--morning)" opacity=".85"/>
+      <rect x="62" y="22" width="28" height="70" rx="4" fill="var(--night)" opacity=".85"/>
+      <rect x="94" y="36" width="28" height="56" rx="4" fill="var(--accent)" opacity=".8"/>
+      <rect x="128" y="28" width="28" height="64" rx="4" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 5"/>
+      <text x="142" y="66" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="22" fill="var(--muted)">?</text>
+      <rect x="162" y="32" width="28" height="60" rx="4" fill="var(--morning)" opacity=".6"/>
+      <rect x="6" y="94" width="200" height="8" rx="3" fill="var(--line)"/>
+    </svg>
+    <p>The page you're looking for wandered off, or the link might have a typo.</p>
+    <p class="muted nf-note">Your check-ins are safe. They're saved with Bookends, not on this page.</p>
+    <div class="nf-actions">
+      <a class="btn" href="/">Back to Bookends</a>
+      <a class="btn ghost" href="/#about-privacy">How your data stays private</a>
+    </div>
+  </div>
+</main>
+</body>
+</html>
