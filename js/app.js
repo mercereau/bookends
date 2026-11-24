@@ -385,7 +385,7 @@ function earnedBadges(entries){
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, startDate:null, startAt:null, visits:{}, insights:[], shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,showWriting:false,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, startDate:null, startAt:null, visits:{}, insights:[], nudges:{}, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,showWriting:false,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -1077,7 +1077,7 @@ function renderSkills(){
       <p class="small">${D.learnMore.links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)} ↗</a>`).join(" · ")}</p></div>`;
   document.querySelectorAll("[data-skill]").forEach(b=>b.onclick=()=>openSkill(b.dataset.skill));
 }
-function openSkill(id){
+function openSkill(id,opts={}){
   const k=skillById(id); if(!k) return;
   closeSkill(true);
   const g=groupOfSkill(id), st={i:0, all:false};
@@ -1156,6 +1156,7 @@ function openSkill(id){
   let rec;
   if(prevUse && new Date(nowIso)-new Date(prevUse.at)<=REPEAT_MS && !prevUse.helped && !prevUse.note) rec=prevUse;   // a quick re-open is the same use
   else { rec={id, at:nowIso}; (S.skillLog[day] ||= []).push(rec); }
+  if(opts.fromNudge) rec.fromNudge=true;
   if(!S.skillDate) S.skillDate=day;
   saveSkillLog();
   const after=earnedBadges(S.entries); skillPendingBadges=badgeList().filter(b=>after[b.id]&&!before[b.id]);
@@ -1176,7 +1177,7 @@ function saveSkillLog(){
 function cleanSkillLog(log){
   const out={}; if(!log||typeof log!=="object") return out;
   for(const [d,list] of Object.entries(log)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(list)){
-    const ok=list.filter(r=>r&&typeof r.id==="string").map(r=>({id:r.id,at:String(r.at||""),...(r.completed?{completed:true}:{}),...(HELPED_LABEL[r.helped]?{helped:r.helped}:{}),...(typeof r.note==="string"&&r.note.trim()?{note:r.note.trim().slice(0,1000)}:{})}));
+    const ok=list.filter(r=>r&&typeof r.id==="string").map(r=>({id:r.id,at:String(r.at||""),...(r.completed?{completed:true}:{}),...(r.fromNudge?{fromNudge:true}:{}),...(HELPED_LABEL[r.helped]?{helped:r.helped}:{}),...(typeof r.note==="string"&&r.note.trim()?{note:r.note.trim().slice(0,1000)}:{})}));
     if(ok.length) out[d]=ok; }        // kept exactly as saved; quick repeats are merged only when reading (skillUsesOn)
   return out;
 }
@@ -1191,7 +1192,7 @@ function mergeQuickRepeats(list){
     const k=out.findLast?.(x=>x.id===r.id) ?? [...out].reverse().find(x=>x.id===r.id);
     const close=k && Math.abs(new Date(r.at)-new Date(k.at))<=REPEAT_MS;
     if(close && (!hasInfo(k)||!hasInfo(r))){
-      Object.assign(k,{...(r.completed||k.completed?{completed:true}:{}),...((k.helped||r.helped)?{helped:k.helped||r.helped}:{}),...((k.note||r.note)?{note:k.note||r.note}:{})});
+      Object.assign(k,{...(r.completed||k.completed?{completed:true}:{}),...(r.fromNudge||k.fromNudge?{fromNudge:true}:{}),...((k.helped||r.helped)?{helped:k.helped||r.helped}:{}),...((k.note||r.note)?{note:k.note||r.note}:{})});
     } else out.push({...r});
   }
   return out;
@@ -1215,7 +1216,7 @@ function skillsDayHTML(d){
 /* Skill suggestions after low ratings (1 or 2). The area-to-skill matches live in data/skills.json → "suggestions".
    Skills that have helped before come first; ones that keep not helping drop back. */
 const LOW_RATING=2, SKILL_NUDGE_MS=60*60*1000;
-let skillNudgeTimer=null;
+let skillNudgeTimer=null, roughNow=null;
 // When areas tie on their rating, the more important one comes first. Everything else shares the last rank.
 const AREA_RANK={emotional:0, social:1, spiritual:2, physical:2};
 const areaRank=dim=>AREA_RANK[dim]??3;
@@ -1268,10 +1269,36 @@ function roughDay(){
   const fresh=lowEnts.length && left>0;
   if(fresh) skillNudgeTimer=setTimeout(()=>{ if(S.view==="today" && !S.form){ const y=scrollY; render(); scrollTo(0,y); } }, left+500);
   const lows=fresh?lowAreas(lowEnts):[], kind=getEntry(t,"night")?"night":"morning", sug=suggestSkill(lows,kind);
-  return sug && !hidden ? {lows,sug} : null;
+  return sug && !hidden ? {lows,sug,savedAt} : null;
+}
+/* Nudge log: each "Rough day?" card that was shown, and what happened (opened the skill, dismissed, or browsed all skills).
+   Kept privately with the rest of the data for later analysis. */
+const NUDGES_META_KEY="meta_nudges";
+function saveNudges(){ const doc={key:NUDGES_META_KEY,kind:"meta",log:S.nudges,updatedAt:new Date().toISOString(),v:1}; affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{}); }
+function logNudge(action,r){
+  const d=today(), forAt=new Date(r.savedAt).toISOString(), list=(S.nudges[d] ||= []);
+  if(action==="shown" && list.some(x=>x.action==="shown"&&x.for===forAt)) return;     // once per change
+  list.push({at:new Date().toISOString(), action, skill:r.sug.id, area:r.sug.dim, lowAreas:r.lows.map(l=>({area:l.dim,rating:l.v})), for:forAt});
+  saveNudges();
+}
+function cleanNudges(v){
+  const out={}; if(!v||typeof v!=="object") return out;
+  for(const [d,list] of Object.entries(v)) if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(list)){
+    const ok=list.filter(x=>x&&typeof x.action==="string"&&typeof x.skill==="string"&&!isNaN(new Date(x.at))); if(ok.length) out[d]=ok; }
+  return out;
+}
+/* One row per card shown: when, which skill, and how it ended */
+function nudgeOutcomes(d){
+  const list=S.nudges[d]||[];
+  return list.filter(x=>x.action==="shown").map(sh=>{
+    const after=list.filter(x=>x.for===sh.for && x.action!=="shown");
+    const end=after.find(x=>x.action==="opened")||after.find(x=>x.action==="dismissed");
+    return {at:sh.at, skill:sh.skill, area:sh.area, lowAreas:sh.lowAreas, outcome:end?end.action:"no response", outcomeAt:end?.at||null, browsedAllSkills:after.some(x=>x.action==="all skills")};
+  });
 }
 function roughDayHTML(){
   const r=roughDay(); if(!r) return "";
+  roughNow=r; logNudge("shown",r);
   const {lows,sug}=r, k=skillById(sug.id), note=SKILLS.data.suggestions.areas[sug.dim]?.note;
   return `<div class="card skill-nudge" role="region" aria-label="Skill suggestion">
       <div class="sn-text"><b>Rough day?</b> <span class="muted">${esc(lowHeadline(lows))} Thanks for being honest. A short skill might help.${note?" "+esc(note):""}</span></div>
@@ -1284,9 +1311,12 @@ function skillLinkHTML(){
   return `<button class="skill-link" id="toSkills">🧰 Feeling overwhelmed? Try a coping skill →</button>`;
 }
 function bindSkillLink(){
-  const b=document.getElementById("toSkills"); if(b) b.onclick=()=>setView("skills");
-  document.querySelectorAll("[data-try]").forEach(b=>b.onclick=()=>openSkill(b.dataset.try));
-  const h=document.getElementById("hideNudge"); if(h) h.onclick=()=>{ try{ localStorage.setItem(SKILL_NUDGE_KEY,new Date().toISOString()); }catch(e){} render(); };
+  const card=document.querySelector(".skill-nudge"), r=card?roughNow:null;
+  const dismiss=()=>{ try{ localStorage.setItem(SKILL_NUDGE_KEY,new Date().toISOString()); }catch(e){} };
+  const b=document.getElementById("toSkills"); if(b) b.onclick=()=>{ if(r) logNudge("all skills",r); setView("skills"); };
+  // tapping the suggested skill opens it and clears the card from Today
+  document.querySelectorAll("[data-try]").forEach(b=>b.onclick=()=>{ if(r) logNudge("opened",r); dismiss(); openSkill(b.dataset.try,{fromNudge:true}); if(S.view==="today"&&!S.form){ const y=scrollY; render(); scrollTo(0,y); } });
+  const h=document.getElementById("hideNudge"); if(h) h.onclick=()=>{ if(r) logNudge("dismissed",r); dismiss(); render(); };
 }
 
 /* ---------- History ---------- */
@@ -1361,6 +1391,9 @@ function dayEntryHTML(d){
     ev.push({at:e.createdAt||"", sort:e.createdAt||(k==="morning"?"0":"2"), html:`<li><button class="entry-row" data-k="${e.key}"><span class="er-time">${clock(e.createdAt)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">${FORMS[k].icon}</span><span class="er-text"><b>${FORMS[k].title}</b>${edited?`<span class="small muted"> · edited ${clock(e.updatedAt)}</span>`:""}</span><span class="avg">${avgRating(e)?.toFixed(1)??"–"}</span></button></li>`}); }
   for(const r of skillUsesOn(d)){ const k=skillById(r.id);
     ev.push({sort:r.at||"1", html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(r.at)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">🧰</span><span class="er-text"><b>${esc(k?k.name:r.id)}</b><span class="small muted"> · ${r.helped?HELPED_LABEL[r.helped]:"Used"}</span>${r.note?`<span class="er-note">${esc(r.note)}</span>`:""}</span></div></li>`}); }
+  const NUDGE_WORD={opened:"You tried it",dismissed:"You tapped Not now","no response":"No response"};
+  for(const n of nudgeOutcomes(d)){ const k=skillById(n.skill);
+    ev.push({sort:n.at, html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(n.at)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">💡</span><span class="er-text"><b>Suggested ${esc(k?k.name:n.skill)}</b><span class="small muted"> · ${NUDGE_WORD[n.outcome]||esc(n.outcome)}</span></span></div></li>`}); }
   if(S.startAt && S.startDate===d) ev.push({sort:S.startAt, html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(S.startAt)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">👣</span><span class="er-text"><b>First visit</b><span class="small muted"> · Started Bookends</span></span></div></li>`});
   ev.sort((a,b)=>a.sort.localeCompare(b.sort));
   const vc=visitCount(d);
@@ -1645,6 +1678,7 @@ function backupJSON(){
   if(Object.keys(S.affLog).length) all.push({key:AFF_META_KEY,kind:"meta",days:S.affLog,times:S.affTimes||{},v:1});
   if(Object.keys(S.skillLog).length) all.push({key:SKILLS_META_KEY,kind:"meta",date:S.skillDate,log:S.skillLog,v:2});
   if(Object.keys(S.visits).length) all.push({key:VISITS_META_KEY,kind:"meta",visits:S.visits,v:1});
+  if(Object.keys(S.nudges).length) all.push({key:NUDGES_META_KEY,kind:"meta",log:S.nudges,v:1});
   return JSON.stringify(all,null,2);
 }
 function lastBackup(){ try{ return localStorage.getItem(BACKUP_KEY); }catch(e){ return null; } }
@@ -1785,7 +1819,8 @@ function providerSummaryData(days, withNotes){
   const visitDays=Object.keys(S.visits).filter(inR);
   const earned=earnedBadges(S.entries), bl=badgeList();
   const affDays=Object.keys(S.affLog).filter(d=>inR(d)&&S.affLog[d].length);
-  const dates=[...new Set(ents.map(e=>e.date).concat(uses.map(u=>u.d),visitDays,affDays))].sort();
+  const nudgeDays=Object.keys(S.nudges).filter(inR);
+  const dates=[...new Set(ents.map(e=>e.date).concat(uses.map(u=>u.d),visitDays,affDays,nudgeDays))].sort();
   const areaLabel=dim=>dim==="closing"?"Proud of":(DIMENSIONS[dim]?.label||dim);
   const questions={};
   for(const k of ["morning","night"]){
@@ -1825,8 +1860,9 @@ function providerSummaryData(days, withNotes){
       if(e.noOriginalTime||(e.importedAt&&e.importedAt===e.createdAt)||bulkSubmitted.has(utc(e.createdAt))) out[k].timeIsImportTime=true;
     }
     const su=uses.filter(u=>u.d===d);
-    if(su.length) out.skills=su.map(u=>({id:u.id, name:skillById(u.id)?.name||u.id, at:utc(u.at), completed:!!(u.completed||u.helped), helped:HELPED_WORD[u.helped]||"no answer", ...(withNotes&&u.note?{note:u.note}:{})}));
+    if(su.length) out.skills=su.map(u=>({id:u.id, name:skillById(u.id)?.name||u.id, at:utc(u.at), completed:!!(u.completed||u.helped), ...(u.fromNudge?{fromSuggestion:true}:{}), helped:HELPED_WORD[u.helped]||"no answer", ...(withNotes&&u.note?{note:u.note}:{})}));
     if(S.visits[d]?.length) out.visits=S.visits[d].map(utc).filter(Boolean);
+    const nu=nudgeOutcomes(d); if(nu.length) out.skillSuggestions=nu.map(n=>({shownAt:utc(n.at), skill:skillById(n.skill)?.name||n.skill, forArea:areaName(n.area), lowAreas:n.lowAreas.map(l=>({area:areaName(l.area),rating:l.rating})), outcome:n.outcome, ...(n.outcomeAt?{outcomeAt:utc(n.outcomeAt)}:{}), ...(n.browsedAllSkills?{browsedAllSkills:true}:{})}));
     const af=(S.affLog[d]||[]).map(id=>{ const a=affById(id); const at=utc(S.affTimes?.[d]?.[id]);
       return a?{text:a.text, type:a.type, area:a.area, ...(at?{at}:{})}:null; }).filter(Boolean);
     if(af.length) out.affirmations=af;
@@ -1848,6 +1884,7 @@ function providerSummaryData(days, withNotes){
       visitTrackingSince:Object.keys(S.visits).sort()[0]||null,
       affirmationsRead:affDays.reduce((n,d)=>n+S.affLog[d].length,0), daysWithAffirmations:affDays.length,
       affirmationTimesSince:Object.keys(S.affTimes||{}).sort()[0]||null,
+      skillSuggestions:(()=>{ const all=nudgeDays.flatMap(d=>nudgeOutcomes(d)); return {shown:all.length, opened:all.filter(n=>n.outcome==="opened").length, dismissed:all.filter(n=>n.outcome==="dismissed").length, noResponse:all.filter(n=>n.outcome==="no response").length}; })(),
       checkInsWithFeelings:ents.filter(e=>Array.isArray(e.answers[FEEL_KEY])&&e.answers[FEEL_KEY].length).length,
       daysOpened:visitDays.length, totalVisits:visitDays.reduce((n,d)=>n+S.visits[d].length,0),
       badgesEarned:bl.filter(b=>earned[b.id]&&inR(earned[b.id])).length},
@@ -1991,6 +2028,7 @@ function renderSettings(){
     try{ await S.store.remove(HOME_META_KEY); S.homeDate=null; }catch(err){}
     try{ await S.store.remove(START_META_KEY); S.startDate=null; }catch(err){}
     try{ await S.store.remove(VISITS_META_KEY); S.visits={}; }catch(err){}
+    try{ await S.store.remove(NUDGES_META_KEY); S.nudges={}; }catch(err){}
     try{ await S.store.remove(INSIGHTS_META_KEY); S.insights=[]; }catch(err){}
     try{ await S.store.remove(SKILLS_META_KEY); S.skillDate=null; S.skillLog={}; }catch(err){}
     try{ await S.store.remove(SHARES_META_KEY); S.shares=[]; }catch(err){}
@@ -2038,6 +2076,8 @@ function renderSettings(){
       for(const [d,list] of Object.entries(inc)){ const have=new Set((S.skillLog[d]||[]).map(r=>r.id+r.at)); S.skillLog[d]=(S.skillLog[d]||[]).concat(list.filter(r=>!have.has(r.id+r.at))); }
       if(!S.skillDate||(/^\d{4}-\d{2}-\d{2}$/.test(skm.date||"")&&skm.date<S.skillDate)) S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(skm.date||"")?skm.date:(Object.keys(inc).sort()[0]||S.skillDate);
       saveSkillLog(); await affSaving; }
+    const nim=arr.find(e=>e&&e.key===NUDGES_META_KEY&&e.log&&typeof e.log==="object");
+    if(nim){ const inc=cleanNudges(nim.log); for(const [d,list] of Object.entries(inc)){ const have=new Set((S.nudges[d]||[]).map(x=>x.at+x.action)); S.nudges[d]=(S.nudges[d]||[]).concat(list.filter(x=>!have.has(x.at+x.action))).sort((a,b)=>a.at.localeCompare(b.at)); } saveNudges(); }
     const vim=arr.find(e=>e&&e.key===VISITS_META_KEY&&e.visits&&typeof e.visits==="object");
     if(vim){ const inc=cleanVisits(vim.visits); for(const [d,list] of Object.entries(inc)) S.visits[d]=cleanVisits({[d]:(S.visits[d]||[]).concat(list)})[d]; saveVisits(); await affSaving; }
     toast(`Imported ${n} check-ins${meta?" + affirmation history":""}${skm?" + skills log":""}${vim?" + visits":""}`); render();
@@ -2161,6 +2201,7 @@ function confetti(count){
     const sk=all.find(e=>e.key===SKILLS_META_KEY); S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(sk?.date||"")?sk.date:null; S.skillLog=cleanSkillLog(sk?.log);
     const hm=all.find(e=>e.key===HOME_META_KEY); S.homeDate=/^\d{4}-\d{2}-\d{2}$/.test(hm?.date||"")?hm.date:null;
     const vm=all.find(e=>e.key===VISITS_META_KEY); S.visits=cleanVisits(vm?.visits);
+    const nm=all.find(e=>e.key===NUDGES_META_KEY); S.nudges=cleanNudges(nm?.log);
     const im=all.find(e=>e.key===INSIGHTS_META_KEY); S.insights=Array.isArray(im?.days)?im.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
     const sm=all.find(e=>e.key===START_META_KEY); S.startDate=/^\d{4}-\d{2}-\d{2}$/.test(sm?.date||"")?sm.date:null; S.startAt=sm?.firstVisit&&sm.at?String(sm.at):null;
     const rm=all.find(e=>e.key===REMINDERS_META_KEY); S.reminders=(rm?.reminders&&typeof rm.reminders==="object")?rm.reminders:{};
