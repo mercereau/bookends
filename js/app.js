@@ -1028,9 +1028,11 @@ async function saveForm(){
   const fresh=badgeList().filter(b=>after[b.id] && !before[b.id]);
   S.form=null; S.view="today"; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v==="today"));
   render(); window.scrollTo(0,0);
-  const s=computeStats(S.entries), sug=!prev?postSaveSuggestion(entry):null;
+  // suggest a skill for a new check-in, or when an edit changes a rating (not for fixing notes)
+  const ratingsChanged=prev && FORMS[entry.kind].sections.some(sec=>sec.scale && (+prev.answers[sec.scale.id]||0)!==(+entry.answers[sec.scale.id]||0));
+  const s=computeStats(S.entries), sug=(!prev||ratingsChanged)?postSaveSuggestion(entry):null;
   if(fresh.length){ celebrate(fresh,s,sug); }
-  else if(sug){ const lines=AFFIRMATIONS[F.kind]; modal(`<div class="big" aria-hidden="true">${F.kind==="morning"?"🌅":"🌙"}</div><h2>Thanks for checking in</h2><p class="muted">${lines[(s.total+new Date().getDate())%lines.length]}</p>${sug}<div class="actions" style="justify-content:center"><button class="btn ghost" data-close>Not now</button></div>`, bindSuggestions); }
+  else if(sug){ const lines=AFFIRMATIONS[F.kind]; modal(`<div class="big" aria-hidden="true">${F.kind==="morning"?"🌅":"🌙"}</div><h2>${prev?"Changes saved":"Thanks for checking in"}</h2><p class="muted">${prev?"Thanks for updating how you're doing.":lines[(s.total+new Date().getDate())%lines.length]}</p>${sug}<div class="actions" style="justify-content:center"><button class="btn ghost" data-close>Not now</button></div>`, bindSuggestions); }
   else if(!prev){ confetti(70); winCard(F.kind,s); }
   else toast("Changes saved");
 }
