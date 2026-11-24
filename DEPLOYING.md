@@ -50,7 +50,7 @@ From now on, **every push to `main` deploys automatically.**
 
 > **Workers vs. Pages:** depending on which screen you start from, Cloudflare creates either a *Pages* project (ending in `.pages.dev`) or a *Worker* (ending in `.workers.dev`). Either one works for Bookends.
 >
-> If you end up with a Worker, Cloudflare may open a pull request on your repo that adds a `wrangler.jsonc` config file. Merging it is fine.
+> If you end up with a Worker, edit `name` in the repo's `wrangler.jsonc` to match the name you gave it.
 
 ## 4. Add your own domain (optional)
 
@@ -97,7 +97,7 @@ If you add something that loads from another site, add that site's address to th
 Bookends includes a friendly `404.html` for links that don't go anywhere.
 
 - **Pages project:** nothing to do. Pages serves `404.html` automatically.
-- **Worker:** turn it on in your `wrangler.jsonc` by setting `not_found_handling` to `"404-page"` under `assets`. Without it, a missing page shows a blank 404.
+- **Worker:** the repo's `wrangler.jsonc` already sets `not_found_handling` to `"404-page"` under `assets`. Change its `name` to match your Worker's name in the Cloudflare dashboard. (Without this setting, a missing page shows a blank 404.) `.assetsignore` keeps files like `.git` and `wrangler.jsonc` from being served.
 
 ```jsonc
 {
@@ -110,7 +110,7 @@ Bookends includes a friendly `404.html` for links that don't go anywhere.
 }
 ```
 
-If Cloudflare already added a `wrangler.jsonc` to your repo, just add the `not_found_handling` line to its `assets` section.
+If you deploy as a Pages project instead, you can delete `wrangler.jsonc` and `.assetsignore`.
 
 ## Other ways to deploy
 

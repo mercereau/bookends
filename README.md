@@ -70,6 +70,8 @@ data/insights-guide.md  Instructions for AI assistants, included in the data dow
 fonts/                  Self-hosted DM Sans and Fraunces (variable, Latin subset) + OFL licenses
 favicon.*, icon-*.png, apple-touch-icon.png, site.webmanifest
 _headers                Cloudflare security and caching headers
+wrangler.jsonc          Cloudflare Worker config (serves 404.html for missing pages)
+.assetsignore           Repo files that aren't served
 robots.txt
 ```
 
