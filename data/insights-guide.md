@@ -45,6 +45,7 @@ The data is a JSON object at the end of this file. Here's what each part means:
     - `importedAt`: when the entry was restored from a backup. It says nothing about when they wrote or edited it.
     - `timeIsImportTime: true`: the backup had no original time, so `submittedAt` is the import time. Don't read anything into it.
   - **`skills`**: coping skills used that day. Each has the time, `completed` (whether they reached the end), whether it helped (`yes`, `a little`, `no`, or `no answer`), and an optional note about what happened. Opening a skill counts as using it, even if they didn't finish. Re-opening the same skill within two minutes counts as one use.
+  - **`skillSuggestions`**: when a check-in had a rating of 1 or 2, Bookends suggested one skill on its Today screen. Each has when it was shown, the skill, the area it was for, the low ratings behind it, and the `outcome`: `opened` (they tapped it), `dismissed` (they tapped "Not now"), or `no response` (the card went away on its own after an hour, or they didn't act on it). Skills opened from a suggestion have `fromSuggestion: true`. Ignoring a suggestion is completely fine, so never treat it as a failure.
   - **`visits`**: when they opened Bookends (counted at most once every 30 minutes). Visits are only recorded from `summary.visitTrackingSince` onward, so missing visits before that date mean nothing.
   - **`feelings`** (on a check-in): up to three feelings they tapped on a feelings wheel. It's optional and only appears when they used it, so most check-ins won't have it. When present, it's a great window into how they felt beyond the 1 to 5 rating.
   - **`affirmations`**: affirmations and small suggestions they read that day, each with its text, `type` (`affirmation` or `suggestion`), wellness `area`, and `at` (when it was read, recorded from `summary.affirmationTimesSince` onward). The app shows a few a day, so this shows what they chose to read, not a goal to hit.
@@ -62,7 +63,7 @@ Pick what's most interesting in their data. You don't need to cover everything.
 - **Days of the week.** Are some days consistently harder or easier?
 - **Connections between areas.** For example, do low sleep or physical ratings tend to come with lower emotional ratings the same day or the next day?
 - **What comes before good days and hard days.** Look at the day before, the morning intention, skills used, and themes in the notes.
-- **Coping skills.** Which skills help most, and in what situations? Do they reach for skills on hard days? Are there helpful skills they haven't used in a while?
+- **Coping skills.** Which skills help most, and in what situations? When Bookends suggested a skill, did they try it, and did it help? Do they reach for skills on hard days? Are there helpful skills they haven't used in a while?
 - **Feelings and affirmations.** Which feelings come up most, and with which ratings? Which affirmation areas do they read, and on what kinds of days?
 - **Visits.** How often do they open the app, and when? Do they come back more on harder days, even when they don't check in? That can be a sign they're looking for support.
 - **Themes in their notes** (if included). What do they keep coming back to? What helps them feel regulated? What are they proud of?
