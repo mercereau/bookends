@@ -1442,5 +1442,97 @@
     "url": "https://nowmattersnow.org/skill/mindfulness-of-current-emotion/"
    }
   }
- ]
+ ],
+ "suggestions": {
+  "_notes": "Used after a check-in with ratings of 1 or 2. Skills that have helped the person before are suggested first.",
+  "areas": {
+   "emotional": {
+    "skills": [
+     "wave",
+     "rain",
+     "stop",
+     "sigh",
+     "selfcomp"
+    ]
+   },
+   "physical": {
+    "skills": [
+     "bodyscan",
+     "paced",
+     "muscle",
+     "please",
+     "smallsteps"
+    ]
+   },
+   "spiritual": {
+    "skills": [
+     "values",
+     "wise",
+     "leaves",
+     "selfcomp"
+    ]
+   },
+   "social": {
+    "skills": [
+     "dearman",
+     "give",
+     "friend",
+     "opposite",
+     "fast"
+    ]
+   },
+   "intellectual": {
+    "skills": [
+     "catch",
+     "traps",
+     "defuse",
+     "facts"
+    ]
+   },
+   "occupational": {
+    "skills": [
+     "problem",
+     "smallsteps",
+     "worrytime",
+     "scaling"
+    ],
+    "note": "A skill won't fix work stress, but it can make the next step feel a little lighter."
+   },
+   "environmental": {
+    "skills": [
+     "orient",
+     "54321",
+     "color",
+     "soothe",
+     "smallsteps"
+    ],
+    "note": "A skill won't change your surroundings, but it can help you feel steadier in them."
+   },
+   "financial": {
+    "skills": [
+     "worrytime",
+     "problem",
+     "worstbest",
+     "facts"
+    ],
+    "note": "A skill won't fix money stress, but it can make the next step feel a little lighter."
+   }
+  },
+  "morning": [
+   "smallsteps",
+   "values",
+   "scaling",
+   "stop",
+   "sigh",
+   "paced"
+  ],
+  "night": [
+   "bodyscan",
+   "leaves",
+   "rain",
+   "worrytime",
+   "muscle",
+   "selfcomp"
+  ]
+ }
 }

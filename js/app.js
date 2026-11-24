@@ -422,6 +422,7 @@ function renderToday(){
       <div class="card stat"><div class="n">${s.total}</div><div class="l">check-ins</div></div>
       <button class="card stat stat-link" id="toBadges"><div class="n">${Object.keys(earned).length}🏅</div><div class="l">${Object.keys(earned).length===1?"badge":"badges"}<span class="hide-sm"> earned</span> <span class="go-arrow">→</span></div></button>
     </div>
+    ${roughDayHTML()}
     ${holidayBannerHTML(earned)}
     ${visitNudgeHTML()}
     ${S.prefs.affMode==="embedded"?affirmCardHTML():affEntryHTML()}
@@ -1028,7 +1029,7 @@ async function saveForm(){
   const fresh=badgeList().filter(b=>after[b.id] && !before[b.id]);
   S.form=null; S.view="today"; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v==="today"));
   render(); window.scrollTo(0,0);
-  const s=computeStats(S.entries);
+  const s=computeStats(S.entries);   // a low rating shows a skill suggestion on Today (roughDayHTML), not in a pop-up
   if(fresh.length){ celebrate(fresh,s); }
   else if(!prev){ confetti(70); winCard(F.kind,s); }
   else toast("Changes saved");
@@ -1211,19 +1212,81 @@ function skillsDayHTML(d){
   return `<div class="dd-block skills-used"><div class="dd-head"><h3>🧰 Skills that helped</h3></div><ul class="sk-tags">${tags}</ul></div>`;
 }
 /* A gentle link on Today. After a low Emotional rating today, it gets a warmer message (can be turned off in Settings). */
+/* Skill suggestions after low ratings (1 or 2). The area-to-skill matches live in data/skills.json → "suggestions".
+   Skills that have helped before come first; ones that keep not helping drop back. */
+const LOW_RATING=2, SKILL_NUDGE_MS=60*60*1000;
+let skillNudgeTimer=null;
+// When areas tie on their rating, the more important one comes first. Everything else shares the last rank.
+const AREA_RANK={emotional:0, social:1, spiritual:2, physical:2};
+const areaRank=dim=>AREA_RANK[dim]??3;
+function lowAreas(entries){
+  const A=SKILLS.data?.suggestions?.areas||{}, m={};
+  for(const e of entries) for(const sec of FORMS[e.kind].sections){
+    if(!sec.scale||!A[sec.dim]) continue; const v=+e.answers[sec.scale.id];
+    if(v && v<=LOW_RATING) m[sec.dim]=Math.min(m[sec.dim]||9,v); }
+  const order=Object.keys(DIMENSIONS);
+  return Object.entries(m).sort((x,y)=>x[1]-y[1]||areaRank(x[0])-areaRank(y[0])||order.indexOf(x[0])-order.indexOf(y[0])).map(([dim,v])=>({dim,v}));
+}
+function skillHistory(){
+  const h={}; for(const d of Object.keys(S.skillLog)) for(const r of skillUsesOn(d)){ const x=h[r.id] ||= {yes:0,little:0,no:0}; if(x[r.helped]!=null) x[r.helped]++; }
+  return h;
+}
+/* One suggestion: the lowest-rated area (ties go to the higher-ranked area), then the best skill for it:
+   one that has helped before, otherwise the first on that area's list (time of day breaks a near-tie).
+   A skill that didn't help two or more times, and never helped, is skipped. */
+function suggestSkill(lows,kind){
+  const SG=SKILLS.data?.suggestions; if(!SG) return null;
+  const hist=skillHistory();
+  const skip=id=>{ const x=hist[id]; return !skillById(id) || (x && x.no>=2 && !x.yes && !x.little); };
+  for(const {dim} of lows){
+    const list=(SG.areas[dim]?.skills||[]).filter(id=>!skip(id)); if(!list.length) continue;
+    const helped=list.filter(id=>hist[id]&&(hist[id].yes||hist[id].little))
+      .sort((a,b)=>(hist[b].yes*2+hist[b].little)-(hist[a].yes*2+hist[a].little)||list.indexOf(a)-list.indexOf(b));
+    if(helped.length) return {id:helped[0],dim,helped:true};
+    const tod=SG[kind]||[];
+    const pick=(list[1] && tod.includes(list[1]) && !tod.includes(list[0]))?list[1]:list[0];
+    return {id:pick,dim,helped:false};
+  }
+  return null;
+}
+const areaName=dim=>DIMENSIONS[dim]?.label||dim;
+function lowHeadline(lows){
+  return lows.length===1?`${areaName(lows[0].dim)} sounds hard right now.`:lows.length===2?`${areaName(lows[0].dim)} and ${areaName(lows[1].dim)} sound hard right now.`:"A few areas sound hard right now.";
+}
+/* Today: a "Rough day?" card near the top for an hour after a check-in with a low rating (new or edited),
+   and otherwise a small link to Skills below the check-ins */
+function roughDay(){
+  if(!SKILLS.data) return null;
+  const t=today(), ents=["morning","night"].map(k=>getEntry(t,k)).filter(Boolean);
+  // The card shows for an hour after today's latest change to a check-in, while any check-in today has a low rating.
+  // Saving or editing either check-in restarts the hour and brings it back, even after "Not now".
+  const lowEnts=S.prefs.skillNudge?ents.filter(e=>lowAreas([e]).length):[];
+  const savedAt=lowEnts.length?Math.max(0,...ents.map(e=>+new Date(e.updatedAt||e.createdAt)||0)):0, left=savedAt+SKILL_NUDGE_MS-Date.now();
+  let hidden=false;
+  try{ const v=localStorage.getItem(SKILL_NUDGE_KEY)||"", at=/^\d{4}-\d{2}-\d{2}$/.test(v)?+parse(v):+new Date(v); hidden=!!v && at>=savedAt; }catch(e){}   // "Not now" only covers changes made before it was tapped
+  clearTimeout(skillNudgeTimer);
+  const fresh=lowEnts.length && left>0;
+  if(fresh) skillNudgeTimer=setTimeout(()=>{ if(S.view==="today" && !S.form){ const y=scrollY; render(); scrollTo(0,y); } }, left+500);
+  const lows=fresh?lowAreas(lowEnts):[], kind=getEntry(t,"night")?"night":"morning", sug=suggestSkill(lows,kind);
+  return sug && !hidden ? {lows,sug} : null;
+}
+function roughDayHTML(){
+  const r=roughDay(); if(!r) return "";
+  const {lows,sug}=r, k=skillById(sug.id), note=SKILLS.data.suggestions.areas[sug.dim]?.note;
+  return `<div class="card skill-nudge" role="region" aria-label="Skill suggestion">
+      <div class="sn-text"><b>Rough day?</b> <span class="muted">${esc(lowHeadline(lows))} Thanks for being honest. A short skill might help.${note?" "+esc(note):""}</span></div>
+      <button class="suggest-skill" data-try="${sug.id}"><span class="sg-name">${esc(k.name)} <span aria-hidden="true">→</span></span><span class="small muted">${esc(k.tagline)}</span><span class="sg-why">${sug.helped?`💛 Helped you before · For ${esc(areaName(sug.dim))}`:`For ${esc(areaName(sug.dim))}`}</span></button>
+      <div class="skill-nudge-actions"><button class="linkbtn" id="toSkills">All skills</button><button class="linkbtn" id="hideNudge">Not now</button></div>
+      ${lows.some(l=>l.dim==="emotional"&&l.v===1)?CRISIS_LINE:""}</div>`;
+}
 function skillLinkHTML(){
-  if(!SKILLS.data) return "";
-  const t=today(), low=S.prefs.skillNudge && ["morning","night"].some(k=>{ const e=getEntry(t,k); const v=+e?.answers?.emotional_scale; return v && v<=2; });
-  let hidden=false; try{ hidden=localStorage.getItem(SKILL_NUDGE_KEY)===t; }catch(e){}
-  const top=helpedSkills()[0], tk=top&&skillById(top.id);
-  if(low && !hidden) return `<div class="card skill-nudge"><div><b>Rough day?</b> <span class="muted">${tk?`<b>${esc(tk.name)}</b> has helped you before.`:"A quick coping skill might help."}</span></div>
-      <div class="skill-nudge-actions">${tk?`<button class="btn" id="tryTop" data-top="${tk.id}">💛 Try ${esc(tk.name)}</button><button class="linkbtn" id="toSkills">All skills</button>`:`<button class="btn" id="toSkills">🧰 Try a skill</button>`}<button class="linkbtn" id="hideNudge">Not now</button></div></div>`;
+  if(!SKILLS.data || roughDay()) return "";
   return `<button class="skill-link" id="toSkills">🧰 Feeling overwhelmed? Try a coping skill →</button>`;
 }
 function bindSkillLink(){
   const b=document.getElementById("toSkills"); if(b) b.onclick=()=>setView("skills");
-  const tt=document.getElementById("tryTop"); if(tt) tt.onclick=()=>openSkill(tt.dataset.top);
-  const h=document.getElementById("hideNudge"); if(h) h.onclick=()=>{ try{ localStorage.setItem(SKILL_NUDGE_KEY,today()); }catch(e){} render(); };
+  document.querySelectorAll("[data-try]").forEach(b=>b.onclick=()=>openSkill(b.dataset.try));
+  const h=document.getElementById("hideNudge"); if(h) h.onclick=()=>{ try{ localStorage.setItem(SKILL_NUDGE_KEY,new Date().toISOString()); }catch(e){} render(); };
 }
 
 /* ---------- History ---------- */
@@ -1872,7 +1935,7 @@ function renderSettings(){
       <div class="pref-label" style="margin-top:18px"><b>Check-ins</b></div>
       <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Always show writing questions</b><span class="small muted">Off: check-ins are just quick ratings, and you can tap "Add a note" to write. On: the questions and ideas are always open.</span></span><input type="checkbox" class="switch" id="pWrite" ${P.showWriting?"checked":""}></label>
       <div class="pref-label" style="margin-top:18px"><b>Skills</b></div>
-      <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Suggest a skill on rough days</b><span class="small muted">After a low Emotional rating, Today shows a gentle link to the Skills tab.</span></span><input type="checkbox" class="switch" id="pSkill" ${P.skillNudge?"checked":""}></label>
+      <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Suggest skills on rough days</b><span class="small muted">When a check-in has a rating of 1 or 2, suggest a skill or two that fits, starting with ones that have helped you before.</span></span><input type="checkbox" class="switch" id="pSkill" ${P.skillNudge?"checked":""}></label>
       <div class="pref-label" style="margin-top:18px"><b>Display</b></div>
       <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Color-blind friendly colors</b><span class="small muted">Uses colors that are easier to tell apart with color vision differences, and adds patterns and check marks where color shows meaning.</span></span><input type="checkbox" class="switch" id="pCvd" ${P.colorMode==="cvd"?"checked":""}></label>
     </div>`+`
