@@ -604,7 +604,9 @@ html.text-l .badges{grid-template-columns:1fr!important}
 .skill-link{display:block;width:100%;margin-top:12px;border:1.5px dashed var(--line);background:transparent;color:var(--ink);border-radius:14px;padding:10px 14px;font:inherit;font-weight:600;text-align:left;cursor:pointer}
 .skill-link:hover{border-color:var(--accent)}
 .skill-nudge{margin-top:12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:color-mix(in srgb,var(--accent) 8%,var(--card))}
-.skill-nudge-actions{display:flex;align-items:center;gap:12px}
+.skill-nudge-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.skill-nudge-actions .btn{white-space:nowrap}
+.skill-nudge-actions .linkbtn{white-space:nowrap}
 @media(max-width:560px){.skill-link{margin-top:10px;padding:9px 12px;font-size:.92rem}}
 .skill-sheet a,.skills-more a{color:inherit;text-decoration:underline}
 #badges{scroll-margin-top:14px}
@@ -642,3 +644,10 @@ html.text-xl .sl-top{grid-template-columns:1fr}html.text-xl .sl-res{grid-column:
 .share-note span b{color:var(--ink)}
 .wheel-q{margin-top:14px}
 .wheel-q+.write-closed{margin-top:10px}
+.suggest{display:flex;flex-direction:column;gap:6px;text-align:left;margin:14px 0 6px;padding:14px;border-radius:14px;background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.suggest-list{display:grid;gap:8px;margin-top:6px}
+.suggest-skill{display:flex;flex-direction:column;gap:2px;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card);font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+.suggest-skill:hover .sg-name{text-decoration:underline}
+.sg-name{font-weight:700}
+.sg-why{font-size:.8rem;font-weight:600;color:var(--muted)}
+.suggest .skill-crisis{margin:6px 0 0}

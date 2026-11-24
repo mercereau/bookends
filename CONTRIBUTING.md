@@ -121,6 +121,15 @@ The tap-to-add ideas under each question live in `data/suggestions.json`, under 
 
 Check that the file is still valid JSON with `python3 -m json.tool data/suggestions.json > /dev/null && echo OK`.
 
+## 3b-2. Editing skill suggestions
+
+`data/skills.json` has a `suggestions` section that decides which skills Bookends suggests after a rating of 1 or 2:
+
+- `areas`: for each wellness area, a list of skill ids, best fit first. An optional `note` softens the suggestion for areas where the cause is usually practical (like money or work).
+- `morning` and `night`: skills that get a small boost at that time of day.
+
+Every id must match a skill in the same file. Keep suggestions gentle, and never suggest that a skill fixes a practical problem.
+
 ## 3c. Editing the AI insights guide
 
 `data/insights-guide.md` is the set of instructions included in the **Data for AI or my provider** download. It tells an AI assistant what the data means, how to look for patterns, and how to talk with the person about them. It's plain Markdown, so you can edit it like any document.

@@ -1028,8 +1028,9 @@ async function saveForm(){
   const fresh=badgeList().filter(b=>after[b.id] && !before[b.id]);
   S.form=null; S.view="today"; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v==="today"));
   render(); window.scrollTo(0,0);
-  const s=computeStats(S.entries);
-  if(fresh.length){ celebrate(fresh,s); }
+  const s=computeStats(S.entries), sug=!prev?postSaveSuggestion(entry):null;
+  if(fresh.length){ celebrate(fresh,s,sug); }
+  else if(sug){ const lines=AFFIRMATIONS[F.kind]; modal(`<div class="big" aria-hidden="true">${F.kind==="morning"?"🌅":"🌙"}</div><h2>Thanks for checking in</h2><p class="muted">${lines[(s.total+new Date().getDate())%lines.length]}</p>${sug}<div class="actions" style="justify-content:center"><button class="btn ghost" data-close>Not now</button></div>`, bindSuggestions); }
   else if(!prev){ confetti(70); winCard(F.kind,s); }
   else toast("Changes saved");
 }
@@ -1211,18 +1212,65 @@ function skillsDayHTML(d){
   return `<div class="dd-block skills-used"><div class="dd-head"><h3>🧰 Skills that helped</h3></div><ul class="sk-tags">${tags}</ul></div>`;
 }
 /* A gentle link on Today. After a low Emotional rating today, it gets a warmer message (can be turned off in Settings). */
+/* Skill suggestions after low ratings (1 or 2). The area-to-skill matches live in data/skills.json → "suggestions".
+   Skills that have helped before come first; ones that keep not helping drop back. */
+const LOW_RATING=2;
+function lowAreas(entries){
+  const A=SKILLS.data?.suggestions?.areas||{}, m={};
+  for(const e of entries) for(const sec of FORMS[e.kind].sections){
+    if(!sec.scale||!A[sec.dim]) continue; const v=+e.answers[sec.scale.id];
+    if(v && v<=LOW_RATING) m[sec.dim]=Math.min(m[sec.dim]||9,v); }
+  return Object.entries(m).sort((x,y)=>x[1]-y[1]).map(([dim,v])=>({dim,v}));
+}
+function skillHistory(){
+  const h={}; for(const d of Object.keys(S.skillLog)) for(const r of skillUsesOn(d)){ const x=h[r.id] ||= {yes:0,little:0,no:0}; if(x[r.helped]!=null) x[r.helped]++; }
+  return h;
+}
+function suggestSkills(lows,kind,max=2){
+  const SG=SKILLS.data?.suggestions; if(!SG||!lows.length) return [];
+  const hist=skillHistory(), score={}, why={};
+  lows.forEach(({dim,v})=>{ const list=SG.areas[dim]?.skills||[], w=LOW_RATING+1-v;   // a 1 counts double
+    list.forEach((id,i)=>{ score[id]=(score[id]||0)+w*(1+(list.length-i)/list.length); if(!why[id]) why[id]=dim; }); });
+  for(const id of Object.keys(score)){
+    if((SG[kind]||[]).includes(id)) score[id]+=0.75;                         // fits the time of day
+    const x=hist[id]; if(!x) continue;
+    if(x.no>=2 && !x.yes && !x.little){ delete score[id]; continue; }      // hasn't helped, more than once
+    score[id]+=Math.min(4,x.yes*1.5+x.little*0.75)-x.no*0.5; }
+  return Object.keys(score).filter(id=>skillById(id)).sort((a,b)=>score[b]-score[a]).slice(0,max)
+    .map(id=>({id,dim:why[id],helped:!!(hist[id]&&(hist[id].yes||hist[id].little))}));
+}
+const areaName=dim=>DIMENSIONS[dim]?.label||dim;
+function lowHeadline(lows){
+  return lows.length===1?`${areaName(lows[0].dim)} sounds hard right now.`:lows.length===2?`${areaName(lows[0].dim)} and ${areaName(lows[1].dim)} sound hard right now.`:"A few areas sound hard right now.";
+}
+function suggestionHTML(lows,sugs){
+  if(!sugs.length) return "";
+  const note=SKILLS.data.suggestions.areas[lows[0].dim]?.note;
+  return `<div class="suggest"><b>${esc(lowHeadline(lows))}</b>
+    <span class="muted">Thanks for being honest. A short skill might help.${note?" "+esc(note):""}</span>
+    <div class="suggest-list">${sugs.map(x=>{ const k=skillById(x.id); return `<button class="suggest-skill" data-sk="${x.id}"><span class="sg-name">${esc(k.name)} <span aria-hidden="true">→</span></span><span class="small muted">${esc(k.tagline)}</span><span class="sg-why">${x.helped?"💛 Helped you before":`For ${esc(areaName(x.dim))}`}</span></button>`; }).join("")}</div>
+    ${lows.some(l=>l.dim==="emotional"&&l.v===1)?CRISIS_LINE:""}</div>`;
+}
+function bindSuggestions(el){ el.querySelectorAll("[data-sk]").forEach(b=>b.onclick=()=>{ closeModal(); openSkill(b.dataset.sk); }); }
+/* After saving a new check-in with low ratings: a gentle note with one or two skills */
+function postSaveSuggestion(entry){
+  if(!S.prefs.skillNudge || !SKILLS.data) return null;
+  const lows=lowAreas([entry]), sugs=suggestSkills(lows,entry.kind);
+  return sugs.length?suggestionHTML(lows,sugs):null;
+}
+/* Today: a "Rough day?" card when any check-in today has low ratings, otherwise a small link */
 function skillLinkHTML(){
   if(!SKILLS.data) return "";
-  const t=today(), low=S.prefs.skillNudge && ["morning","night"].some(k=>{ const e=getEntry(t,k); const v=+e?.answers?.emotional_scale; return v && v<=2; });
+  const t=today(), ents=["morning","night"].map(k=>getEntry(t,k)).filter(Boolean);
   let hidden=false; try{ hidden=localStorage.getItem(SKILL_NUDGE_KEY)===t; }catch(e){}
-  const top=helpedSkills()[0], tk=top&&skillById(top.id);
-  if(low && !hidden) return `<div class="card skill-nudge"><div><b>Rough day?</b> <span class="muted">${tk?`<b>${esc(tk.name)}</b> has helped you before.`:"A quick coping skill might help."}</span></div>
-      <div class="skill-nudge-actions">${tk?`<button class="btn" id="tryTop" data-top="${tk.id}">💛 Try ${esc(tk.name)}</button><button class="linkbtn" id="toSkills">All skills</button>`:`<button class="btn" id="toSkills">🧰 Try a skill</button>`}<button class="linkbtn" id="hideNudge">Not now</button></div></div>`;
+  const lows=S.prefs.skillNudge?lowAreas(ents):[], kind=getEntry(t,"night")?"night":"morning", sugs=suggestSkills(lows,kind);
+  if(sugs.length && !hidden) return `<div class="card skill-nudge"><div><b>Rough day?</b> <span class="muted">${esc(lowHeadline(lows))} A short skill might help.</span></div>
+      <div class="skill-nudge-actions">${sugs.map((x,i)=>`<button class="btn ${i?"ghost":""}" data-try="${x.id}">${x.helped?"💛 ":""}Try ${esc(skillById(x.id).name)}</button>`).join("")}<button class="linkbtn" id="toSkills">All skills</button><button class="linkbtn" id="hideNudge">Not now</button></div></div>`;
   return `<button class="skill-link" id="toSkills">🧰 Feeling overwhelmed? Try a coping skill →</button>`;
 }
 function bindSkillLink(){
   const b=document.getElementById("toSkills"); if(b) b.onclick=()=>setView("skills");
-  const tt=document.getElementById("tryTop"); if(tt) tt.onclick=()=>openSkill(tt.dataset.top);
+  document.querySelectorAll("[data-try]").forEach(b=>b.onclick=()=>openSkill(b.dataset.try));
   const h=document.getElementById("hideNudge"); if(h) h.onclick=()=>{ try{ localStorage.setItem(SKILL_NUDGE_KEY,today()); }catch(e){} render(); };
 }
 
@@ -1872,7 +1920,7 @@ function renderSettings(){
       <div class="pref-label" style="margin-top:18px"><b>Check-ins</b></div>
       <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Always show writing questions</b><span class="small muted">Off: check-ins are just quick ratings, and you can tap "Add a note" to write. On: the questions and ideas are always open.</span></span><input type="checkbox" class="switch" id="pWrite" ${P.showWriting?"checked":""}></label>
       <div class="pref-label" style="margin-top:18px"><b>Skills</b></div>
-      <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Suggest a skill on rough days</b><span class="small muted">After a low Emotional rating, Today shows a gentle link to the Skills tab.</span></span><input type="checkbox" class="switch" id="pSkill" ${P.skillNudge?"checked":""}></label>
+      <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Suggest skills on rough days</b><span class="small muted">When a check-in has a rating of 1 or 2, suggest a skill or two that fits, starting with ones that have helped you before.</span></span><input type="checkbox" class="switch" id="pSkill" ${P.skillNudge?"checked":""}></label>
       <div class="pref-label" style="margin-top:18px"><b>Display</b></div>
       <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Color-blind friendly colors</b><span class="small muted">Uses colors that are easier to tell apart with color vision differences, and adds patterns and check marks where color shows meaning.</span></span><input type="checkbox" class="switch" id="pCvd" ${P.colorMode==="cvd"?"checked":""}></label>
     </div>`+`
@@ -2069,13 +2117,14 @@ function showWelcome(){
       const h=el.querySelector("#wHow"); if(h) h.onclick=()=>{ noteStarted(); closeModal(); location.hash="about-homescreen"; setView("about"); setTimeout(scrollToHash,60); };
       setTimeout(()=>el.querySelector("#wGo")?.focus(),30); });
 }
-function celebrate(badges,s){
+function celebrate(badges,s,extraHTML){
   confetti(160);
   modal(`<div class="big">${badges[0].em}</div><h2>${badges.length>1?"New badges!":"Badge unlocked!"}</h2>
     <p class="muted">${s.current>0?`You're on a ${s.current}-day check-in streak. `:""}Keep showing up for yourself.</p>
     <div class="list">${badges.map(b=>`<div><span class="em">${b.em}</span><span><b>${b.name}</b><br><span class="small muted">${b.desc}</span></span></div>`).join("")}</div>
     ${badges.some(b=>b.id==="first-steps")?`<div class="badge-intro"><b>About badges</b><span>We want you to feel rewarded every time you take care of yourself. You'll earn badges for showing up, like checking in, trying a skill, or coming back after a break, never for how your day went. You can find them all in <b>History</b>.</span></div>`:""}
-    <button class="btn" data-close>Thanks!</button>`);
+    ${extraHTML||""}
+    <button class="btn" data-close>Thanks!</button>`, extraHTML?bindSuggestions:null);
 }
 function confetti(count){
   if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
