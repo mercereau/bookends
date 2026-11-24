@@ -603,7 +603,8 @@ html.text-l .badges{grid-template-columns:1fr!important}
 .skill-steps p{margin:2px 0 0}
 .skill-link{display:block;width:100%;margin-top:12px;border:1.5px dashed var(--line);background:transparent;color:var(--ink);border-radius:14px;padding:10px 14px;font:inherit;font-weight:600;text-align:left;cursor:pointer}
 .skill-link:hover{border-color:var(--accent)}
-.skill-nudge{margin-top:12px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:color-mix(in srgb,var(--accent) 8%,var(--card))}
+.skill-nudge{margin-top:12px;display:flex;flex-direction:column;align-items:stretch;gap:10px;background:color-mix(in srgb,var(--accent) 8%,var(--card))}
+.skill-nudge .skill-crisis{margin:0}
 .skill-nudge-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
 .skill-nudge-actions .btn{white-space:nowrap}
 .skill-nudge-actions .linkbtn{white-space:nowrap}

@@ -422,6 +422,7 @@ function renderToday(){
       <div class="card stat"><div class="n">${s.total}</div><div class="l">check-ins</div></div>
       <button class="card stat stat-link" id="toBadges"><div class="n">${Object.keys(earned).length}🏅</div><div class="l">${Object.keys(earned).length===1?"badge":"badges"}<span class="hide-sm"> earned</span> <span class="go-arrow">→</span></div></button>
     </div>
+    ${roughDayHTML()}
     ${holidayBannerHTML(earned)}
     ${visitNudgeHTML()}
     ${S.prefs.affMode==="embedded"?affirmCardHTML():affEntryHTML()}
@@ -1028,11 +1029,8 @@ async function saveForm(){
   const fresh=badgeList().filter(b=>after[b.id] && !before[b.id]);
   S.form=null; S.view="today"; document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v==="today"));
   render(); window.scrollTo(0,0);
-  // suggest a skill for a new check-in, or when an edit changes a rating (not for fixing notes)
-  const ratingsChanged=prev && FORMS[entry.kind].sections.some(sec=>sec.scale && (+prev.answers[sec.scale.id]||0)!==(+entry.answers[sec.scale.id]||0));
-  const s=computeStats(S.entries), sug=(!prev||ratingsChanged)?postSaveSuggestion(entry):null;
-  if(fresh.length){ celebrate(fresh,s,sug); }
-  else if(sug){ const lines=AFFIRMATIONS[F.kind]; modal(`<div class="big" aria-hidden="true">${F.kind==="morning"?"🌅":"🌙"}</div><h2>${prev?"Changes saved":"Thanks for checking in"}</h2><p class="muted">${prev?"Thanks for updating how you're doing.":lines[(s.total+new Date().getDate())%lines.length]}</p>${sug}<div class="actions" style="justify-content:center"><button class="btn ghost" data-close>Not now</button></div>`, bindSuggestions); }
+  const s=computeStats(S.entries);   // a low rating shows a skill suggestion on Today (roughDayHTML), not in a pop-up
+  if(fresh.length){ celebrate(fresh,s); }
   else if(!prev){ confetti(70); winCard(F.kind,s); }
   else toast("Changes saved");
 }
@@ -1255,24 +1253,10 @@ const areaName=dim=>DIMENSIONS[dim]?.label||dim;
 function lowHeadline(lows){
   return lows.length===1?`${areaName(lows[0].dim)} sounds hard right now.`:lows.length===2?`${areaName(lows[0].dim)} and ${areaName(lows[1].dim)} sound hard right now.`:"A few areas sound hard right now.";
 }
-function suggestionHTML(lows,sug){
-  if(!sug) return "";
-  const note=SKILLS.data.suggestions.areas[sug.dim]?.note, k=skillById(sug.id);
-  return `<div class="suggest"><b>${esc(lowHeadline(lows))}</b>
-    <span class="muted">Thanks for being honest. A short skill might help.${note?" "+esc(note):""}</span>
-    <div class="suggest-list"><button class="suggest-skill" data-sk="${sug.id}"><span class="sg-name">${esc(k.name)} <span aria-hidden="true">→</span></span><span class="small muted">${esc(k.tagline)}</span><span class="sg-why">${sug.helped?`💛 Helped you before · For ${esc(areaName(sug.dim))}`:`For ${esc(areaName(sug.dim))}`}</span></button></div>
-    ${lows.some(l=>l.dim==="emotional"&&l.v===1)?CRISIS_LINE:""}</div>`;
-}
-function bindSuggestions(el){ el.querySelectorAll("[data-sk]").forEach(b=>b.onclick=()=>{ closeModal(); openSkill(b.dataset.sk); }); }
-/* After saving a new check-in with low ratings: a gentle note with one or two skills */
-function postSaveSuggestion(entry){
-  if(!S.prefs.skillNudge || !SKILLS.data) return null;
-  const lows=lowAreas([entry]), sug=suggestSkill(lows,entry.kind);
-  return sug?suggestionHTML(lows,sug):null;
-}
-/* Today: a "Rough day?" card when any check-in today has low ratings, otherwise a small link */
-function skillLinkHTML(){
-  if(!SKILLS.data) return "";
+/* Today: a "Rough day?" card near the top for an hour after a check-in with a low rating (new or edited),
+   and otherwise a small link to Skills below the check-ins */
+function roughDay(){
+  if(!SKILLS.data) return null;
   const t=today(), ents=["morning","night"].map(k=>getEntry(t,k)).filter(Boolean);
   let hidden=false; try{ hidden=localStorage.getItem(SKILL_NUDGE_KEY)===t; }catch(e){}
   // the card stays for an hour after the latest check-in with a low rating was saved, then goes away on its own
@@ -1282,8 +1266,19 @@ function skillLinkHTML(){
   const fresh=lowEnts.length && left>0;
   if(fresh) skillNudgeTimer=setTimeout(()=>{ if(S.view==="today" && !S.form){ const y=scrollY; render(); scrollTo(0,y); } }, left+500);
   const lows=fresh?lowAreas(lowEnts):[], kind=getEntry(t,"night")?"night":"morning", sug=suggestSkill(lows,kind);
-  if(sug && !hidden) return `<div class="card skill-nudge"><div><b>Rough day?</b> <span class="muted">${esc(lowHeadline(lows))} A short skill might help.</span></div>
-      <div class="skill-nudge-actions"><button class="btn" data-try="${sug.id}">${sug.helped?"💛 ":""}Try ${esc(skillById(sug.id).name)}</button><button class="linkbtn" id="toSkills">All skills</button><button class="linkbtn" id="hideNudge">Not now</button></div></div>`;
+  return sug && !hidden ? {lows,sug} : null;
+}
+function roughDayHTML(){
+  const r=roughDay(); if(!r) return "";
+  const {lows,sug}=r, k=skillById(sug.id), note=SKILLS.data.suggestions.areas[sug.dim]?.note;
+  return `<div class="card skill-nudge" role="region" aria-label="Skill suggestion">
+      <div class="sn-text"><b>Rough day?</b> <span class="muted">${esc(lowHeadline(lows))} Thanks for being honest. A short skill might help.${note?" "+esc(note):""}</span></div>
+      <button class="suggest-skill" data-try="${sug.id}"><span class="sg-name">${esc(k.name)} <span aria-hidden="true">→</span></span><span class="small muted">${esc(k.tagline)}</span><span class="sg-why">${sug.helped?`💛 Helped you before · For ${esc(areaName(sug.dim))}`:`For ${esc(areaName(sug.dim))}`}</span></button>
+      <div class="skill-nudge-actions"><button class="linkbtn" id="toSkills">All skills</button><button class="linkbtn" id="hideNudge">Not now</button></div>
+      ${lows.some(l=>l.dim==="emotional"&&l.v===1)?CRISIS_LINE:""}</div>`;
+}
+function skillLinkHTML(){
+  if(!SKILLS.data || roughDay()) return "";
   return `<button class="skill-link" id="toSkills">🧰 Feeling overwhelmed? Try a coping skill →</button>`;
 }
 function bindSkillLink(){
@@ -2135,14 +2130,13 @@ function showWelcome(){
       const h=el.querySelector("#wHow"); if(h) h.onclick=()=>{ noteStarted(); closeModal(); location.hash="about-homescreen"; setView("about"); setTimeout(scrollToHash,60); };
       setTimeout(()=>el.querySelector("#wGo")?.focus(),30); });
 }
-function celebrate(badges,s,extraHTML){
+function celebrate(badges,s){
   confetti(160);
   modal(`<div class="big">${badges[0].em}</div><h2>${badges.length>1?"New badges!":"Badge unlocked!"}</h2>
     <p class="muted">${s.current>0?`You're on a ${s.current}-day check-in streak. `:""}Keep showing up for yourself.</p>
     <div class="list">${badges.map(b=>`<div><span class="em">${b.em}</span><span><b>${b.name}</b><br><span class="small muted">${b.desc}</span></span></div>`).join("")}</div>
     ${badges.some(b=>b.id==="first-steps")?`<div class="badge-intro"><b>About badges</b><span>We want you to feel rewarded every time you take care of yourself. You'll earn badges for showing up, like checking in, trying a skill, or coming back after a break, never for how your day went. You can find them all in <b>History</b>.</span></div>`:""}
-    ${extraHTML||""}
-    <button class="btn" data-close>Thanks!</button>`, extraHTML?bindSuggestions:null);
+    <button class="btn" data-close>Thanks!</button>`);
 }
 function confetti(count){
   if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
