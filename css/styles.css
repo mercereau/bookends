@@ -652,3 +652,68 @@ html.text-xl .sl-top{grid-template-columns:1fr}html.text-xl .sl-res{grid-column:
 .sg-name{font-weight:700}
 .sg-why{font-size:.8rem;font-weight:600;color:var(--muted)}
 .suggest .skill-crisis{margin:6px 0 0}
+
+/* Daily log */
+.skill-link.done{border-style:solid}
+.skill-link.done .muted{font-weight:500}
+.skill-link+.log-support{margin-top:8px}
+.log-sheet .sheet-body{padding-bottom:20px}
+.log-sec{--dc:var(--accent)}
+.log-sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.log-sec-head h3{margin:0}
+.log-sec>p{margin:4px 0 4px}
+.log-item{margin:18px 0 0}
+.log-item-label{margin-bottom:8px;font-weight:500}
+.log-item-label .small{font-weight:400}
+.log-chips,.log-yn,.log-checks,.log-skill-chips{display:flex;flex-wrap:wrap;gap:6px}
+.log-chip{min-width:2.4rem;min-height:2.4rem;padding:0 8px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+.log-chip.wide{padding:6px 12px;min-width:0;font-weight:500}
+.log-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.log-chip:disabled{cursor:default;opacity:.75}
+.log-chip.on:disabled{opacity:1}
+.log-sub{margin:8px 0 0;display:flex;flex-direction:column;gap:6px}
+.log-field{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+.log-field input{font:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+.log-add-skill{font:inherit;padding:6px 10px;border:1px dashed var(--line);border-radius:10px;background:transparent;color:var(--ink)}
+.log-target{padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.log-support{margin:12px 0 0;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,#c0392b 10%,var(--card));border:1px solid color-mix(in srgb,#c0392b 35%,transparent)}
+.log-support p{margin:0 0 6px}
+.log-support p:last-child{margin:0}
+.log-h{margin:18px 0 4px;font-size:1.02rem}
+.log-setup-item{align-items:flex-start}
+.log-privacy{margin-top:14px}
+.log-sum{margin:0;display:grid;gap:6px}
+.log-sum div{display:flex;flex-wrap:wrap;gap:2px 10px}
+.log-sum dt{font-weight:600}
+.log-sum dd{margin:0;color:var(--muted)}
+.log-tb-wrap{margin:-2px 0 10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.log-tb-list{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:6px}
+.log-tb{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:var(--card);border:1px solid var(--line)}
+.log-tb.off .log-tb-name{color:var(--muted);text-decoration:line-through}
+.log-tb-name{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
+.log-tb-switch{display:flex;align-items:center}
+.log-tb-del{color:var(--muted)}
+.log-tb-add-btns{display:flex;align-items:center;gap:12px}
+.log-steps .stepdot{--dc:var(--accent)}
+.log-sheet .sheet-head{background:var(--accent-soft)}
+.log-q{font-size:.92rem}
+.log-sub .scale,.log-sub .anchors{width:100%}
+.log-scale.log-yn button{font-size:1rem;font-weight:600}
+.log-target .log-item-label{font-weight:700}
+.log-checklist{display:grid;gap:8px}
+.log-check{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font:inherit;cursor:pointer;transition:.15s}
+.log-check:hover{border-color:var(--accent)}
+.log-box{flex:none;width:1.35rem;height:1.35rem;border:2px solid var(--muted);border-radius:6px;display:grid;place-items:center;font-size:.9rem;font-weight:800;line-height:1;color:#fff}
+.log-check.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--bg))}
+.log-check.on .log-box{background:var(--accent);border-color:var(--accent)}
+.log-check:disabled{cursor:default}
+.log-check:disabled:not(.on){opacity:.6}
+.log-check:disabled:hover{border-color:var(--line)}
+.log-hours-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.log-hours-head output{font-weight:700;color:var(--accent)}
+.log-hours.unset .log-hours-head output{font-weight:400;color:var(--muted)}
+.log-range{width:100%;accent-color:var(--accent);height:2rem;margin:4px 0 0;cursor:pointer}
+.log-hours.unset .log-range{opacity:.55}
+.log-range:disabled{cursor:default}
+.log-tag{display:inline-block;font-size:.72rem;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--ink);white-space:nowrap;vertical-align:1px}
+.log-sens-note{margin:6px 0 10px}

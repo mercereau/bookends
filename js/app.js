@@ -203,31 +203,6 @@ const LocalStore = {
   async save(e){ const o=this._read(); o[e.key]=e; this._write(o); },
   async remove(k){ const o=this._read(); delete o[k]; this._write(o); },
 };
-function CloudStore(db, uid){
-  const col = db.collection("data/users/"+uid);
-  return {
-    kind:"cloud",
-    async list(){ const s = await col.get(); return s.docs.filter(d=>d.exists).map(d=>({...d.data()})); },
-    async save(e){ await withRetry(()=>col.doc(e.key).set(e)); },
-    async remove(k){ await withRetry(()=>col.doc(k).delete()); },
-  };
-}
-async function withRetry(fn){
-  try{ return await fn(); }
-  catch(e){ if(e&&e.code==="unavailable"){ await new Promise(r=>setTimeout(r,400+Math.random()*600)); return fn(); } throw e; }
-}
-async function pickStore(){
-  if(!window.claude || !window.claude.use) return LocalStore;
-  const timeout = new Promise(r=>setTimeout(()=>r(null),10000));
-  try{
-    const [db,user] = await Promise.race([Promise.all([claude.use("db"), claude.use("user")]), timeout.then(()=>[null,null])]);
-    if(!db||!user) return LocalStore;
-    const uid = await user.id();
-    if(!uid) return LocalStore;
-    return CloudStore(db, uid);
-  }catch(e){ return LocalStore; }
-}
-
 /* =========================================================
    4. DATE + STATS HELPERS
    ========================================================= */
@@ -382,13 +357,14 @@ function earnedBadges(entries){
   }
   dynamicBadges(entries,out);
   skillBadges(out);
+  dailyLogBadges(out);
   return out;
 }
 
 /* =========================================================
    5. APP STATE + RENDERING
    ========================================================= */
-const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, startDate:null, startAt:null, visits:{}, insights:[], nudges:{}, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,showWriting:false,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
+const S = { histDay:null, affLog:{}, skillLog:{}, backups:[], homeDate:null, startDate:null, startAt:null, visits:{}, insights:[], nudges:{}, logs:{}, logCfg:null, shares:[], reminders:{}, prefs:{affMode:"popup",colorMode:"standard",skillNudge:true,showWriting:false,dailyLog:true,morningStart:5,morningEnd:12,nightStart:17,nightEnd:24}, store:null, entries:[], view:"today", form:null, cal:new Date() };
 const $app = document.getElementById("app");
 
 function scrollToHash(){
@@ -433,6 +409,7 @@ function renderToday(){
       ${ciCard("morning",m,morningOpen,"Set the tone for your day","Start check-in →",closedMsg("morning"))}
       ${ciCard("night",n,nightOpen,"Look back on how today went","Start reflection →",closedMsg("night"))}
     </div>
+    ${dailyLogBoxHTML()}
     ${skillLinkHTML()}
     <div class="card" style="margin-top:14px">
       <div class="shelf-head"><span class="small muted">Your week on the shelf</span>
@@ -450,6 +427,7 @@ function renderToday(){
   if(S.prefs.affMode==="embedded") bindAffirm();
   const qb=document.getElementById("quickBackup"); if(qb) qb.onclick=downloadBackup;
   bindSkillLink();
+  bindDailyLogBox();
 }
 /* Time windows (each person can change these in Settings):
    morning intention: midnight until prefs.morningEnd · nightly reflection: prefs.nightStart until midnight. 24h clock. */
@@ -515,7 +493,6 @@ function nextBadgeHint(s,earned){
   return `<div class="note">Next up: <b>${next.b.em} ${next.b.name}</b> — ${next.b.desc.toLowerCase()} (${Math.min(next.c,next.g)}/${next.g})</div>`;
 }
 function storeNote(){
-  if(S.store.kind==="cloud") return "";
   const d=lastBackup(), days=d?Math.round((parse(today())-parse(d.slice(0,10)))/864e5):null;
   if(!S.entries.length || (days!==null && days<14)) return "";
   return `<div class="note warn backup-note">Entries are saved in this browser only. ${d?`Your last backup was ${days} days ago.`:"You haven't downloaded a backup yet."} <button class="linkbtn" id="quickBackup">Download backup</button></div>`;
@@ -697,7 +674,7 @@ function reminderStatus(kind){
 function saveBackupLog(){ const doc={key:BACKUPS_META_KEY,kind:"meta",days:S.backups,updatedAt:new Date().toISOString(),v:1};
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{}); }
 let affSaving=Promise.resolve();
-function saveAffLog(){ // one write at a time; kept with the user's entries (synced on the Claude-hosted copy)
+function saveAffLog(){ // one write at a time; kept with the user's entries
   const doc={key:AFF_META_KEY,kind:"meta",days:S.affLog,times:S.affTimes||{},updatedAt:new Date().toISOString(),v:1};
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
 }
@@ -780,9 +757,9 @@ function maybeAutoAffirm(){ // once per day, on the first visit, unless turned o
   setTimeout(()=>openAffSheet(true),700);
 }
 
-/* ---------- Preferences (kept with the user's data; synced on the Claude-hosted copy) ---------- */
+/* ---------- Preferences (kept in this browser) ---------- */
 const PREFS_KEY="meta_prefs";
-const DEFAULT_PREFS={affMode:"popup", colorMode:"standard", skillNudge:true, showWriting:false, morningStart:5, morningEnd:12, nightStart:17, nightEnd:24};
+const DEFAULT_PREFS={affMode:"popup", colorMode:"standard", skillNudge:true, showWriting:false, dailyLog:true, morningStart:5, morningEnd:12, nightStart:17, nightEnd:24};
 const AFF_MODES=["off","embedded","popup"];
 function normalizePrefs(p){ // also upgrades the earlier on/off switches
   const out={...DEFAULT_PREFS, ...p};
@@ -791,6 +768,7 @@ function normalizePrefs(p){ // also upgrades the earlier on/off switches
   if(!["standard","cvd"].includes(out.colorMode)) out.colorMode="standard";
   out.skillNudge = out.skillNudge!==false;
   out.showWriting = out.showWriting===true;
+  out.dailyLog = out.dailyLog!==false;
   for(const k of ["morningStart","morningEnd","nightStart","nightEnd"]) out[k]=Number.isInteger(+out[k])?+out[k]:DEFAULT_PREFS[k];
   fixWindows(out);
   delete out.affEnabled; delete out.affAuto; return out;
@@ -1327,6 +1305,369 @@ function bindSkillLink(){
   const h=document.getElementById("hideNudge"); if(h) h.onclick=()=>{ if(r) logNudge("dismissed",r); dismiss(); render(); };
 }
 
+/* ---------- Daily log (a DBT-style diary card) ----------
+   Content lives in data/daily-log.json. One log per day (doc key "log_YYYY-MM-DD", kind "log"), editable that day.
+   Setup (sections and target behaviors) is a meta doc. Sensitive sections stay out of exports unless chosen. */
+const LOG={data:null};
+const LOG_CFG_KEY="meta_dailylog";
+let EXPORT_SENS=false;   // include the sensitive daily log sections in the next download (set from the Settings switch, off by default)
+async function loadDailyLog(){
+  try{ const r=await fetch("data/daily-log.json",{cache:"no-cache"}); if(!r.ok) throw 0; const d=await r.json(); if(!Array.isArray(d.sections)) throw 0; LOG.data=d; }
+  catch(e){ LOG.data=null; }
+}
+const logSection=id=>LOG.data?.sections.find(s=>s.id===id);
+const logKey=d=>"log_"+d;
+const getLog=d=>S.logs[d]||null;
+function logCfg(){ return S.logCfg||{setup:false,sections:{},targets:[]}; }
+function logOn(id){ const c=logCfg(), s=logSection(id); return s? (c.sections[id]!==undefined ? !!c.sections[id] : !!s.default) : false; }
+const TARGETS_MAX=3;
+const activeTargets=()=>logCfg().targets.filter(t=>t.on);
+const logEnabledSections=()=>(LOG.data?.sections||[]).filter(s=>logOn(s.id));
+function saveLogCfg(){ const doc={key:LOG_CFG_KEY,kind:"meta",...S.logCfg,updatedAt:new Date().toISOString(),v:1}; affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{}); }
+function cleanLogCfg(c){
+  if(!c||typeof c!=="object") return null;
+  return {setup:!!c.setup, setupAt:c.setupAt||null, sections:(c.sections&&typeof c.sections==="object")?{...c.sections}:{},
+    targets:Array.isArray(c.targets)?c.targets.map((t,i)=>typeof t==="string"?{id:"tb"+i,name:t.slice(0,80),on:true,addedAt:c.setupAt||null}:(t&&t.id&&t.name?{id:String(t.id),name:String(t.name).slice(0,80),on:t.on!==false,addedAt:t.addedAt||null}:null)).filter(Boolean):[]};
+}
+const scaleEnds=it=>it.reversed?["hard to focus","focused"]:["none","most intense"];
+
+/* Which support message (if any) the answers call for */
+function logSupport(a){
+  const out=[]; const n=k=>+a[k]||0;
+  if(n("suicidal")>0||a.suicidal_plan==="yes"||n("selfharm")>0||a.selfharm_acted==="yes") out.push("crisis");
+  if(n("harmothers")>0||a.harmothers_plan==="yes") out.push("others");
+  if(n("substance_urge")>0||a.substance_used==="yes") out.push("substance");
+  if((a.appetite||[]).some(x=>["restricting","binge","purge"].includes(x))) out.push("eating");
+  return out;
+}
+function supportHTML(kinds){
+  if(!kinds.length||!LOG.data) return "";
+  const S2=LOG.data.support;
+  return `<div class="log-support" role="note">${kinds.map(k=>`<p>${esc(S2[k])}</p>`).join("")}${kinds.some(k=>k==="crisis"||k==="others")?`<p class="small">${esc(S2.notMonitored)}</p>`:""}</div>`;
+}
+
+/* Today: a dotted box above the skill link that nudges setup, then the day's log */
+function dailyLogBoxHTML(){
+  if(!LOG.data || S.prefs.dailyLog===false) return "";
+  const c=logCfg(), lg=getLog(today());
+  // styled like the coping-skill link below it
+  if(!c.setup) return `<button class="skill-link" id="logSetup">📓 Set up your daily log →</button>`;
+  if(!lg) return `<button class="skill-link" id="logOpen">📓 Fill in today's daily log →</button>`;
+  return `<button class="skill-link done" id="logOpen">📓 Daily log done for today ✓ <span class="muted">View or edit →</span></button>${supportHTML(logSupport(lg.answers).filter(k=>k==="crisis"||k==="others"))}`;
+}
+function bindDailyLogBox(){
+  const s=document.getElementById("logSetup"); if(s) s.onclick=()=>openLogSetup();
+  const o=document.getElementById("logOpen"); if(o) o.onclick=()=>openLog(today());
+}
+
+/* Setup sheet */
+let logBg=null, logPendingBadges=[];
+function closeLogSheet(instant){
+  if(!logBg) return; const bg=logBg; logBg=null;
+  if(!S.form) document.body.classList.remove("noscroll");
+  if(instant) bg.remove(); else { bg.classList.add("closing"); setTimeout(()=>bg.remove(),180); }
+  if(S.view==="today"||S.view==="history"||S.view==="settings"){ const y=scrollY; render(); scrollTo(0,y); }
+  if(logPendingBadges.length){ const fresh=logPendingBadges; logPendingBadges=[]; setTimeout(()=>celebrate(fresh,computeStats(S.entries)),260); }
+}
+function logSheet(title,sub,bodyHTML,footHTML){
+  closeLogSheet(true);
+  logBg=document.createElement("div"); logBg.className="sheet-bg log-bg";
+  logBg.innerHTML=`<div class="sheet log-sheet" role="dialog" aria-modal="true" aria-labelledby="log-title">
+      <div class="sheet-head"><div class="sheet-title"><span class="sheet-ico" aria-hidden="true">📓</span><div><h2 id="log-title">${esc(title)}</h2><div class="small muted">${esc(sub)}</div></div></div>
+        <button class="xbtn" id="logClose" aria-label="Close">✕</button></div>
+      <div class="sheet-body" id="logBody">${bodyHTML}</div>
+      <div class="sheet-foot" id="logFoot">${footHTML}</div></div>`;
+  logBg.addEventListener("mousedown",e=>{ if(e.target===logBg) logRequestClose(); });
+  document.body.appendChild(logBg); document.body.classList.add("noscroll");
+  logBg.querySelector("#logClose").onclick=()=>logRequestClose();
+  return logBg;
+}
+function openLogSetup(){
+  const c=logCfg(), D=LOG.data; if(!D) return;
+  const body=`<p>${esc(D.intro)}</p><p class="small muted">${esc(D.privacy)}</p>
+    <h3 class="log-h">What to track</h3>
+    <p class="small muted log-sens-note"><span class="log-tag">🔒 Sensitive</span> sections stay out of anything you share unless you turn on <b>Include sensitive information</b> in Settings → Share or explore your data.</p>
+    <div class="log-setup-list">${D.sections.map(s=>`<label class="pref log-setup-item"><span><b>${logIcon(s)} ${esc(s.title)}${s.sensitive||(s.items||[]).some(it=>it.sensitive)?` <span class="log-tag">🔒 Sensitive</span>`:""}</b><span class="small muted">${esc(s.about)}</span></span><input type="checkbox" class="switch" data-sec="${s.id}" ${logOn(s.id)?"checked":""}></label>${s.type==="targets"?`<div class="log-tb-wrap" id="tbWrap" ${logOn(s.id)?"":"hidden"}></div>`:""}`).join("")}</div>`;
+  const bg=logSheet(c.setup?"Daily log setup":"Set up your daily log","Choose what fits you. You can change this any time.",body,`<button class="btn ghost" id="logCancel">Cancel</button><button class="btn" id="logSaveSetup">${c.setup?"Save":"Start my daily log"}</button>`);
+  bg.querySelector("#logCancel").onclick=()=>closeLogSheet();
+  // target behaviors: add with a name; after that a behavior can only be turned off or deleted (names are fixed so past logs stay clear)
+  const tbs=JSON.parse(JSON.stringify(c.targets||[])); let adding=false;
+  const wrap=bg.querySelector("#tbWrap");
+  const drawTb=()=>{
+    const onCount=tbs.filter(t=>t.on).length;
+    wrap.innerHTML=`${tbs.length?`<ul class="log-tb-list">${tbs.map(t=>`<li class="log-tb ${t.on?"":"off"}"><span class="log-tb-name">${esc(t.name)}</span>
+        <label class="log-tb-switch"><span class="sr-only">Track ${esc(t.name)}</span><input type="checkbox" class="switch" data-tbon="${t.id}" ${t.on?"checked":""}></label>
+        <button type="button" class="linkbtn log-tb-del" data-tbdel="${t.id}" aria-label="Delete ${esc(t.name)}">Delete</button></li>`).join("")}</ul>`:`<p class="small muted">No behaviors yet.</p>`}
+      ${adding?`<div class="log-tb-add"><label class="log-field"><span class="small">New behavior</span><input type="text" id="tbName" maxlength="80" placeholder="e.g. Isolating"></label>
+          <div class="log-tb-add-btns"><button type="button" class="btn" id="tbAddGo">Add</button><button type="button" class="linkbtn" id="tbAddCancel">Cancel</button></div>
+          <p class="small muted">Once added, a behavior can be turned off or deleted, but not renamed.</p></div>`
+        :`<button type="button" class="linkbtn" id="tbAdd">+ Add a behavior</button>`}
+      ${onCount>=TARGETS_MAX?`<p class="small muted">You're tracking ${TARGETS_MAX}, the most at once. Turn one off to track another.</p>`:""}`;
+    wrap.querySelectorAll("[data-tbon]").forEach(x=>x.onchange=()=>{ const t=tbs.find(y=>y.id===x.dataset.tbon);
+      if(x.checked && tbs.filter(y=>y.on).length>=TARGETS_MAX){ x.checked=false; return toast(`You can track up to ${TARGETS_MAX} at a time.`); }
+      t.on=x.checked; drawTb(); });
+    wrap.querySelectorAll("[data-tbdel]").forEach(x=>x.onclick=()=>{ const i=tbs.findIndex(y=>y.id===x.dataset.tbdel); if(i>=0){ tbs.splice(i,1); drawTb(); wrap.querySelector("#tbAdd")?.focus(); } });
+    const ad=wrap.querySelector("#tbAdd"); if(ad) ad.onclick=()=>{ adding=true; drawTb(); wrap.querySelector("#tbName").focus(); };
+    const ac=wrap.querySelector("#tbAddCancel"); if(ac) ac.onclick=()=>{ adding=false; drawTb(); wrap.querySelector("#tbAdd")?.focus(); };
+    const go=wrap.querySelector("#tbAddGo"), nm=wrap.querySelector("#tbName");
+    const doAdd=()=>{ const v=nm.value.trim(); if(!v) return nm.focus();
+      if(tbs.some(t=>t.name.toLowerCase()===v.toLowerCase())) return toast("You already have that one.");
+      tbs.push({id:"tb"+Date.now().toString(36)+Math.random().toString(36).slice(2,5), name:v.slice(0,80), on:tbs.filter(t=>t.on).length<TARGETS_MAX, addedAt:new Date().toISOString()});
+      adding=false; drawTb(); wrap.querySelector("#tbAdd")?.focus(); };
+    if(go){ go.onclick=doAdd; nm.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); doAdd(); } }; }
+  };
+  drawTb();
+  const tsw=bg.querySelector('[data-sec="targets"]'); if(tsw) tsw.onchange=()=>{ wrap.hidden=!tsw.checked; };
+  bg.querySelector("#logSaveSetup").onclick=()=>{
+    const before=earnedBadges(S.entries), sections={};
+    bg.querySelectorAll("[data-sec]").forEach(x=>sections[x.dataset.sec]=x.checked);
+    const targets=tbs;
+    S.logCfg={...c, setup:true, setupAt:c.setupAt||new Date().toISOString(), sections, targets};
+    saveLogCfg();
+    const after=earnedBadges(S.entries); logPendingBadges=badgeList().filter(b=>after[b.id]&&!before[b.id]);
+    toast(c.setup?"Daily log updated":"Daily log is ready"); closeLogSheet();
+  };
+}
+
+/* The log itself */
+// ratings and yes/no look and work like the check-in scale: full-width buttons, with what the ends mean underneath
+function chipsHTML(name,max,val,label,ro,low,high){
+  const set=val!==undefined&&val!=="";
+  return `<div class="scale log-scale" role="radiogroup" aria-label="${esc(label)}">${Array.from({length:max+1},(_,i)=>`<button type="button" class="${set&&+val===i?"on":""}" role="radio" aria-checked="${set&&+val===i}" data-k="${name}" data-v="${i}" ${ro?"disabled":""}>${i}</button>`).join("")}</div>
+    ${low?`<div class="anchors" aria-hidden="true"><span>0 = ${esc(low)}</span><span>${max} = ${esc(high)}</span></div>`:""}`;
+}
+function ynHTML(name,val,label,ro){
+  return `<div class="scale log-scale log-yn" role="radiogroup" aria-label="${esc(label)}">${["yes","no"].map(v=>`<button type="button" class="${val===v?"on":""}" role="radio" aria-checked="${val===v}" data-k="${name}" data-v="${v}" ${ro?"disabled":""}>${v==="yes"?"Yes":"No"}</button>`).join("")}</div>`;
+}
+// multi-select lists look like a checklist so it's clear you can pick more than one
+function checksHTML(key,checks,sel,label,ro){
+  sel=sel||[];
+  return `<div class="log-item-label">Check all that apply</div><div class="log-checklist" role="group" aria-label="${esc(label)}: check all that apply">${checks.map(c=>{ const on=sel.includes(c.id);
+    return `<button type="button" class="log-check ${on?"on":""}" role="checkbox" aria-checked="${on}" data-check="${key}" data-id="${c.id}" ${ro?"disabled":""}><span class="log-box" aria-hidden="true">${on?"✓":""}</span><span>${esc(c.label)}</span></button>`; }).join("")}</div>`;
+}
+const fmtSleep=h=>h>=12?"12+ hours":`${h} hour${h===1?"":"s"}`;
+function noteHTML(name,val,label,ro){ return `<label class="log-field"><span class="small muted">${esc(label)}</span><input type="text" maxlength="300" data-note="${name}" value="${esc(val||"")}" ${ro?"readonly":""}></label>`; }
+// section icons are emoji, plus a few small drawings for things emoji doesn't have
+const LOG_SVG={"pill-bottle":`<svg class="log-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5.5" y="1.5" width="13" height="5" rx="1.4" fill="#f4f4f2" stroke="#8a8f94" stroke-width=".9"/><path d="M8 2.6v2.8M10.7 2.6v2.8M13.3 2.6v2.8M16 2.6v2.8" stroke="#b7bbbf" stroke-width=".8"/><rect x="6.5" y="6.5" width="11" height="2" rx=".6" fill="#c7680f"/><rect x="6" y="8" width="12" height="14.5" rx="2.2" fill="#f0892a"/><rect x="7.5" y="9.5" width="2" height="11.5" rx="1" fill="#fff" opacity=".28"/><rect x="7.6" y="12" width="8.8" height="6.6" rx=".9" fill="#fff"/><rect x="9" y="13.6" width="6" height="1" rx=".5" fill="#f0892a"/><rect x="9" y="15.6" width="4" height="1" rx=".5" fill="#f5b06e"/></svg>`};
+const logIcon=sec=>LOG_SVG[sec.icon]||sec.icon;
+function logSectionHTML(sec,a,ro,d){
+  const head=`<div class="log-sec-head"><h3><span aria-hidden="true">${logIcon(sec)}</span>${esc(sec.title)}</h3>${!ro&&(sec.items||sec.type==="checks"||sec.type==="sleep")?`<button type="button" class="linkbtn" data-none="${sec.id}">Nothing to report</button>`:""}</div><p class="small muted">${esc(sec.about)}</p>`;
+  let inner="";
+  if(sec.items) inner=sec.items.map(it=>{
+    const v=a[it.id];
+    return `<div class="log-item"><div class="log-item-label">${esc(it.label)}</div>${chipsHTML(it.id,it.scale,v,it.label,ro,...scaleEnds(it))}
+      ${it.acted&&(+v>0||a[it.id+"_acted"])?`<div class="log-sub"><span class="log-q">Did you act on it?</span>${ynHTML(it.id+"_acted",a[it.id+"_acted"],it.label+": acted on it",ro)}${a[it.id+"_acted"]==="yes"?noteHTML(it.id+"_note",a[it.id+"_note"],"What happened? (optional)",ro):""}</div>`:""}
+      ${it.plan&&(+v>0||a[it.id+"_plan"])?`<div class="log-sub"><span class="log-q">Do you have a plan, intent, or the means?</span>${ynHTML(it.id+"_plan",a[it.id+"_plan"],it.label+": plan",ro)}${a[it.id+"_plan"]==="yes"?noteHTML(it.id+"_note",a[it.id+"_note"],"Anything you want to note (optional)",ro):""}</div>`:""}</div>`;
+  }).join("");
+  else if(sec.type==="targets"){
+    const list=ro?Object.entries(a.targets||{}).map(([id,t])=>({id,name:t.name||logCfg().targets.find(x=>x.id===id)?.name||"Target behavior"})):activeTargets();
+    if(!list.length) inner=`<p class="small">${ro?"None logged.":`No behaviors yet. <button type="button" class="linkbtn" id="logToSetup">Add one in setup</button>`}</p>`;
+    else { const used=[...new Set(skillUsesOn(d).map(r=>r.id))];
+      inner=list.map(tb=>{ const t=(a.targets||{})[tb.id]||{}, sk=t.skills||[], nm=tb.name, K=k=>`tg|${tb.id}|${k}`;
+        const opts=[...new Set([...used,...sk])].filter(id=>skillById(id));
+        return `<div class="log-item log-target"><div class="log-item-label"><b>${esc(nm)}</b></div>
+          <div class="log-sub"><span class="log-q">Urge</span>${chipsHTML(K("urge"),5,t.urge,nm+": urge",ro,"none","strong")}</div>
+          <div class="log-sub"><span class="log-q">Did you do it?</span>${ynHTML(K("acted"),t.acted,nm+": did it",ro)}</div>
+          <div class="log-sub"><span class="log-q">Did it get in the way of your day?</span>${ynHTML(K("affected"),t.affected,nm+": got in the way",ro)}</div>
+          <div class="log-sub"><span class="log-q">Skills you tried</span><div class="log-skill-chips">${opts.map(id=>`<button type="button" class="log-chip wide ${sk.includes(id)?"on":""}" aria-pressed="${sk.includes(id)}" data-tskill="${tb.id}" data-id="${id}" ${ro?"disabled":""}>${esc(skillById(id).name)}</button>`).join("")||(ro?`<span class="small muted">None noted</span>`:"")}
+            ${ro?"":`<select class="log-add-skill" data-tadd="${tb.id}" aria-label="Add a skill for ${esc(nm)}"><option value="">+ Add a skill</option>${(SKILLS.data?.skills||[]).filter(k=>!opts.includes(k.id)).map(k=>`<option value="${k.id}">${esc(k.name)}</option>`).join("")}</select>`}</div></div>
+          ${noteHTML(K("note"),t.note,"Notes (optional)",ro)}</div>`; }).join(""); }
+  }
+  else if(sec.type==="sleep"){
+    const hs=a.sleep_hours!==undefined;
+    inner=`<div class="log-item log-hours ${hs?"":"unset"}"><div class="log-item-label log-hours-head"><label for="logHours">Hours of sleep</label>
+        <span><output id="logHoursOut" for="logHours">${hs?fmtSleep(a.sleep_hours):"Not answered"}</output>${hs&&!ro?` <button type="button" class="linkbtn" id="logHoursClear">Clear</button>`:""}</span></div>
+      <input type="range" id="logHours" class="log-range" min="0" max="12" step="0.5" value="${hs?Math.min(12,a.sleep_hours):7}" data-range="sleep_hours" aria-valuetext="${hs?fmtSleep(a.sleep_hours):"Not answered"}" ${ro?"disabled":""}>
+      <div class="anchors" aria-hidden="true"><span>0</span><span>6</span><span>12+</span></div></div>
+      <div class="log-item">${checksHTML("sleep_checks",sec.checks,a.sleep_checks,sec.title,ro)}</div>
+      ${noteHTML("sleep_other",a.sleep_other,"Anything else? (optional)",ro)}`;
+  }
+  else if(sec.type==="checks"){
+    inner=`<div class="log-item">${checksHTML(sec.id,sec.checks,a[sec.id],sec.title,ro)}</div>
+      ${noteHTML(sec.id+"_other",a[sec.id+"_other"],"Anything else? (optional)",ro)}`;
+  }
+  else if(sec.type==="meds"){
+    inner=`<div class="log-item"><div class="log-item-label">I took my medication as prescribed</div>${ynHTML("meds_taken",a.meds_taken,"Took medication as prescribed",ro)}</div>
+      <div class="log-item"><div class="log-item-label">Any medication changes in the last 24 hours?</div>${ynHTML("meds_changed",a.meds_changed,"Medication changes",ro)}${a.meds_changed==="yes"?noteHTML("meds_note",a.meds_note,"What changed? (optional)",ro):""}</div>`;
+  }
+  else if(sec.type==="substance"){
+    inner=`<div class="log-item"><div class="log-item-label">Urge to use</div>${chipsHTML("substance_urge",5,a.substance_urge,"Urge to use",ro,"none","most intense")}</div>
+      <div class="log-item"><div class="log-item-label">Did you use in the last 24 hours?</div>${ynHTML("substance_used",a.substance_used,"Used in the last 24 hours",ro)}${a.substance_used==="yes"?noteHTML("substance_note",a.substance_note,"What, and how much? (optional)",ro):""}</div>`;
+  }
+  const sup=sec.support?supportHTML(logSupport(a).filter(k=>sec.id==="safety"?(k==="crisis"&&(+a.suicidal>0||a.suicidal_plan==="yes"))||k==="others":sec.id==="urges"?k==="crisis":k===sec.support)):(sec.id==="urges"?supportHTML(logSupport(a).filter(k=>k==="crisis"&&(+a.selfharm>0||a.selfharm_acted==="yes"))):"");
+  return `<section class="dim log-sec" data-sec="${sec.id}" aria-labelledby="ls-${sec.id}">${head.replace("<h3>",`<h3 id="ls-${sec.id}">`)}${inner}${sup}</section>`;
+}
+let LF=null;   // the log being edited
+function openLog(d){
+  if(!LOG.data) return;
+  const ex=getLog(d), ro=d!==today();
+  LF={date:d, answers:JSON.parse(JSON.stringify(ex?.answers||{})), existing:!!ex, ro, startedAt:ex?.startedAt||new Date().toISOString(), step:0, anim:true, dir:"fwd"}; LF.orig=JSON.stringify(LF.answers);
+  logSheet("Daily Log", "", "", "");
+  logBg.querySelector("#log-title").nextElementSibling.outerHTML=`<span class="sheet-date">${d===today()?"Today · ":""}${fmtDate(d)}${ro?` · <span class="ro-tag">🔒 Read only</span>`:""}</span>`;
+  logBg.addEventListener("keydown",e=>{ // ←/→ move between sections, like the check-ins
+    if(!LF||e.target.closest("input,textarea,select")) return;
+    const n=logWalkSections().length;
+    if(e.key==="ArrowRight"&&LF.step<n-1){ e.preventDefault(); logGo(LF.step+1); }
+    else if(e.key==="ArrowLeft"&&LF.step>0){ e.preventDefault(); logGo(LF.step-1); } });
+  drawLog();
+}
+// the sections to step through: Target behaviors only when there's a behavior to log (or, on a past day, one was logged)
+function logWalkSections(){
+  return logEnabledSections().filter(s=>s.type!=="targets" || (LF?.ro ? logHasAnswers({targets:LF.answers.targets}) : activeTargets().length>0));
+}
+// a section counts as answered once anything in it has a value
+function logSecDone(sec,a){
+  if(sec.type==="targets") return logHasAnswers({targets:a.targets});
+  const ids=(sec.items||[]).map(it=>it.id).concat(sec.id);
+  return Object.keys(a).some(k=>ids.some(id=>k===id||k.startsWith(id+"_")) && logHasAnswers({[k]:a[k]}));
+}
+// closing an edited log asks first, the same as a check-in
+function logRequestClose(){
+  if(LF && !LF.ro && JSON.stringify(LF.answers)!==LF.orig) return confirmBox("Discard this daily log?","Your answers haven't been saved yet.","Discard",()=>{ LF=null; closeLogSheet(); });
+  LF=null; closeLogSheet();
+}
+function logGo(n){ if(!LF) return; LF.dir=n<LF.step?"back":"fwd"; LF.step=n; LF.anim=true; drawLog(); logBg?.querySelector(".stepdot.cur")?.focus({preventScroll:true}); }
+function drawLog(keepScroll){
+  if(!logBg||!LF) return;
+  const body=logBg.querySelector("#logBody"), foot=logBg.querySelector("#logFoot"), y=body.scrollTop, a=LF.answers;
+  const secs=logWalkSections(), N=secs.length;
+  LF.step=Math.max(0,Math.min(LF.step,N-1));
+  const sec=secs[LF.step], last=LF.step>=N-1, anim=LF.anim; LF.anim=false;
+  let steps=logBg.querySelector("#logSteps");
+  if(!steps){ steps=document.createElement("div"); steps.id="logSteps"; steps.className="steps log-steps"; steps.setAttribute("role","group"); steps.setAttribute("aria-label","Sections"); body.before(steps); }
+  steps.hidden=N<2; steps.style.display=N<2?"none":"";
+  steps.innerHTML=secs.map((x,i)=>{ const done=logSecDone(x,a);
+    return `<button type="button" class="stepdot ${i===LF.step?"cur":""} ${done?"done":""}" data-lstep="${i}" title="${esc(x.title)}" aria-label="${esc(x.title)}${done?", answered":""}" ${i===LF.step?'aria-current="step"':""}><span aria-hidden="true">${logIcon(x)}</span></button>`; }).join("");
+  body.innerHTML=N?`<div class="stepcount">Section ${LF.step+1} of ${N}${LF.step===0&&!LF.ro?`<br>The last 24 hours. Skip anything that doesn't apply.`:""}</div>
+      <div class="${anim?"step-in":""} ${anim&&LF.dir==="back"?"from-left":""}">${logSectionHTML(sec,a,LF.ro,LF.date)}</div>
+      ${last&&!LF.ro?`<p class="small muted log-privacy">${esc(LOG.data.privacy)}</p>`:""}
+      ${LF.existing&&!last&&!LF.ro?`<div style="text-align:right;margin-top:10px"><button type="button" class="linkbtn" id="logSaveNow">Save changes now</button></div>`:""}`
+    :`<p>No sections are turned on. <button type="button" class="linkbtn" id="logToSetup">Open setup</button></p>`;
+  foot.innerHTML=!N?`<button class="btn" id="logDone">Close</button>`
+    :`<button class="btn ghost" id="logPrev" ${LF.step===0?"disabled":""}>← Back</button>`
+     +(last?(LF.ro?`<button class="btn" id="logDone">Close</button>`:`<button class="btn" id="logSave">${LF.existing?"Save changes":"Save today's log"}</button>`)
+           :`<button class="btn" id="logNext">Next: ${esc(secs[LF.step+1].title)} →</button>`);
+  if(keepScroll) body.scrollTop=y; else body.scrollTop=0;
+  steps.querySelector(".stepdot.cur")?.scrollIntoView({block:"nearest",inline:"nearest"});
+  steps.querySelectorAll("[data-lstep]").forEach(b=>b.onclick=()=>logGo(+b.dataset.lstep));
+  const pv=foot.querySelector("#logPrev"); if(pv) pv.onclick=()=>logGo(LF.step-1);
+  const nx=foot.querySelector("#logNext"); if(nx) nx.onclick=()=>logGo(LF.step+1);
+  const sn=body.querySelector("#logSaveNow"); if(sn) sn.onclick=saveLog;
+  const set=(k,v)=>{ if(v===undefined||v==="") delete a[k]; else a[k]=v; };
+  const tgt=id=>{ if(!a.targets||Array.isArray(a.targets)) a.targets={}; return a.targets[id] ||= {name:logCfg().targets.find(x=>x.id===id)?.name||""}; };
+  body.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{
+    const k=b.dataset.k, raw=b.dataset.v, v=/^\d+$/.test(raw)?+raw:raw;
+    if(k.startsWith("tg|")){ const [,id,f]=k.split("|"), t=tgt(id); t[f]=t[f]===v?undefined:v; }
+    else set(k, a[k]===v?undefined:v);
+    drawLog(true);
+  });
+  body.querySelectorAll("[data-check]").forEach(b=>b.onclick=()=>{ const k=b.dataset.check, id=b.dataset.id, l=new Set(a[k]||[]); l.has(id)?l.delete(id):l.add(id); a[k]=[...l]; if(!a[k].length) delete a[k]; drawLog(true); });
+  body.querySelectorAll("[data-tskill]").forEach(b=>b.onclick=()=>{ const t=tgt(b.dataset.tskill), l=new Set(t.skills||[]); l.has(b.dataset.id)?l.delete(b.dataset.id):l.add(b.dataset.id); t.skills=[...l]; drawLog(true); });
+  body.querySelectorAll("[data-tadd]").forEach(x=>x.onchange=()=>{ if(!x.value) return; const t=tgt(x.dataset.tadd); t.skills=[...new Set([...(t.skills||[]),x.value])]; drawLog(true); });
+  body.querySelectorAll("[data-note]").forEach(x=>x.oninput=()=>{ const k=x.dataset.note; if(k.startsWith("tg|")) tgt(k.split("|")[1]).note=x.value; else set(k,x.value); });
+  body.querySelectorAll("[data-range]").forEach(x=>{ const out=body.querySelector("#logHoursOut");
+    x.oninput=()=>{ const n=+x.value; set(x.dataset.range,n); out.textContent=fmtSleep(n); x.setAttribute("aria-valuetext",fmtSleep(n)); x.closest(".log-hours").classList.remove("unset"); };
+    x.onchange=()=>{ drawLog(true); body.querySelector("#logHours")?.focus(); };
+    // a tap on the thumb right where it sits still counts as an answer
+    x.onpointerup=()=>{ if(a[x.dataset.range]===undefined){ x.oninput(); drawLog(true); body.querySelector("#logHours")?.focus(); } }; });
+  const hc=body.querySelector("#logHoursClear"); if(hc) hc.onclick=()=>{ set("sleep_hours",undefined); drawLog(true); body.querySelector("#logHours")?.focus(); };
+  body.querySelectorAll("[data-none]").forEach(b=>b.onclick=()=>{ const sec=logSection(b.dataset.none);
+    (sec.items||[]).forEach(it=>{ a[it.id]=it.reversed?undefined:0; if(it.reversed) delete a[it.id]; delete a[it.id+"_acted"]; delete a[it.id+"_plan"]; delete a[it.id+"_note"]; });
+    if(sec.type==="checks"){ a[sec.id]=sec.id==="appetite"?["normal"]:[]; }
+    if(sec.type==="sleep"){ a.sleep_checks=[...new Set([...(a.sleep_checks||[]).filter(x=>x==="well"),"well"])]; }
+    drawLog(true); });
+  const ts=body.querySelector("#logToSetup"); if(ts) ts.onclick=()=>{ closeLogSheet(true); openLogSetup(); };
+  const dn=foot.querySelector("#logDone"); if(dn) dn.onclick=()=>{ LF=null; closeLogSheet(); };
+  const sv=foot.querySelector("#logSave"); if(sv) sv.onclick=saveLog;
+}
+function logHasAnswers(a){ return Object.keys(a).some(k=>{ const v=a[k]; return k==="targets"?Object.values(v||{}).some(t=>t&&Object.entries(t).some(([f,x])=>f!=="name"&&x!==undefined&&x!==""&&!(Array.isArray(x)&&!x.length))):!(v===undefined||v===""||(Array.isArray(v)&&!v.length)); }); }
+async function saveLog(){
+  if(!LF) return;
+  if(!logHasAnswers(LF.answers)){ LF=null; closeLogSheet(); return toast("Nothing to save, so nothing was changed."); }
+  const before=earnedBadges(S.entries), now=new Date().toISOString(), prev=getLog(LF.date);
+  const doc={key:logKey(LF.date),kind:"log",date:LF.date,answers:LF.answers,startedAt:LF.startedAt,createdAt:prev?.createdAt||now,updatedAt:now,v:1};
+  try{ await S.store.save(doc); }catch(e){ return toast(e?.code==="unreadable"?"Bookends couldn't read your saved data, so it won't save over it. Nothing was changed.":"Couldn't save. Please try again."); }
+  S.logs[LF.date]=doc;
+  const after=earnedBadges(S.entries); logPendingBadges=badgeList().filter(b=>after[b.id]&&!before[b.id]);
+  const sup=logSupport(doc.answers).filter(k=>k==="crisis"||k==="others");
+  if(sup.length) logPendingBadges=[];   // safety comes first: no celebration now (badges still show in History)
+  LF=null; closeLogSheet();
+  if(!logPendingBadges.length && !sup.length) toast(prev?"Daily log updated":"Daily log saved. Thanks for checking in with yourself.");
+  if(sup.length) setTimeout(()=>modal(`<div class="big" aria-hidden="true">🛟</div><h2>Please reach out</h2>${supportHTML(sup)}<div class="actions" style="justify-content:center"><button class="btn" data-close>OK</button></div>`),250);
+}
+
+/* A readable summary, for History and the provider report */
+function logSummaryRows(lg,{sensitive=true}={}){
+  const a=lg.answers, rows=[];
+  for(const sec of logEnabledSections().concat((LOG.data?.sections||[]).filter(s=>!logOn(s.id)))){
+    if(!sensitive && sec.sensitive) continue;
+    if(sec.items) sec.items.forEach(it=>{ if(!sensitive && it.sensitive) return; const v=a[it.id]; if(v===undefined) return;
+      let txt=`${v}/${it.scale}`; if(a[it.id+"_acted"]) txt+=`, acted on it: ${a[it.id+"_acted"]}`; if(a[it.id+"_plan"]) txt+=`, plan or means: ${a[it.id+"_plan"]}`; if(a[it.id+"_note"]) txt+=` (${a[it.id+"_note"]})`;
+      if(+v>0||it.reversed||a[it.id+"_acted"]==="yes"||a[it.id+"_plan"]==="yes") rows.push([it.label,txt,it.sensitive||sec.sensitive]); });
+    else if(sec.type==="targets") Object.entries(a.targets||{}).forEach(([id,t])=>{ if(!t) return; const nm=t.name||logCfg().targets.find(x=>x.id===id)?.name||"Target behavior";
+      const bits=[t.urge!==undefined?`urge ${t.urge}/5`:"", t.acted?`did it: ${t.acted}`:"", t.affected?`got in the way: ${t.affected}`:"", (t.skills||[]).length?`skills: ${(t.skills||[]).map(id=>skillById(id)?.name||id).join(", ")}`:"", t.note?`(${t.note})`:""].filter(Boolean);
+      if(bits.length) rows.push([nm,bits.join(", "),false]); });
+    else if(sec.type==="sleep"){ const bits=[a.sleep_hours!==undefined?fmtSleep(a.sleep_hours):"", ...(a.sleep_checks||[]).map(id=>sec.checks.find(c=>c.id===id)?.label).filter(Boolean), a.sleep_other||""].filter(Boolean); if(bits.length) rows.push(["Sleep",bits.join(", "),false]); }
+    else if(sec.type==="checks"){ const bits=[...(a[sec.id]||[]).map(id=>sec.checks.find(c=>c.id===id)?.label).filter(Boolean), a[sec.id+"_other"]||""].filter(Boolean); if(bits.length) rows.push([sec.title,bits.join(", "),!!sec.sensitive]); }
+    else if(sec.type==="meds"){ const bits=[a.meds_taken?`took as prescribed: ${a.meds_taken}`:"", a.meds_changed?`changes: ${a.meds_changed}${a.meds_note?` (${a.meds_note})`:""}`:""].filter(Boolean); if(bits.length) rows.push(["Medication",bits.join(", "),false]); }
+    else if(sec.type==="substance"){ const bits=[a.substance_urge!==undefined?`urge ${a.substance_urge}/5`:"", a.substance_used?`used: ${a.substance_used}${a.substance_note?` (${a.substance_note})`:""}`:""].filter(Boolean); if(bits.length) rows.push(["Substance use",bits.join(", "),true]); }
+  }
+  return rows;
+}
+function dailyLogDayHTML(d){
+  const lg=getLog(d); if(!lg) return "";
+  const rows=logSummaryRows(lg);
+  return `<div class="dd-block log-day"><div class="dd-head"><h3>📓 Daily log</h3><button class="linkbtn" data-log-open="${d}">${d===today()?"View or edit":"View"}</button></div>
+    ${rows.length?`<dl class="log-sum">${rows.map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>`:`<p class="small muted">Logged, with nothing notable to report.</p>`}</div>`;
+}
+
+/* Exports: daily log per day; sensitive sections only when chosen */
+function logExport(d,withNotes,sensitive){
+  const lg=getLog(d); if(!lg) return null;
+  const a=lg.answers, out={loggedAt:utc(lg.createdAt)}; if(utc(lg.updatedAt)!==utc(lg.createdAt)) out.updatedAt=utc(lg.updatedAt);
+  for(const sec of LOG.data?.sections||[]){
+    if(sec.sensitive && !sensitive) continue;
+    if(sec.items){ const o={}; sec.items.forEach(it=>{ if(it.sensitive&&!sensitive) return; if(a[it.id]!==undefined){ o[it.id]={rating:a[it.id],outOf:it.scale}; if(a[it.id+"_acted"]) o[it.id].actedOnIt=a[it.id+"_acted"]; if(a[it.id+"_plan"]) o[it.id].planIntentOrMeans=a[it.id+"_plan"]; if(withNotes&&a[it.id+"_note"]) o[it.id].note=a[it.id+"_note"]; } }); if(Object.keys(o).length) out[sec.id]=o; }
+    else if(sec.type==="targets"){ const o=Object.entries(a.targets||{}).map(([id,t])=>{ if(!t) return null; const nm=t.name||logCfg().targets.find(x=>x.id===id)?.name||"Target behavior"; if(t.urge===undefined&&!t.acted&&!t.affected&&!(t.skills||[]).length&&!t.note) return null; return {behavior:nm, ...(t.urge!==undefined?{urge:t.urge,outOf:5}:{}), ...(t.acted?{didIt:t.acted}:{}), ...(t.affected?{gotInTheWay:t.affected}:{}), ...((t.skills||[]).length?{skillsTried:t.skills.map(id=>skillById(id)?.name||id)}:{}), ...(withNotes&&t.note?{note:t.note}:{})}; }).filter(Boolean); if(o.length) out.targets=o; }
+    else if(sec.type==="sleep"){ if(a.sleep_hours!==undefined||(a.sleep_checks||[]).length) out.sleep={...(a.sleep_hours!==undefined?{hours:Math.min(12,a.sleep_hours),...(a.sleep_hours>=12?{hoursOrMore:true}:{})}:{}), ...((a.sleep_checks||[]).length?{notes:a.sleep_checks.map(id=>sec.checks.find(c=>c.id===id)?.label||id)}:{}), ...(withNotes&&a.sleep_other?{other:a.sleep_other}:{})}; }
+    else if(sec.type==="checks"){ if((a[sec.id]||[]).length) out[sec.id]={checked:a[sec.id].map(id=>sec.checks.find(c=>c.id===id)?.label||id), ...(withNotes&&a[sec.id+"_other"]?{other:a[sec.id+"_other"]}:{})}; }
+    else if(sec.type==="meds"){ if(a.meds_taken||a.meds_changed) out.medication={...(a.meds_taken?{tookAsPrescribed:a.meds_taken}:{}), ...(a.meds_changed?{changed:a.meds_changed}:{}), ...(withNotes&&a.meds_note?{note:a.meds_note}:{})}; }
+    else if(sec.type==="substance"){ if(a.substance_urge!==undefined||a.substance_used) out.substance={...(a.substance_urge!==undefined?{urge:a.substance_urge,outOf:5}:{}), ...(a.substance_used?{used:a.substance_used}:{}), ...(withNotes&&a.substance_note?{note:a.substance_note}:{})}; }
+  }
+  return out;
+}
+
+/* Badges for keeping a daily log: always for showing up, never for what's in it */
+function dailyLogBadges(out){
+  if(!LOG.data) return;
+  const add=(id,em,name,desc,d)=>{ DYN_BADGES[id]={id,em,name,desc}; if(d && !out[id]) out[id]=d; };
+  const c=logCfg();
+  if(c.setup && c.setupAt) add("log-setup","🛠️","Made It Yours","Set up your daily log",ymd(new Date(c.setupAt)));
+  const firstTb=c.targets.map(t=>t.addedAt).filter(Boolean).sort()[0];
+  if(c.setup && firstTb) add("log-targets","🎯","Know Your Targets","Named a target behavior to work on",ymd(new Date(firstTb)));
+  const days=Object.keys(S.logs).filter(d=>d<=today()).sort(); if(!days.length) return;
+  add("log-first","📓","First Page","Filled out your first daily log",days[0]);
+  [[3,"📗","Getting the Hang of It"],[7,"📘","A Week of Pages"],[14,"📙","Two Weeks of Pages"],[30,"📚","A Month of Pages"],[60,"🗂️","Chapter Two"],[100,"💯","A Hundred Pages"],[365,"🏛️","A Year of Pages"]]
+    .forEach(([n,em,name])=>{ if(days.length>=n) add("log-"+n,em,name,`Filled out ${n} daily logs`,days[n-1]); });
+  // three logs within any seven days
+  for(let i=2;i<days.length;i++) if((parse(days[i])-parse(days[i-2]))/86400000<=6){ add("log-3in7","🗓️","Three in a Week","Filled out three daily logs in one week",days[i]); break; }
+  // seven days in a row
+  let run=1; for(let i=1;i<days.length;i++){ run=addDays(days[i-1],1)===days[i]?run+1:1; if(run>=7){ add("log-7row","🔗","Seven Straight","Filled out a daily log seven days in a row",days[i]); break; } }
+  // back after a break of a week or more
+  for(let i=1;i<days.length;i++) if((parse(days[i])-parse(days[i-1]))/86400000>=8){ add("log-back","🔄","Back to the Page","Came back to your daily log after a break",days[i]); break; }
+  // morning, night and daily log on the same day
+  const full=days.find(d=>getEntry(d,"morning")&&getEntry(d,"night")); if(full) add("log-fullday","🌗","The Whole Day","Morning intention, nightly reflection and daily log on the same day",full);
+  // weekend: Saturday and Sunday of the same weekend
+  const sat=days.find(d=>parse(d).getDay()===6 && days.includes(addDays(d,1))); if(sat) add("log-weekend","🛋️","Weekend Pages","Filled out your daily log on a Saturday and Sunday",addDays(sat,1));
+  // noted a skill for a target behavior
+  const sk=days.find(d=>Object.values(S.logs[d].answers.targets||{}).some(t=>(t?.skills||[]).length)); if(sk) add("log-skills","🧰","Skills on Paper","Noted the skills you tried for a target behavior",sk);
+  // sleep hours on 7 days
+  const sl=days.filter(d=>S.logs[d].answers.sleep_hours!==undefined); if(sl.length>=7) add("log-sleep7","😴","Sleep Detective","Logged your sleep on seven days",sl[6]);
+  // every turned-on section filled in one log
+  const ev=days.find(d=>{ const a=S.logs[d].answers, secs=logEnabledSections(); return secs.length>=3 && secs.every(s=>s.items?s.items.some(it=>a[it.id]!==undefined):s.type==="targets"?Object.values(a.targets||{}).some(t=>t&&(t.urge!==undefined||t.acted||t.affected))||!activeTargets().length:s.type==="sleep"?(a.sleep_hours!==undefined||(a.sleep_checks||[]).length):s.type==="checks"?(a[s.id]||[]).length:s.type==="meds"?!!(a.meds_taken||a.meds_changed):s.type==="substance"?(a.substance_urge!==undefined||!!a.substance_used):true); });
+  if(ev) add("log-complete","✅","Every Page Turned","Filled in every section of your daily log",ev);
+}
+
 /* ---------- History ---------- */
 function showDayInHistory(d){
   S.histDay=d; S.cal=new Date(+d.slice(0,4),+d.slice(5,7)-1,1); setView("history");
@@ -1344,7 +1685,7 @@ function dayDetailHTML(d){
     return `<div class="dd-block ${k}"><div class="dd-head"><h3>${FORMS[k].icon} ${FORMS[k].title}</h3><button class="linkbtn" data-open-k="${k}">Open</button></div>
       ${rows?`<ul class="dd-list">${rows}</ul>`:`<p class="muted small">Checked in, no answers recorded.</p>`}</div>`;
   }).join("");
-  const none=!ents.some(([,e])=>e), sk=skillsDayLogHTML(d), bd=dayBadgesListHTML(d), vc=visitCount(d);
+  const none=!ents.some(([,e])=>e), sk=skillsDayLogHTML(d)+dailyLogDayHTML(d), bd=dayBadgesListHTML(d), vc=visitCount(d);
   return `<section class="card day-detail" id="dayDetail">
       <div class="dd-top"><h2>${isToday?"Today · ":""}${fmtDate(d)}</h2><button class="xbtn" id="ddClose" aria-label="Close day">✕</button></div>
       ${vc?`<p class="dd-visits small muted"><span aria-hidden="true">📖</span> ${visitText(vc)}</p>`:""}
@@ -1385,11 +1726,12 @@ function renderHistory(){
   focusBadgeAfterRender();
   $app.querySelectorAll(".entry[data-k]").forEach(b=>b.onclick=()=>{const e=S.entries.find(x=>x.key===b.dataset.k); openForm(e.kind,e.date);});
   $app.querySelectorAll(".bd-row").forEach(b=>b.onclick=()=>showBadges(b.dataset.badge));
+  $app.querySelectorAll("[data-log-open]").forEach(b=>b.onclick=()=>openLog(b.dataset.logOpen));
   $app.querySelectorAll("[data-day-open]").forEach(b=>b.onclick=()=>{ S.histDay=b.dataset.dayOpen; render(); document.getElementById("dayDetail")?.scrollIntoView({behavior:"smooth",block:"start"}); });
 }
 /* Entries grouped by day: check-ins and skills, in the order they happened, with times */
 function historyDays(){
-  return [...new Set(S.entries.map(e=>e.date).concat(Object.keys(S.skillLog).filter(d=>S.skillLog[d].length),S.startAt&&S.startDate?[S.startDate]:[],Object.keys(S.visits)))].filter(d=>d<=today()).sort().reverse();
+  return [...new Set(S.entries.map(e=>e.date).concat(Object.keys(S.skillLog).filter(d=>S.skillLog[d].length),S.startAt&&S.startDate?[S.startDate]:[],Object.keys(S.visits),Object.keys(S.logs)))].filter(d=>d<=today()).sort().reverse();
 }
 const clock=iso=>{ const t=iso?new Date(iso):null; return t&&!isNaN(t)?t.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):""; };
 function dayEntryHTML(d){
@@ -1399,6 +1741,8 @@ function dayEntryHTML(d){
     ev.push({at:e.createdAt||"", sort:e.createdAt||(k==="morning"?"0":"2"), html:`<li><button class="entry-row" data-k="${e.key}"><span class="er-time">${clock(e.createdAt)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">${FORMS[k].icon}</span><span class="er-text"><b>${FORMS[k].title}</b>${edited?`<span class="small muted"> · edited ${clock(e.updatedAt)}</span>`:""}</span><span class="avg">${avgRating(e)?.toFixed(1)??"–"}</span></button></li>`}); }
   for(const r of skillUsesOn(d)){ const k=skillById(r.id);
     ev.push({sort:r.at||"1", html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(r.at)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">🧰</span><span class="er-text"><b>${esc(k?k.name:r.id)}</b><span class="small muted"> · ${r.helped?HELPED_LABEL[r.helped]:"Used"}</span>${r.note?`<span class="er-note">${esc(r.note)}</span>`:""}</span></div></li>`}); }
+  const lg=getLog(d);
+  if(lg) ev.push({sort:lg.createdAt||"1", html:`<li><button class="entry-row" data-log-open="${d}"><span class="er-time">${clock(lg.createdAt)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">📓</span><span class="er-text"><b>Daily log</b>${lg.updatedAt&&lg.createdAt&&new Date(lg.updatedAt)-new Date(lg.createdAt)>60000?`<span class="small muted"> · edited ${clock(lg.updatedAt)}</span>`:""}</span></button></li>`});
   const NUDGE_WORD={opened:"You tried it",dismissed:"You tapped Not now","no response":"No response"};
   for(const n of nudgeOutcomes(d)){ const k=skillById(n.skill);
     ev.push({sort:n.at, html:`<li><div class="entry-row skill-row"><span class="er-time">${clock(n.at)||"&nbsp;"}</span><span class="er-ico" aria-hidden="true">💡</span><span class="er-text"><b>Suggested ${esc(k?k.name:n.skill)}</b><span class="small muted"> · ${NUDGE_WORD[n.outcome]||esc(n.outcome)}</span></span></div></li>`}); }
@@ -1565,9 +1909,7 @@ function badgesSectionHTML(){
 /* ---------- About ---------- */
 const ABOUT_SECTIONS=[["about-note","A quick note"],["about-why","Why I made this"],["about-name","Why \"Bookends\"?"],["about-how","How it works"],["about-privacy","Your privacy"],["about-free","Free, on purpose"],["about-providers","For providers"],["about-sharing","Sharing with your provider"],["about-homescreen","Add to Home Screen"],["about-source","Open source"]];
 function renderAbout(){
-  const privacy = S.store.kind==="cloud"
-    ? "Your check-ins are saved to your own private space. Only you can read them. Nobody else who opens this page can see them."
-    : "Your check-ins never leave this device. There's no account and no server storing them, so nobody else can read them, including me. That also means if you clear your browser data, they're gone, so use the <b>Settings</b> tab to download a backup now and then.";
+  const privacy = "Your check-ins never leave this device. There's no account and no server storing them, so nobody else can read them, including me. That also means if you clear your browser data, they're gone, so use the <b>Settings</b> tab to download a backup now and then.";
   const visitsNote=" Bookends also keeps a private record of when you open it, so History can show how often you came back. It's stored alongside your check-ins, included in your backups, and erased by Delete all.";
   $app.innerHTML = `
     <article class="about">
@@ -1599,6 +1941,7 @@ function renderAbout(){
         <ul>
           <li><b>🌅 Morning intention</b> is open from ${hourLabel(win("morning")[0])} to ${hourLabel(win("morning")[1])}. <b>🌙 Nightly reflection</b> is open from ${hourLabel(win("night")[0])} to ${hourLabel(win("night")[1])}. You can change both windows in <b>Settings</b>.</li>
           <li><b>🧰 Skills</b> has short coping skills, like STOP, DEAR MAN, "catch it, check it, change it," a self-compassion break and the 5-4-3-2-1 grounding exercise, for when feelings start to run high. They draw on DBT, CBT, ACT, mindfulness and self-compassion. They're reminders, not therapy.</li>
+          <li><b>📓 Daily log</b> is an optional daily diary card, like the ones many therapists use, for sleep, mood, thoughts, urges and the behaviors you're working on. You choose what it tracks. The 🔒 sensitive parts (safety, self-harm urges, substance use and appetite) never leave your device unless you choose to include them in a download.</li>
           <li>Each check-in walks through the eight areas of wellness, one at a time. Rate each one from 1 to 5 and write as much or as little as you want. Skipping is fine.</li>
           <li><b>Check-ins are for today.</b> You can look back on past days, but you can't fill them in afterward. If you miss a day, that's okay. There's always tomorrow. No guilt, no shame.</li>
           <li><b>Badges reward showing up, never your ratings.</b> A hard day logged honestly counts just as much as a great one. There's no list to finish.</li>
@@ -1625,7 +1968,7 @@ function renderAbout(){
         <ul>
           <li><b>Sharing it is easy:</b> send your clients to <b>bookends.day</b>. It works in any browser on a phone or computer. On a phone, they can <a href="#about-homescreen">add it to their Home Screen</a> so it opens like an app.</li>
           <li><b>It fits their routine:</b> clients can set their own morning and evening check-in windows, and choose how affirmations show up (or turn them off), in <b>Settings</b>.</li>
-          <li><b>It's private by design:</b> ${S.store.kind==="cloud"?"each person's check-ins are private to them. There's no way for you, or me, to see anyone's entries.":"Bookends doesn't collect or store anyone's check-ins. Entries stay on the client's own device, so there's no account for you to manage and nothing on my end to access."}</li>
+          <li><b>It's private by design:</b> Bookends doesn't collect or store anyone's check-ins. Entries stay on the client's own device, so there's no account for you to manage and nothing on my end to access.</li>
           <li><b>Clients choose what to share:</b> they can make a printable summary for you anytime (see below).</li>
           <li><b>It's a self-care tool, not a clinical one.</b> Bookends doesn't monitor entries or send alerts to anyone, so it's not a substitute for your own check-ins or a safety plan.</li>
         </ul>
@@ -1680,13 +2023,15 @@ function renderAbout(){
 
 /* ---------- Backup export ---------- */
 const BACKUP_KEY="ir_last_backup";
-const hasData=()=>S.entries.length>0 || Object.keys(S.affLog).length>0 || Object.keys(S.skillLog).length>0;
+const hasData=()=>S.entries.length>0 || Object.keys(S.affLog).length>0 || Object.keys(S.skillLog).length>0 || Object.keys(S.logs).length>0;
 function backupJSON(){
   const all=[...S.entries].sort((a,b)=>a.key.localeCompare(b.key));
   if(Object.keys(S.affLog).length) all.push({key:AFF_META_KEY,kind:"meta",days:S.affLog,times:S.affTimes||{},v:1});
   if(Object.keys(S.skillLog).length) all.push({key:SKILLS_META_KEY,kind:"meta",date:S.skillDate,log:S.skillLog,v:2});
   if(Object.keys(S.visits).length) all.push({key:VISITS_META_KEY,kind:"meta",visits:S.visits,v:1});
   if(Object.keys(S.nudges).length) all.push({key:NUDGES_META_KEY,kind:"meta",log:S.nudges,v:1});
+  Object.keys(S.logs).sort().forEach(d=>all.push(S.logs[d]));
+  if(S.logCfg) all.push({key:LOG_CFG_KEY,kind:"meta",...S.logCfg,v:1});
   return JSON.stringify(all,null,2);
 }
 function lastBackup(){ try{ return localStorage.getItem(BACKUP_KEY); }catch(e){ return null; } }
@@ -1695,13 +2040,8 @@ function lastBackupText(){
   const days=Math.round((parse(today())-parse(d.slice(0,10)))/864e5);
   return `Last backup: ${days===0?"today":days===1?"yesterday":days+" days ago"}.`;
 }
-/* Save a file: through Claude's download prompt when hosted there, otherwise a normal browser download. */
+/* Save a file with a normal browser download. */
 async function saveFile(filename,data,mime){
-  const dl = window.claude?.use ? await claude.use("downloads").catch(()=>null) : null;
-  if(dl){
-    try{ await dl.save({filename,data}); return true; }
-    catch(e){ if(e?.code==="declined"){ toast("Download cancelled"); return false; } if(e?.code==="rate_limited"){ toast("A download prompt is already open"); return false; } }
-  }
   try{
     const url=URL.createObjectURL(new Blob([data],{type:mime}));
     const a=Object.assign(document.createElement("a"),{href:url,download:filename}); document.body.appendChild(a); a.click(); a.remove();
@@ -1735,7 +2075,7 @@ function providerSummaryHTML(days, withNotes){
   const ents=S.entries.filter(e=>e.date>=start && e.date<=end).sort((a,b)=>(a.date+a.kind).localeCompare(b.date+b.kind));
   const uses=skillsInRange(start,end), visitDays=Object.keys(S.visits).filter(d=>d>=start&&d<=end);
   const totalVisits=visitDays.reduce((n,d)=>n+S.visits[d].length,0);
-  const dates=[...new Set(ents.map(e=>e.date).concat(uses.map(u=>u.d)))].sort();
+  const dates=[...new Set(ents.map(e=>e.date).concat(uses.map(u=>u.d),Object.keys(S.logs).filter(d=>d>=start&&d<=end)))].sort();
   const range=[...Array(days)].map((_,i)=>addDays(start,i));
   const dims=Object.keys(DIMENSIONS).filter(k=>FORMS.morning.sections.concat(FORMS.night.sections).some(x=>x.dim===k&&x.scale));
   const AM="#d98b3a", PM="#4a5b9b", GRID="#e6ddd0", INK="#23302a", MUTED="#6b7570";
@@ -1788,7 +2128,9 @@ function providerSummaryHTML(days, withNotes){
     }).join("");
     const su=uses.filter(u=>u.d===d), vc=(S.visits[d]||[]).length;
     const sk=su.length?`<h4><span class="dot" style="background:#2f6b52"></span>Coping skills</h4><table>${su.map(u=>`<tr><td class="a">${e2(skillById(u.id)?.name||u.id)}</td><td class="r">${e2(u.helped==="yes"?"Helped":u.helped==="little"?"Helped a little":u.helped==="no"?"Didn't help":"No answer")}</td><td>${withNotes&&u.note?e2(u.note):""}</td></tr>`).join("")}</table>`:"";
-    return `<section><h3>${e2(fmtDate(d))}</h3>${parts}${sk}${vc?`<p class="meta">Opened Bookends ${vc===1?"once":vc+" times"}</p>`:""}</section>`;
+    const lgx=getLog(d), lr=lgx?logSummaryRows(lgx,{sensitive:EXPORT_SENS}).filter(r=>withNotes||true):[];
+    const lgh=lgx?`<h4><span class="dot" style="background:#6a5acd"></span>Daily log</h4>${lr.length?`<table>${lr.map(([k,v])=>`<tr><td class="a">${e2(k)}</td><td>${e2(withNotes?v:v.replace(/\s*\([^)]*\)/g,""))}</td></tr>`).join("")}</table>`:`<p class="meta">Logged, nothing notable.</p>`}`:"";
+    return `<section><h3>${e2(fmtDate(d))}</h3>${parts}${sk}${lgh}${vc?`<p class="meta">Opened Bookends ${vc===1?"once":vc+" times"}</p>`:""}</section>`;
   }).join("");
 
   const nM=ents.filter(e=>e.kind==="morning").length, nN=ents.filter(e=>e.kind==="night").length;
@@ -1827,8 +2169,8 @@ function providerSummaryData(days, withNotes){
   const visitDays=Object.keys(S.visits).filter(inR);
   const earned=earnedBadges(S.entries), bl=badgeList();
   const affDays=Object.keys(S.affLog).filter(d=>inR(d)&&S.affLog[d].length);
-  const nudgeDays=Object.keys(S.nudges).filter(inR);
-  const dates=[...new Set(ents.map(e=>e.date).concat(uses.map(u=>u.d),visitDays,affDays,nudgeDays))].sort();
+  const nudgeDays=Object.keys(S.nudges).filter(inR), logDays=Object.keys(S.logs).filter(inR);
+  const dates=[...new Set(ents.map(e=>e.date).concat(uses.map(u=>u.d),visitDays,affDays,nudgeDays,logDays))].sort();
   const areaLabel=dim=>dim==="closing"?"Proud of":(DIMENSIONS[dim]?.label||dim);
   const questions={};
   for(const k of ["morning","night"]){
@@ -1870,6 +2212,7 @@ function providerSummaryData(days, withNotes){
     const su=uses.filter(u=>u.d===d);
     if(su.length) out.skills=su.map(u=>({id:u.id, name:skillById(u.id)?.name||u.id, at:utc(u.at), completed:!!(u.completed||u.helped), ...(u.fromNudge?{fromSuggestion:true}:{}), helped:HELPED_WORD[u.helped]||"no answer", ...(withNotes&&u.note?{note:u.note}:{})}));
     if(S.visits[d]?.length) out.visits=S.visits[d].map(utc).filter(Boolean);
+    const dl=logExport(d,withNotes,EXPORT_SENS); if(dl) out.dailyLog=dl;
     const nu=nudgeOutcomes(d); if(nu.length) out.skillSuggestions=nu.map(n=>({shownAt:utc(n.at), skill:skillById(n.skill)?.name||n.skill, forArea:areaName(n.area), lowAreas:n.lowAreas.map(l=>({area:areaName(l.area),rating:l.rating})), outcome:n.outcome, ...(n.outcomeAt?{outcomeAt:utc(n.outcomeAt)}:{}), ...(n.browsedAllSkills?{browsedAllSkills:true}:{})}));
     const af=(S.affLog[d]||[]).map(id=>{ const a=affById(id); const at=utc(S.affTimes?.[d]?.[id]);
       return a?{text:a.text, type:a.type, area:a.area, ...(at?{at}:{})}:null; }).filter(Boolean);
@@ -1893,10 +2236,14 @@ function providerSummaryData(days, withNotes){
       affirmationsRead:affDays.reduce((n,d)=>n+S.affLog[d].length,0), daysWithAffirmations:affDays.length,
       affirmationTimesSince:Object.keys(S.affTimes||{}).sort()[0]||null,
       skillSuggestions:(()=>{ const all=nudgeDays.flatMap(d=>nudgeOutcomes(d)); return {shown:all.length, opened:all.filter(n=>n.outcome==="opened").length, dismissed:all.filter(n=>n.outcome==="dismissed").length, noResponse:all.filter(n=>n.outcome==="no response").length}; })(),
+      daysWithDailyLog:logDays.length,
       checkInsWithFeelings:ents.filter(e=>Array.isArray(e.answers[FEEL_KEY])&&e.answers[FEEL_KEY].length).length,
       daysOpened:visitDays.length, totalVisits:visitDays.reduce((n,d)=>n+S.visits[d].length,0),
       badgesEarned:bl.filter(b=>earned[b.id]&&inR(earned[b.id])).length},
-    questions, skillsCatalog:catalog, days:dayList
+    questions, skillsCatalog:catalog,
+    ...(logDays.length&&LOG.data?{dailyLogGuide:{includesPrivateSections:EXPORT_SENS, note:"Daily log ratings run from 0 (none) up to the scale's top (most intense). 'focus' is reversed: higher is better. Private sections (safety, urges to hurt yourself, substance use, eating) are only present if the person chose to include them.",
+      sections:Object.fromEntries(LOG.data.sections.filter(sec=>EXPORT_SENS||!sec.sensitive).map(sec=>[sec.id,{title:sec.title, ...(sec.items?{items:Object.fromEntries(sec.items.filter(it=>EXPORT_SENS||!it.sensitive).map(it=>[it.id,{label:it.label,outOf:it.scale,...(it.reversed?{higherIsBetter:true}:{})}]))}:{})}]))}}:{}),
+    days:dayList
   };
 }
 const providerSummaryJSON=(days,withNotes)=>JSON.stringify(providerSummaryData(days,withNotes),null,2);
@@ -1935,12 +2282,12 @@ ${JSON.stringify(data)}
 `;
 }
 async function downloadInsights(days,withNotes){
-  if(!S.entries.length && !Object.keys(S.skillLog).length) return toast("No check-ins to share yet.");
+  if(!S.entries.length && !Object.keys(S.skillLog).length && !Object.keys(S.logs).length) return toast("No check-ins to share yet.");
   const ok=await saveFile(`bookends-data-${today()}.md`, await insightsMarkdown(days,withNotes), "text/markdown");
   if(ok && !noteInsights()) toast("Saved. You decide who sees it.");
 }
 async function downloadProviderSummary(days,withNotes){
-  if(!S.entries.length) return toast("No check-ins to share yet.");
+  if(!S.entries.length && !Object.keys(S.logs).length) return toast("No check-ins to share yet.");
   const ok=await saveFile(`bookends-summary-${today()}.html`, providerSummaryHTML(days,withNotes), "text/html");
   if(ok && !noteShare()) toast("Summary saved. You decide who sees it.");
 }
@@ -1979,6 +2326,9 @@ function renderSettings(){
       </div>
       <div class="pref-label" style="margin-top:18px"><b>Check-ins</b></div>
       <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Always show writing questions</b><span class="small muted">Off: check-ins are just quick ratings, and you can tap "Add a note" to write. On: the questions and ideas are always open.</span></span><input type="checkbox" class="switch" id="pWrite" ${P.showWriting?"checked":""}></label>
+      <div class="pref-label" style="margin-top:18px"><b>Daily log</b></div>
+      <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Show the daily log on Today</b><span class="small muted">A daily diary card for sleep, mood, thoughts and urges. Off hides it from Today; anything you've logged stays in History.</span></span><input type="checkbox" class="switch" id="pLog" ${P.dailyLog!==false?"checked":""}></label>
+      ${LOG.data?`<p style="margin:2px 2px 0"><button class="linkbtn" id="pLogSetup">${logCfg().setup?"Change what my daily log tracks":"Set up my daily log"}</button></p>`:""}
       <div class="pref-label" style="margin-top:18px"><b>Skills</b></div>
       <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Suggest skills on rough days</b><span class="small muted">When a check-in has a rating of 1 or 2, suggest a skill or two that fits, starting with ones that have helped you before.</span></span><input type="checkbox" class="switch" id="pSkill" ${P.skillNudge?"checked":""}></label>
       <div class="pref-label" style="margin-top:18px"><b>Display</b></div>
@@ -1999,6 +2349,7 @@ function renderSettings(){
       <div class="share-opts">
         <label class="time-row"><span>Time period</span><select id="shDays">${[[7,"Last 7 days"],[14,"Last 14 days"],[30,"Last 30 days"],[90,"Last 90 days"],[0,"Everything"]].map(([n,t])=>`<option value="${n}" ${n===90?"selected":""}>${t}</option>`).join("")}</select></label>
         <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Include my written notes</b><span class="small muted">Turn off to share ratings, skills and visits only.</span></span><input type="checkbox" class="switch" id="shNotes" checked></label>
+        ${Object.keys(S.logs).length||logCfg().setup?`<label class="pref" style="border-top:0;padding:4px 2px"><span><b>Include sensitive information</b><span class="small muted">The 🔒 sensitive parts of your daily log: safety, urges to hurt yourself, appetite and substance use. Off unless you turn it on. The rest of your daily log is shared either way.</span></span><input type="checkbox" class="switch" id="shSens"></label>`:""}
       </div>
       <div class="share-note"><b>Before you share</b>
         <span>These files include everything from the time period, including your notes if that's on. Once you upload a file to an AI service or a patient portal, that service's privacy terms apply, not Bookends'. You might want to remove other people's names first.</span>
@@ -2008,9 +2359,7 @@ function renderSettings(){
     </div>
     <div class="card" style="margin-top:14px">
       <h2 style="font-size:1.15rem">Where your entries live</h2>
-      <p class="small muted">${S.store.kind==="cloud"
-        ?"Saved to your private space in this page's store. Only you can read them — not the page's owner or anyone it's shared with."
-        :"Saved in this browser only. Clearing site data or switching devices will lose them, so export a backup now and then."}</p>
+      <p class="small muted">Saved in this browser only. Clearing site data or switching devices will lose them, so export a backup now and then.</p>
     </div>
     <div class="card" style="margin-top:14px">
       <h2 style="font-size:1.15rem">Back up</h2>
@@ -2037,6 +2386,7 @@ function renderSettings(){
     try{ await S.store.remove(START_META_KEY); S.startDate=null; }catch(err){}
     try{ await S.store.remove(VISITS_META_KEY); S.visits={}; }catch(err){}
     try{ await S.store.remove(NUDGES_META_KEY); S.nudges={}; }catch(err){}
+    try{ for(const d of Object.keys(S.logs)) await S.store.remove(logKey(d)); S.logs={}; await S.store.remove(LOG_CFG_KEY); S.logCfg=null; }catch(err){}
     try{ await S.store.remove(INSIGHTS_META_KEY); S.insights=[]; }catch(err){}
     try{ await S.store.remove(SKILLS_META_KEY); S.skillDate=null; S.skillLog={}; }catch(err){}
     try{ await S.store.remove(SHARES_META_KEY); S.shares=[]; }catch(err){}
@@ -2051,6 +2401,8 @@ function renderSettings(){
   document.getElementById("pNE").onchange=setWin("nightEnd","night");
   ["morning","night"].forEach(k=>document.getElementById(`rem-${k}`).onclick=()=>setReminder(k));
   document.getElementById("pWrite").onchange=e=>{ S.prefs.showWriting=e.target.checked; savePrefs(); };
+  document.getElementById("pLog").onchange=e=>{ S.prefs.dailyLog=e.target.checked; savePrefs(); };
+  const pls=document.getElementById("pLogSetup"); if(pls) pls.onclick=()=>openLogSetup();
   document.getElementById("pSkill").onchange=e=>{ S.prefs.skillNudge=e.target.checked; savePrefs(); };
   document.getElementById("pCvd").onchange=e=>{
     S.prefs.colorMode=e.target.checked?"cvd":"standard"; applyColorMode(S.prefs.colorMode); savePrefs(); render();
@@ -2061,8 +2413,8 @@ function renderSettings(){
     toast({off:"Daily affirmations turned off",embedded:"Affirmations will show on the Today screen",popup:"Affirmations will pop up once a day"}[r.value]);
   });
   document.getElementById("export").onclick=downloadBackup;
-  document.getElementById("shGo").onclick=()=>downloadProviderSummary(+document.getElementById("shDays").value, document.getElementById("shNotes").checked);
-  document.getElementById("shAI").onclick=()=>downloadInsights(+document.getElementById("shDays").value, document.getElementById("shNotes").checked);
+  document.getElementById("shGo").onclick=()=>(EXPORT_SENS=!!document.getElementById("shSens")?.checked, downloadProviderSummary(+document.getElementById("shDays").value, document.getElementById("shNotes").checked));
+  document.getElementById("shAI").onclick=()=>(EXPORT_SENS=!!document.getElementById("shSens")?.checked, downloadInsights(+document.getElementById("shDays").value, document.getElementById("shNotes").checked));
   document.getElementById("copy").onclick=async()=>{
     const json=backupJSON();
     try{ await navigator.clipboard.writeText(json); toast("Copied to clipboard"); }
@@ -2084,11 +2436,16 @@ function renderSettings(){
       for(const [d,list] of Object.entries(inc)){ const have=new Set((S.skillLog[d]||[]).map(r=>r.id+r.at)); S.skillLog[d]=(S.skillLog[d]||[]).concat(list.filter(r=>!have.has(r.id+r.at))); }
       if(!S.skillDate||(/^\d{4}-\d{2}-\d{2}$/.test(skm.date||"")&&skm.date<S.skillDate)) S.skillDate=/^\d{4}-\d{2}-\d{2}$/.test(skm.date||"")?skm.date:(Object.keys(inc).sort()[0]||S.skillDate);
       saveSkillLog(); await affSaving; }
+    let nLogs=0;
+    for(const e of arr) if(e&&e.kind==="log"&&/^\d{4}-\d{2}-\d{2}$/.test(e.date||"")&&e.answers&&typeof e.answers==="object"&&!S.logs[e.date]){
+      const doc={key:logKey(e.date),kind:"log",date:e.date,answers:e.answers,createdAt:utc(e.createdAt)||new Date().toISOString(),updatedAt:utc(e.updatedAt)||utc(e.createdAt)||new Date().toISOString(),importedAt:new Date().toISOString(),v:1};
+      await S.store.save(doc); S.logs[e.date]=doc; nLogs++; }
+    const lcm=arr.find(e=>e&&e.key===LOG_CFG_KEY); if(lcm && !S.logCfg?.setup){ S.logCfg=cleanLogCfg(lcm); saveLogCfg(); }
     const nim=arr.find(e=>e&&e.key===NUDGES_META_KEY&&e.log&&typeof e.log==="object");
     if(nim){ const inc=cleanNudges(nim.log); for(const [d,list] of Object.entries(inc)){ const have=new Set((S.nudges[d]||[]).map(x=>x.at+x.action)); S.nudges[d]=(S.nudges[d]||[]).concat(list.filter(x=>!have.has(x.at+x.action))).sort((a,b)=>a.at.localeCompare(b.at)); } saveNudges(); }
     const vim=arr.find(e=>e&&e.key===VISITS_META_KEY&&e.visits&&typeof e.visits==="object");
     if(vim){ const inc=cleanVisits(vim.visits); for(const [d,list] of Object.entries(inc)) S.visits[d]=cleanVisits({[d]:(S.visits[d]||[]).concat(list)})[d]; saveVisits(); await affSaving; }
-    toast(`Imported ${n} check-ins${meta?" + affirmation history":""}${skm?" + skills log":""}${vim?" + visits":""}`); render();
+    toast(`Imported ${n} check-ins${meta?" + affirmation history":""}${skm?" + skills log":""}${vim?" + visits":""}${nLogs?` + ${nLogs} daily log${nLogs===1?"":"s"}`:""}`); render();
   };
 }
 
@@ -2120,6 +2477,7 @@ function renderSettings(){
       if(modalEl && d.closest(".modal-bg")){ e.preventDefault(); closeModal(); }
       else if(affBg && d.closest(".aff-bg")){ e.preventDefault(); closeAffSheet(); }
       else if(dayBg && d.closest(".sheet-bg")===dayBg){ e.preventDefault(); closeDaySheet(); }
+      else if(logBg && d.closest(".sheet-bg")===logBg){ e.preventDefault(); logRequestClose(); }
       else if(skillBg && d.closest(".sheet-bg")===skillBg){ e.preventDefault(); closeSkill(); }
       return; // the check-in form handles its own Esc
     }
@@ -2165,7 +2523,7 @@ function markWelcomed(){ try{ localStorage.setItem(WELCOME_KEY,today()); }catch(
 function showWelcome(){
   markWelcomed();
   const ua=navigator.userAgent||"", ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1), android=/Android/.test(ua);
-  const where=S.store.kind==="cloud"?"is saved to your own private space":"stays on this device";
+  const where="stays on this device";
   const how=ios?"In Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>."
     :android?"In Chrome, tap the <b>⋮</b> menu, then <b>Add to Home screen</b>."
     :"On your phone, open bookends.day and add it to your Home Screen from the browser's menu.";
@@ -2201,8 +2559,8 @@ function confetti(count){
 /* ---------- Boot ---------- */
 (async function boot(){
   countVisit();
-  const affReady = Promise.all([loadAffirmations(), loadSuggestions(), loadSkills()]);
-  S.store = await pickStore();
+  const affReady = Promise.all([loadAffirmations(), loadSuggestions(), loadSkills(), loadDailyLog()]);
+  S.store = LocalStore;
   await affReady;
   try{ const all = await S.store.list(); const meta=all.find(e=>e.key===AFF_META_KEY);
     S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{};
@@ -2211,6 +2569,8 @@ function confetti(count){
     const hm=all.find(e=>e.key===HOME_META_KEY); S.homeDate=/^\d{4}-\d{2}-\d{2}$/.test(hm?.date||"")?hm.date:null;
     const vm=all.find(e=>e.key===VISITS_META_KEY); S.visits=cleanVisits(vm?.visits);
     const nm=all.find(e=>e.key===NUDGES_META_KEY); S.nudges=cleanNudges(nm?.log);
+    S.logs={}; all.filter(e=>e&&e.kind==="log"&&/^\d{4}-\d{2}-\d{2}$/.test(e.date||"")&&e.answers&&typeof e.answers==="object").forEach(e=>S.logs[e.date]=e);
+    S.logCfg=cleanLogCfg(all.find(e=>e.key===LOG_CFG_KEY));
     const im=all.find(e=>e.key===INSIGHTS_META_KEY); S.insights=Array.isArray(im?.days)?im.days.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)):[];
     const sm=all.find(e=>e.key===START_META_KEY); S.startDate=/^\d{4}-\d{2}-\d{2}$/.test(sm?.date||"")?sm.date:null; S.startAt=sm?.firstVisit&&sm.at?String(sm.at):null;
     const rm=all.find(e=>e.key===REMINDERS_META_KEY); S.reminders=(rm?.reminders&&typeof rm.reminders==="object")?rm.reminders:{};
