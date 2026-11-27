@@ -7,6 +7,7 @@ It does **not** cover the written and visual content, which is © 2026 Jonathan 
 - The affirmations and suggestions in `data/affirmations.json`
 - The writing hints, ideas and feelings wheel in `data/suggestions.json`
 - The AI insights guide in `data/insights-guide.md`
+- The daily log wording in `data/daily-log.json`
 - The skill descriptions in `data/skills.json` (the skills draw on Dialectical Behavior Therapy, developed by Marsha Linehan, Cognitive Behavioral Therapy, Acceptance and Commitment Therapy, self-compassion research, mindfulness, solution-focused therapy, and common grounding exercises; the wording is original)
 - The About page text and other written copy in the app
 - The Bookends name and the bracket logo, including `favicon.svg`, `favicon.ico`, `apple-touch-icon.png` and the `icon-*.png` files

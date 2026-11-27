@@ -132,6 +132,15 @@ Bookends suggests one skill, from the lowest-rated area (ties go to Emotional, t
 
 Every id must match a skill in the same file. Keep suggestions gentle, and never suggest that a skill fixes a practical problem.
 
+## 3b-3. Editing the daily log
+
+`data/daily-log.json` holds the daily log's sections, items and support messages.
+
+- Each section has an `id`, `title`, `icon`, `about`, and `default` (whether it starts on during setup). Rating items have a `scale` (5 or 10); `reversed` marks an item where higher is better.
+- `sensitive: true` (on a section or an item) keeps it out of downloads unless the person chooses to include it. Keep safety, self-harm, substance use and eating marked sensitive.
+- `support` messages are shown when someone notes thoughts of suicide or harm, substance use, or eating concerns. Keep them accurate, current and gentle, and keep the note that nobody is notified.
+- Never add badges, streaks or celebrations tied to what someone writes in the log, only to showing up.
+
 ## 3c. Editing the AI insights guide
 
 `data/insights-guide.md` is the set of instructions included in the **Data for AI or my provider** download. It tells an AI assistant what the data means, how to look for patterns, and how to talk with the person about them. It's plain Markdown, so you can edit it like any document.

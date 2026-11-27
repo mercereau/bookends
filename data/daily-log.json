@@ -1,0 +1,142 @@
+{
+  "_notes": "The daily log (a DBT-style diary card). Wording is original. 'sensitive' sections and items are left out of exports unless the person chooses to include them. 'default' is whether a section starts on during setup.",
+  "intro": "A quick daily check on sleep, mood, thoughts, urges and more over the last 24 hours. It's based on the diary cards many therapists use, especially in DBT, and it's helpful whether or not you see one.",
+  "privacy": "Your daily log stays private on this device, like everything else in Bookends. Nobody else sees it, and nobody is notified about what you write. If you're in danger, please reach out to someone directly.",
+  "sections": [
+    {
+      "id": "targets",
+      "title": "Target behaviors",
+      "icon": "🎯",
+      "default": true,
+      "about": "Up to three behaviors you're working on, like skipping meals, isolating, or snapping at people. Many people pick these with their therapist.",
+      "type": "targets"
+    },
+    {
+      "id": "thoughts",
+      "title": "Thoughts",
+      "icon": "💭",
+      "default": true,
+      "about": "Patterns in your thinking.",
+      "items": [
+        {"id": "selfcrit", "label": "Self-critical thoughts", "scale": 10},
+        {"id": "focus", "label": "Ability to focus", "scale": 10, "reversed": true},
+        {"id": "worry", "label": "Worry", "scale": 10},
+        {"id": "hopeless", "label": "Hopelessness", "scale": 10},
+        {"id": "racing", "label": "Racing thoughts", "scale": 10},
+        {"id": "ruminating", "label": "Going over the same thoughts", "scale": 10}
+      ]
+    },
+    {
+      "id": "urges",
+      "title": "Urges",
+      "icon": "🌊",
+      "default": true,
+      "about": "Urges you noticed, and whether you acted on them.",
+      "items": [
+        {"id": "pleasing", "label": "People-pleasing or holding in feelings", "scale": 10},
+        {"id": "impulsive", "label": "Impulsive or risky urges", "scale": 10, "acted": true},
+        {"id": "selfharm", "label": "Urges to hurt yourself", "scale": 10, "acted": true, "sensitive": true, "support": "crisis"}
+      ]
+    },
+    {
+      "id": "mood",
+      "title": "Mood",
+      "icon": "💗",
+      "default": true,
+      "about": "How strong each feeling was.",
+      "items": [
+        {"id": "sad", "label": "Sad or down", "scale": 10},
+        {"id": "anxious", "label": "Anxious", "scale": 10},
+        {"id": "irritated", "label": "Irritated or on edge", "scale": 10},
+        {"id": "elevated", "label": "Unusually high, revved up, or euphoric", "scale": 10}
+      ]
+    },
+    {
+      "id": "body",
+      "title": "Energy and stress",
+      "icon": "🔋",
+      "default": true,
+      "about": "Other things you might be feeling.",
+      "items": [
+        {"id": "fatigue", "label": "Low energy or tired", "scale": 10},
+        {"id": "motivation", "label": "Low motivation", "scale": 10},
+        {"id": "restless", "label": "Restless", "scale": 10},
+        {"id": "overwhelmed", "label": "Easily overwhelmed", "scale": 10},
+        {"id": "panic", "label": "Panic", "scale": 10}
+      ]
+    },
+    {
+      "id": "sleep",
+      "title": "Sleep",
+      "icon": "😴",
+      "default": true,
+      "about": "How you slept in the last 24 hours.",
+      "type": "sleep",
+      "checks": [
+        {"id": "well", "label": "Slept well"},
+        {"id": "fallasleep", "label": "Trouble falling asleep"},
+        {"id": "waking", "label": "Woke up often"},
+        {"id": "hardwake", "label": "Hard to wake up"},
+        {"id": "toomuch", "label": "Slept too much"},
+        {"id": "nightmares", "label": "Nightmares"},
+        {"id": "sleepmed", "label": "Took sleep medication"}
+      ]
+    },
+    {
+      "id": "appetite",
+      "title": "Eating",
+      "icon": "🍽️",
+      "default": false,
+      "sensitive": true,
+      "support": "eating",
+      "about": "How eating went. Check anything that fits.",
+      "type": "checks",
+      "checks": [
+        {"id": "normal", "label": "Ate normally"},
+        {"id": "more", "label": "Ate more than usual"},
+        {"id": "less", "label": "Ate less than usual, or not at all"},
+        {"id": "restricting", "label": "Restricted food"},
+        {"id": "binge", "label": "Binged"},
+        {"id": "purge", "label": "Purged"}
+      ]
+    },
+    {
+      "id": "safety",
+      "title": "Safety",
+      "icon": "🛟",
+      "default": true,
+      "sensitive": true,
+      "support": "crisis",
+      "about": "Thoughts of harm, from 0 (none) to 5 (strong). If any come up, Bookends will show you where to get help right away.",
+      "items": [
+        {"id": "suicidal", "label": "Thoughts of suicide", "scale": 5, "plan": true},
+        {"id": "harmothers", "label": "Thoughts of hurting someone else", "scale": 5, "plan": true}
+      ]
+    },
+    {
+      "id": "meds",
+      "title": "Medication",
+      "icon": "💊",
+      "default": false,
+      "about": "Only if you take medication for your mental health.",
+      "type": "meds"
+    },
+    {
+      "id": "substance",
+      "title": "Substance use",
+      "icon": "🫗",
+      "default": false,
+      "sensitive": true,
+      "support": "substance",
+      "about": "Urges to use alcohol or drugs, and any use.",
+      "type": "substance"
+    }
+  ],
+  "support": {
+    "crisis": "If you're thinking about suicide or hurting yourself, please reach out now. Call or text 988 (Suicide & Crisis Lifeline, US) any time, or call 911 if you're in immediate danger.",
+    "others": "If you're worried you might hurt someone, please reach out now. Call or text 988 any time to talk it through, or call 911 if anyone is in immediate danger.",
+    "substance": "Support is available. SAMHSA's National Helpline is free, confidential and open 24/7: 1-800-662-4357.",
+    "eating": "You're not alone with this. The National Alliance for Eating Disorders helpline (1-866-662-1235, weekdays) is staffed by therapists who can help.",
+    "notMonitored": "Bookends is private and nobody is notified, so please reach out to someone directly. Your therapist or doctor would want to know too."
+  }
+}
