@@ -136,7 +136,7 @@ Every id must match a skill in the same file. Keep suggestions gentle, and never
 
 `data/daily-log.json` holds the daily log's sections, items and support messages.
 
-- Each section has an `id`, `title`, `icon`, `about`, and `default` (whether it starts on during setup). Rating items have a `scale` (5 or 10); `reversed` marks an item where higher is better.
+- Each section has an `id`, `title`, `icon` (an emoji, or `pill-bottle` for the built-in pill bottle drawing), `about`, and `default` (whether it starts on during setup). Rating items have a `scale` (use 5, so every rating fits on one row); `reversed` marks an item where higher is better.
 - `sensitive: true` (on a section or an item) keeps it out of downloads unless the person chooses to include it. Keep safety, self-harm, substance use and eating marked sensitive.
 - `support` messages are shown when someone notes thoughts of suicide or harm, substance use, or eating concerns. Keep them accurate, current and gentle, and keep the note that nobody is notified.
 - Never add badges, streaks or celebrations tied to what someone writes in the log, only to showing up.
@@ -158,6 +158,7 @@ When you change it, keep these in place:
 - Check the Today, Skills, History, Settings and About tabs at phone width (about 390px) and desktop width, in both light and dark mode.
 - Open the browser console and make sure there are no errors.
 - Don't add anything that loads from another site. `_headers` has a strict Content Security Policy that would block it anyway.
+- Before you open a pull request, go through [TESTS.md](TESTS.md). Always run **Before every change** and **Your data is safe**, plus the sections for what you changed.
 
 ## 5. Commit and push
 

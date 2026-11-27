@@ -203,31 +203,6 @@ const LocalStore = {
   async save(e){ const o=this._read(); o[e.key]=e; this._write(o); },
   async remove(k){ const o=this._read(); delete o[k]; this._write(o); },
 };
-function CloudStore(db, uid){
-  const col = db.collection("data/users/"+uid);
-  return {
-    kind:"cloud",
-    async list(){ const s = await col.get(); return s.docs.filter(d=>d.exists).map(d=>({...d.data()})); },
-    async save(e){ await withRetry(()=>col.doc(e.key).set(e)); },
-    async remove(k){ await withRetry(()=>col.doc(k).delete()); },
-  };
-}
-async function withRetry(fn){
-  try{ return await fn(); }
-  catch(e){ if(e&&e.code==="unavailable"){ await new Promise(r=>setTimeout(r,400+Math.random()*600)); return fn(); } throw e; }
-}
-async function pickStore(){
-  if(!window.claude || !window.claude.use) return LocalStore;
-  const timeout = new Promise(r=>setTimeout(()=>r(null),10000));
-  try{
-    const [db,user] = await Promise.race([Promise.all([claude.use("db"), claude.use("user")]), timeout.then(()=>[null,null])]);
-    if(!db||!user) return LocalStore;
-    const uid = await user.id();
-    if(!uid) return LocalStore;
-    return CloudStore(db, uid);
-  }catch(e){ return LocalStore; }
-}
-
 /* =========================================================
    4. DATE + STATS HELPERS
    ========================================================= */
@@ -518,7 +493,6 @@ function nextBadgeHint(s,earned){
   return `<div class="note">Next up: <b>${next.b.em} ${next.b.name}</b> — ${next.b.desc.toLowerCase()} (${Math.min(next.c,next.g)}/${next.g})</div>`;
 }
 function storeNote(){
-  if(S.store.kind==="cloud") return "";
   const d=lastBackup(), days=d?Math.round((parse(today())-parse(d.slice(0,10)))/864e5):null;
   if(!S.entries.length || (days!==null && days<14)) return "";
   return `<div class="note warn backup-note">Entries are saved in this browser only. ${d?`Your last backup was ${days} days ago.`:"You haven't downloaded a backup yet."} <button class="linkbtn" id="quickBackup">Download backup</button></div>`;
@@ -700,7 +674,7 @@ function reminderStatus(kind){
 function saveBackupLog(){ const doc={key:BACKUPS_META_KEY,kind:"meta",days:S.backups,updatedAt:new Date().toISOString(),v:1};
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{}); }
 let affSaving=Promise.resolve();
-function saveAffLog(){ // one write at a time; kept with the user's entries (synced on the Claude-hosted copy)
+function saveAffLog(){ // one write at a time; kept with the user's entries
   const doc={key:AFF_META_KEY,kind:"meta",days:S.affLog,times:S.affTimes||{},updatedAt:new Date().toISOString(),v:1};
   affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{});
 }
@@ -783,7 +757,7 @@ function maybeAutoAffirm(){ // once per day, on the first visit, unless turned o
   setTimeout(()=>openAffSheet(true),700);
 }
 
-/* ---------- Preferences (kept with the user's data; synced on the Claude-hosted copy) ---------- */
+/* ---------- Preferences (kept in this browser) ---------- */
 const PREFS_KEY="meta_prefs";
 const DEFAULT_PREFS={affMode:"popup", colorMode:"standard", skillNudge:true, showWriting:false, dailyLog:true, morningStart:5, morningEnd:12, nightStart:17, nightEnd:24};
 const AFF_MODES=["off","embedded","popup"];
@@ -1333,10 +1307,10 @@ function bindSkillLink(){
 
 /* ---------- Daily log (a DBT-style diary card) ----------
    Content lives in data/daily-log.json. One log per day (doc key "log_YYYY-MM-DD", kind "log"), editable that day.
-   Setup (sections, target behaviors, appointments) is a meta doc. Sensitive sections stay out of exports unless chosen. */
+   Setup (sections and target behaviors) is a meta doc. Sensitive sections stay out of exports unless chosen. */
 const LOG={data:null};
 const LOG_CFG_KEY="meta_dailylog";
-let EXPORT_SENS=false;   // include private daily log sections in the next download (set from the Settings switch, off by default)
+let EXPORT_SENS=false;   // include the sensitive daily log sections in the next download (set from the Settings switch, off by default)
 async function loadDailyLog(){
   try{ const r=await fetch("data/daily-log.json",{cache:"no-cache"}); if(!r.ok) throw 0; const d=await r.json(); if(!Array.isArray(d.sections)) throw 0; LOG.data=d; }
   catch(e){ LOG.data=null; }
@@ -1344,16 +1318,18 @@ async function loadDailyLog(){
 const logSection=id=>LOG.data?.sections.find(s=>s.id===id);
 const logKey=d=>"log_"+d;
 const getLog=d=>S.logs[d]||null;
-function logCfg(){ return S.logCfg||{setup:false,sections:{},targets:[],appts:{}}; }
+function logCfg(){ return S.logCfg||{setup:false,sections:{},targets:[]}; }
 function logOn(id){ const c=logCfg(), s=logSection(id); return s? (c.sections[id]!==undefined ? !!c.sections[id] : !!s.default) : false; }
+const TARGETS_MAX=3;
+const activeTargets=()=>logCfg().targets.filter(t=>t.on);
 const logEnabledSections=()=>(LOG.data?.sections||[]).filter(s=>logOn(s.id));
 function saveLogCfg(){ const doc={key:LOG_CFG_KEY,kind:"meta",...S.logCfg,updatedAt:new Date().toISOString(),v:1}; affSaving=affSaving.then(()=>S.store.save(doc)).catch(()=>{}); }
 function cleanLogCfg(c){
   if(!c||typeof c!=="object") return null;
   return {setup:!!c.setup, setupAt:c.setupAt||null, sections:(c.sections&&typeof c.sections==="object")?{...c.sections}:{},
-    targets:Array.isArray(c.targets)?c.targets.map(t=>String(t||"").slice(0,80)).slice(0,3):[], appts:(c.appts&&typeof c.appts==="object")?{therapy:c.appts.therapy||"",psych:c.appts.psych||""}:{}};
+    targets:Array.isArray(c.targets)?c.targets.map((t,i)=>typeof t==="string"?{id:"tb"+i,name:t.slice(0,80),on:true,addedAt:c.setupAt||null}:(t&&t.id&&t.name?{id:String(t.id),name:String(t.name).slice(0,80),on:t.on!==false,addedAt:t.addedAt||null}:null)).filter(Boolean):[]};
 }
-const scaleHint=(it)=>it.reversed?"0 = hard to focus, 10 = focused":it.scale===5?"0 = none, 5 = strong":"0 = none, 10 = most intense";
+const scaleEnds=it=>it.reversed?["hard to focus","focused"]:["none","most intense"];
 
 /* Which support message (if any) the answers call for */
 function logSupport(a){
@@ -1369,25 +1345,15 @@ function supportHTML(kinds){
   const S2=LOG.data.support;
   return `<div class="log-support" role="note">${kinds.map(k=>`<p>${esc(S2[k])}</p>`).join("")}${kinds.some(k=>k==="crisis"||k==="others")?`<p class="small">${esc(S2.notMonitored)}</p>`:""}</div>`;
 }
-const fmtAppt=d=>{ try{ return /^\d{4}-\d{2}-\d{2}$/.test(d)?parse(d).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}):""; }catch(e){ return ""; } };
-function apptsHTML(){
-  const a=logCfg().appts||{}, t=today(), list=[["therapy","Therapy"],["psych","Psychiatry"]].filter(([k])=>a[k]&&a[k]>=t);
-  return list.length?`<p class="small muted log-appts">${list.map(([k,l])=>`🗓️ ${l}: ${esc(fmtAppt(a[k]))}`).join(" · ")}</p>`:"";
-}
 
 /* Today: a dotted box above the skill link that nudges setup, then the day's log */
 function dailyLogBoxHTML(){
   if(!LOG.data || S.prefs.dailyLog===false) return "";
-  const c=logCfg(), t=today(), lg=getLog(t);
-  if(!c.setup) return `<section class="log-box dotted" aria-labelledby="logBoxH"><div class="log-box-text"><h3 id="logBoxH">📓 Daily log</h3>
-      <p class="small muted">Track sleep, mood, thoughts and urges each day, like the diary cards therapists use. A few taps, all private.</p></div>
-      <div class="log-box-actions"><button class="btn" id="logSetup">Set up my daily log</button><span class="small muted">You can hide this in Settings.</span></div></section>`;
-  if(!lg) return `<section class="log-box dotted" aria-labelledby="logBoxH"><div class="log-box-text"><h3 id="logBoxH">📓 Today's daily log</h3>
-      <p class="small muted">A few taps to log the last 24 hours.</p>${apptsHTML()}</div>
-      <div class="log-box-actions"><button class="btn" id="logOpen">Log today</button></div></section>`;
-  return `<section class="log-box done" aria-labelledby="logBoxH"><div class="log-box-text"><h3 id="logBoxH">📓 Daily log done for today ✓</h3>${apptsHTML()}</div>
-      <div class="log-box-actions"><button class="btn ghost" id="logOpen">View or edit</button></div>
-      ${supportHTML(logSupport(lg.answers).filter(k=>k==="crisis"||k==="others"))}</section>`;
+  const c=logCfg(), lg=getLog(today());
+  // styled like the coping-skill link below it
+  if(!c.setup) return `<button class="skill-link" id="logSetup">📓 Set up your daily log →</button>`;
+  if(!lg) return `<button class="skill-link" id="logOpen">📓 Fill in today's daily log →</button>`;
+  return `<button class="skill-link done" id="logOpen">📓 Daily log done for today ✓ <span class="muted">View or edit →</span></button>${supportHTML(logSupport(lg.answers).filter(k=>k==="crisis"||k==="others"))}`;
 }
 function bindDailyLogBox(){
   const s=document.getElementById("logSetup"); if(s) s.onclick=()=>openLogSetup();
@@ -1411,31 +1377,52 @@ function logSheet(title,sub,bodyHTML,footHTML){
         <button class="xbtn" id="logClose" aria-label="Close">✕</button></div>
       <div class="sheet-body" id="logBody">${bodyHTML}</div>
       <div class="sheet-foot" id="logFoot">${footHTML}</div></div>`;
-  logBg.addEventListener("mousedown",e=>{ if(e.target===logBg) closeLogSheet(); });
+  logBg.addEventListener("mousedown",e=>{ if(e.target===logBg) logRequestClose(); });
   document.body.appendChild(logBg); document.body.classList.add("noscroll");
-  logBg.querySelector("#logClose").onclick=()=>closeLogSheet();
+  logBg.querySelector("#logClose").onclick=()=>logRequestClose();
   return logBg;
 }
 function openLogSetup(){
   const c=logCfg(), D=LOG.data; if(!D) return;
   const body=`<p>${esc(D.intro)}</p><p class="small muted">${esc(D.privacy)}</p>
     <h3 class="log-h">What to track</h3>
-    <div class="log-setup-list">${D.sections.map(s=>`<label class="pref log-setup-item"><span><b>${s.icon} ${esc(s.title)}</b>${s.sensitive?` <span class="log-tag">Private by default</span>`:""}<span class="small muted">${esc(s.about)}</span></span><input type="checkbox" class="switch" data-sec="${s.id}" ${logOn(s.id)?"checked":""}></label>`).join("")}</div>
-    <p class="small muted">"Private by default" sections are left out of anything you download unless you choose to include them.</p>
-    <h3 class="log-h">Target behaviors <span class="small muted">(optional)</span></h3>
-    <p class="small muted">Up to three behaviors you're working on. Each day you'll note the urge, whether you acted on it, and which skills you tried.</p>
-    ${[0,1,2].map(i=>`<label class="log-field"><span class="sr-only">Target behavior ${i+1}</span><input type="text" maxlength="80" data-target="${i}" placeholder="Target behavior ${i+1}" value="${esc(c.targets[i]||"")}"></label>`).join("")}
-    <h3 class="log-h">Appointments <span class="small muted">(optional)</span></h3>
-    <div class="log-appt-row"><label class="log-field"><span>Next therapy appointment</span><input type="date" data-appt="therapy" value="${esc(c.appts?.therapy||"")}"></label>
-      <label class="log-field"><span>Next psychiatry appointment</span><input type="date" data-appt="psych" value="${esc(c.appts?.psych||"")}"></label></div>`;
+    <p class="small muted log-sens-note"><span class="log-tag">🔒 Sensitive</span> sections stay out of anything you share unless you turn on <b>Include sensitive information</b> in Settings → Share or explore your data.</p>
+    <div class="log-setup-list">${D.sections.map(s=>`<label class="pref log-setup-item"><span><b>${logIcon(s)} ${esc(s.title)}${s.sensitive||(s.items||[]).some(it=>it.sensitive)?` <span class="log-tag">🔒 Sensitive</span>`:""}</b><span class="small muted">${esc(s.about)}</span></span><input type="checkbox" class="switch" data-sec="${s.id}" ${logOn(s.id)?"checked":""}></label>${s.type==="targets"?`<div class="log-tb-wrap" id="tbWrap" ${logOn(s.id)?"":"hidden"}></div>`:""}`).join("")}</div>`;
   const bg=logSheet(c.setup?"Daily log setup":"Set up your daily log","Choose what fits you. You can change this any time.",body,`<button class="btn ghost" id="logCancel">Cancel</button><button class="btn" id="logSaveSetup">${c.setup?"Save":"Start my daily log"}</button>`);
   bg.querySelector("#logCancel").onclick=()=>closeLogSheet();
+  // target behaviors: add with a name; after that a behavior can only be turned off or deleted (names are fixed so past logs stay clear)
+  const tbs=JSON.parse(JSON.stringify(c.targets||[])); let adding=false;
+  const wrap=bg.querySelector("#tbWrap");
+  const drawTb=()=>{
+    const onCount=tbs.filter(t=>t.on).length;
+    wrap.innerHTML=`${tbs.length?`<ul class="log-tb-list">${tbs.map(t=>`<li class="log-tb ${t.on?"":"off"}"><span class="log-tb-name">${esc(t.name)}</span>
+        <label class="log-tb-switch"><span class="sr-only">Track ${esc(t.name)}</span><input type="checkbox" class="switch" data-tbon="${t.id}" ${t.on?"checked":""}></label>
+        <button type="button" class="linkbtn log-tb-del" data-tbdel="${t.id}" aria-label="Delete ${esc(t.name)}">Delete</button></li>`).join("")}</ul>`:`<p class="small muted">No behaviors yet.</p>`}
+      ${adding?`<div class="log-tb-add"><label class="log-field"><span class="small">New behavior</span><input type="text" id="tbName" maxlength="80" placeholder="e.g. Isolating"></label>
+          <div class="log-tb-add-btns"><button type="button" class="btn" id="tbAddGo">Add</button><button type="button" class="linkbtn" id="tbAddCancel">Cancel</button></div>
+          <p class="small muted">Once added, a behavior can be turned off or deleted, but not renamed.</p></div>`
+        :`<button type="button" class="linkbtn" id="tbAdd">+ Add a behavior</button>`}
+      ${onCount>=TARGETS_MAX?`<p class="small muted">You're tracking ${TARGETS_MAX}, the most at once. Turn one off to track another.</p>`:""}`;
+    wrap.querySelectorAll("[data-tbon]").forEach(x=>x.onchange=()=>{ const t=tbs.find(y=>y.id===x.dataset.tbon);
+      if(x.checked && tbs.filter(y=>y.on).length>=TARGETS_MAX){ x.checked=false; return toast(`You can track up to ${TARGETS_MAX} at a time.`); }
+      t.on=x.checked; drawTb(); });
+    wrap.querySelectorAll("[data-tbdel]").forEach(x=>x.onclick=()=>{ const i=tbs.findIndex(y=>y.id===x.dataset.tbdel); if(i>=0){ tbs.splice(i,1); drawTb(); wrap.querySelector("#tbAdd")?.focus(); } });
+    const ad=wrap.querySelector("#tbAdd"); if(ad) ad.onclick=()=>{ adding=true; drawTb(); wrap.querySelector("#tbName").focus(); };
+    const ac=wrap.querySelector("#tbAddCancel"); if(ac) ac.onclick=()=>{ adding=false; drawTb(); wrap.querySelector("#tbAdd")?.focus(); };
+    const go=wrap.querySelector("#tbAddGo"), nm=wrap.querySelector("#tbName");
+    const doAdd=()=>{ const v=nm.value.trim(); if(!v) return nm.focus();
+      if(tbs.some(t=>t.name.toLowerCase()===v.toLowerCase())) return toast("You already have that one.");
+      tbs.push({id:"tb"+Date.now().toString(36)+Math.random().toString(36).slice(2,5), name:v.slice(0,80), on:tbs.filter(t=>t.on).length<TARGETS_MAX, addedAt:new Date().toISOString()});
+      adding=false; drawTb(); wrap.querySelector("#tbAdd")?.focus(); };
+    if(go){ go.onclick=doAdd; nm.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); doAdd(); } }; }
+  };
+  drawTb();
+  const tsw=bg.querySelector('[data-sec="targets"]'); if(tsw) tsw.onchange=()=>{ wrap.hidden=!tsw.checked; };
   bg.querySelector("#logSaveSetup").onclick=()=>{
     const before=earnedBadges(S.entries), sections={};
     bg.querySelectorAll("[data-sec]").forEach(x=>sections[x.dataset.sec]=x.checked);
-    const targets=[...bg.querySelectorAll("[data-target]")].map(x=>x.value.trim()).filter(Boolean);
-    const appts={}; bg.querySelectorAll("[data-appt]").forEach(x=>appts[x.dataset.appt]=x.value||"");
-    S.logCfg={...c, setup:true, setupAt:c.setupAt||new Date().toISOString(), sections, targets, appts};
+    const targets=tbs;
+    S.logCfg={...c, setup:true, setupAt:c.setupAt||new Date().toISOString(), sections, targets};
     saveLogCfg();
     const after=earnedBadges(S.entries); logPendingBadges=badgeList().filter(b=>after[b.id]&&!before[b.id]);
     toast(c.setup?"Daily log updated":"Daily log is ready"); closeLogSheet();
@@ -1443,43 +1430,60 @@ function openLogSetup(){
 }
 
 /* The log itself */
-function chipsHTML(name,max,val,label,ro){
-  return `<div class="log-chips" role="radiogroup" aria-label="${esc(label)}">${Array.from({length:max+1},(_,i)=>`<button type="button" class="log-chip ${+val===i&&val!==undefined&&val!==""?"on":""}" role="radio" aria-checked="${+val===i&&val!==undefined&&val!==""}" data-k="${name}" data-v="${i}" ${ro?"disabled":""}>${i}</button>`).join("")}</div>`;
+// ratings and yes/no look and work like the check-in scale: full-width buttons, with what the ends mean underneath
+function chipsHTML(name,max,val,label,ro,low,high){
+  const set=val!==undefined&&val!=="";
+  return `<div class="scale log-scale" role="radiogroup" aria-label="${esc(label)}">${Array.from({length:max+1},(_,i)=>`<button type="button" class="${set&&+val===i?"on":""}" role="radio" aria-checked="${set&&+val===i}" data-k="${name}" data-v="${i}" ${ro?"disabled":""}>${i}</button>`).join("")}</div>
+    ${low?`<div class="anchors" aria-hidden="true"><span>0 = ${esc(low)}</span><span>${max} = ${esc(high)}</span></div>`:""}`;
 }
 function ynHTML(name,val,label,ro){
-  return `<div class="log-yn" role="radiogroup" aria-label="${esc(label)}">${["yes","no"].map(v=>`<button type="button" class="log-chip wide ${val===v?"on":""}" role="radio" aria-checked="${val===v}" data-k="${name}" data-v="${v}" ${ro?"disabled":""}>${v==="yes"?"Yes":"No"}</button>`).join("")}</div>`;
+  return `<div class="scale log-scale log-yn" role="radiogroup" aria-label="${esc(label)}">${["yes","no"].map(v=>`<button type="button" class="${val===v?"on":""}" role="radio" aria-checked="${val===v}" data-k="${name}" data-v="${v}" ${ro?"disabled":""}>${v==="yes"?"Yes":"No"}</button>`).join("")}</div>`;
 }
+// multi-select lists look like a checklist so it's clear you can pick more than one
+function checksHTML(key,checks,sel,label,ro){
+  sel=sel||[];
+  return `<div class="log-item-label">Check all that apply</div><div class="log-checklist" role="group" aria-label="${esc(label)}: check all that apply">${checks.map(c=>{ const on=sel.includes(c.id);
+    return `<button type="button" class="log-check ${on?"on":""}" role="checkbox" aria-checked="${on}" data-check="${key}" data-id="${c.id}" ${ro?"disabled":""}><span class="log-box" aria-hidden="true">${on?"✓":""}</span><span>${esc(c.label)}</span></button>`; }).join("")}</div>`;
+}
+const fmtSleep=h=>h>=12?"12+ hours":`${h} hour${h===1?"":"s"}`;
 function noteHTML(name,val,label,ro){ return `<label class="log-field"><span class="small muted">${esc(label)}</span><input type="text" maxlength="300" data-note="${name}" value="${esc(val||"")}" ${ro?"readonly":""}></label>`; }
+// section icons are emoji, plus a few small drawings for things emoji doesn't have
+const LOG_SVG={"pill-bottle":`<svg class="log-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5.5" y="1.5" width="13" height="5" rx="1.4" fill="#f4f4f2" stroke="#8a8f94" stroke-width=".9"/><path d="M8 2.6v2.8M10.7 2.6v2.8M13.3 2.6v2.8M16 2.6v2.8" stroke="#b7bbbf" stroke-width=".8"/><rect x="6.5" y="6.5" width="11" height="2" rx=".6" fill="#c7680f"/><rect x="6" y="8" width="12" height="14.5" rx="2.2" fill="#f0892a"/><rect x="7.5" y="9.5" width="2" height="11.5" rx="1" fill="#fff" opacity=".28"/><rect x="7.6" y="12" width="8.8" height="6.6" rx=".9" fill="#fff"/><rect x="9" y="13.6" width="6" height="1" rx=".5" fill="#f0892a"/><rect x="9" y="15.6" width="4" height="1" rx=".5" fill="#f5b06e"/></svg>`};
+const logIcon=sec=>LOG_SVG[sec.icon]||sec.icon;
 function logSectionHTML(sec,a,ro,d){
-  const head=`<div class="log-sec-head"><h3>${sec.icon} ${esc(sec.title)}</h3>${!ro&&(sec.items||sec.type==="checks"||sec.type==="sleep")?`<button type="button" class="linkbtn" data-none="${sec.id}">Nothing to report</button>`:""}</div><p class="small muted">${esc(sec.about)}</p>`;
+  const head=`<div class="log-sec-head"><h3><span aria-hidden="true">${logIcon(sec)}</span>${esc(sec.title)}</h3>${!ro&&(sec.items||sec.type==="checks"||sec.type==="sleep")?`<button type="button" class="linkbtn" data-none="${sec.id}">Nothing to report</button>`:""}</div><p class="small muted">${esc(sec.about)}</p>`;
   let inner="";
   if(sec.items) inner=sec.items.map(it=>{
     const v=a[it.id];
-    return `<div class="log-item"><div class="log-item-label">${esc(it.label)} <span class="small muted">${esc(scaleHint(it))}</span></div>${chipsHTML(it.id,it.scale,v,it.label,ro)}
-      ${it.acted&&(+v>0||a[it.id+"_acted"])?`<div class="log-sub"><span class="small">Did you act on it?</span>${ynHTML(it.id+"_acted",a[it.id+"_acted"],it.label+": acted on it",ro)}${a[it.id+"_acted"]==="yes"?noteHTML(it.id+"_note",a[it.id+"_note"],"What happened? (optional)",ro):""}</div>`:""}
-      ${it.plan&&(+v>0||a[it.id+"_plan"])?`<div class="log-sub"><span class="small">Do you have a plan, intent, or the means?</span>${ynHTML(it.id+"_plan",a[it.id+"_plan"],it.label+": plan",ro)}${a[it.id+"_plan"]==="yes"?noteHTML(it.id+"_note",a[it.id+"_note"],"Anything you want to note (optional)",ro):""}</div>`:""}</div>`;
+    return `<div class="log-item"><div class="log-item-label">${esc(it.label)}</div>${chipsHTML(it.id,it.scale,v,it.label,ro,...scaleEnds(it))}
+      ${it.acted&&(+v>0||a[it.id+"_acted"])?`<div class="log-sub"><span class="log-q">Did you act on it?</span>${ynHTML(it.id+"_acted",a[it.id+"_acted"],it.label+": acted on it",ro)}${a[it.id+"_acted"]==="yes"?noteHTML(it.id+"_note",a[it.id+"_note"],"What happened? (optional)",ro):""}</div>`:""}
+      ${it.plan&&(+v>0||a[it.id+"_plan"])?`<div class="log-sub"><span class="log-q">Do you have a plan, intent, or the means?</span>${ynHTML(it.id+"_plan",a[it.id+"_plan"],it.label+": plan",ro)}${a[it.id+"_plan"]==="yes"?noteHTML(it.id+"_note",a[it.id+"_note"],"Anything you want to note (optional)",ro):""}</div>`:""}</div>`;
   }).join("");
   else if(sec.type==="targets"){
-    const names=logCfg().targets;
-    if(!names.length) inner=`<p class="small">No target behaviors yet. ${ro?"":`<button type="button" class="linkbtn" id="logToSetup">Add them in setup</button>`}</p>`;
+    const list=ro?Object.entries(a.targets||{}).map(([id,t])=>({id,name:t.name||logCfg().targets.find(x=>x.id===id)?.name||"Target behavior"})):activeTargets();
+    if(!list.length) inner=`<p class="small">${ro?"None logged.":`No behaviors yet. <button type="button" class="linkbtn" id="logToSetup">Add one in setup</button>`}</p>`;
     else { const used=[...new Set(skillUsesOn(d).map(r=>r.id))];
-      inner=names.map((nm,i)=>{ const t=(a.targets||[])[i]||{}; const sk=t.skills||[];
+      inner=list.map(tb=>{ const t=(a.targets||{})[tb.id]||{}, sk=t.skills||[], nm=tb.name, K=k=>`tg|${tb.id}|${k}`;
         const opts=[...new Set([...used,...sk])].filter(id=>skillById(id));
         return `<div class="log-item log-target"><div class="log-item-label"><b>${esc(nm)}</b></div>
-          <div class="log-sub"><span class="small">Urge <span class="muted">(0 = none, 5 = strong)</span></span>${chipsHTML("t"+i+"_urge",5,t.urge,nm+": urge",ro)}</div>
-          <div class="log-sub"><span class="small">Did you do it?</span>${ynHTML("t"+i+"_acted",t.acted,nm+": did it",ro)}</div>
-          <div class="log-sub"><span class="small">Did it get in the way of your day?</span>${ynHTML("t"+i+"_affected",t.affected,nm+": got in the way",ro)}</div>
-          <div class="log-sub"><span class="small">Skills you tried</span><div class="log-skill-chips">${opts.map(id=>`<button type="button" class="log-chip wide ${sk.includes(id)?"on":""}" aria-pressed="${sk.includes(id)}" data-tskill="${i}" data-id="${id}" ${ro?"disabled":""}>${esc(skillById(id).name)}</button>`).join("")||(ro?`<span class="small muted">None noted</span>`:"")}
-            ${ro?"":`<select class="log-add-skill" data-tadd="${i}" aria-label="Add a skill for ${esc(nm)}"><option value="">+ Add a skill</option>${(SKILLS.data?.skills||[]).filter(k=>!opts.includes(k.id)).map(k=>`<option value="${k.id}">${esc(k.name)}</option>`).join("")}</select>`}</div></div>
-          ${noteHTML("t"+i+"_note",t.note,"Notes (optional)",ro)}</div>`; }).join(""); }
+          <div class="log-sub"><span class="log-q">Urge</span>${chipsHTML(K("urge"),5,t.urge,nm+": urge",ro,"none","strong")}</div>
+          <div class="log-sub"><span class="log-q">Did you do it?</span>${ynHTML(K("acted"),t.acted,nm+": did it",ro)}</div>
+          <div class="log-sub"><span class="log-q">Did it get in the way of your day?</span>${ynHTML(K("affected"),t.affected,nm+": got in the way",ro)}</div>
+          <div class="log-sub"><span class="log-q">Skills you tried</span><div class="log-skill-chips">${opts.map(id=>`<button type="button" class="log-chip wide ${sk.includes(id)?"on":""}" aria-pressed="${sk.includes(id)}" data-tskill="${tb.id}" data-id="${id}" ${ro?"disabled":""}>${esc(skillById(id).name)}</button>`).join("")||(ro?`<span class="small muted">None noted</span>`:"")}
+            ${ro?"":`<select class="log-add-skill" data-tadd="${tb.id}" aria-label="Add a skill for ${esc(nm)}"><option value="">+ Add a skill</option>${(SKILLS.data?.skills||[]).filter(k=>!opts.includes(k.id)).map(k=>`<option value="${k.id}">${esc(k.name)}</option>`).join("")}</select>`}</div></div>
+          ${noteHTML(K("note"),t.note,"Notes (optional)",ro)}</div>`; }).join(""); }
   }
   else if(sec.type==="sleep"){
-    inner=`<label class="log-field log-hours"><span>Hours of sleep</span><input type="number" min="0" max="24" step="0.5" inputmode="decimal" data-num="sleep_hours" value="${esc(a.sleep_hours??"")}" ${ro?"readonly":""}></label>
-      <div class="log-checks">${sec.checks.map(c=>`<button type="button" class="log-chip wide ${(a.sleep_checks||[]).includes(c.id)?"on":""}" aria-pressed="${(a.sleep_checks||[]).includes(c.id)}" data-check="sleep_checks" data-id="${c.id}" ${ro?"disabled":""}>${esc(c.label)}</button>`).join("")}</div>
+    const hs=a.sleep_hours!==undefined;
+    inner=`<div class="log-item log-hours ${hs?"":"unset"}"><div class="log-item-label log-hours-head"><label for="logHours">Hours of sleep</label>
+        <span><output id="logHoursOut" for="logHours">${hs?fmtSleep(a.sleep_hours):"Not answered"}</output>${hs&&!ro?` <button type="button" class="linkbtn" id="logHoursClear">Clear</button>`:""}</span></div>
+      <input type="range" id="logHours" class="log-range" min="0" max="12" step="0.5" value="${hs?Math.min(12,a.sleep_hours):7}" data-range="sleep_hours" aria-valuetext="${hs?fmtSleep(a.sleep_hours):"Not answered"}" ${ro?"disabled":""}>
+      <div class="anchors" aria-hidden="true"><span>0</span><span>6</span><span>12+</span></div></div>
+      <div class="log-item">${checksHTML("sleep_checks",sec.checks,a.sleep_checks,sec.title,ro)}</div>
       ${noteHTML("sleep_other",a.sleep_other,"Anything else? (optional)",ro)}`;
   }
   else if(sec.type==="checks"){
-    inner=`<div class="log-checks">${sec.checks.map(c=>`<button type="button" class="log-chip wide ${(a[sec.id]||[]).includes(c.id)?"on":""}" aria-pressed="${(a[sec.id]||[]).includes(c.id)}" data-check="${sec.id}" data-id="${c.id}" ${ro?"disabled":""}>${esc(c.label)}</button>`).join("")}</div>
+    inner=`<div class="log-item">${checksHTML(sec.id,sec.checks,a[sec.id],sec.title,ro)}</div>
       ${noteHTML(sec.id+"_other",a[sec.id+"_other"],"Anything else? (optional)",ro)}`;
   }
   else if(sec.type==="meds"){
@@ -1487,55 +1491,99 @@ function logSectionHTML(sec,a,ro,d){
       <div class="log-item"><div class="log-item-label">Any medication changes in the last 24 hours?</div>${ynHTML("meds_changed",a.meds_changed,"Medication changes",ro)}${a.meds_changed==="yes"?noteHTML("meds_note",a.meds_note,"What changed? (optional)",ro):""}</div>`;
   }
   else if(sec.type==="substance"){
-    inner=`<div class="log-item"><div class="log-item-label">Urge to use <span class="small muted">0 = none, 10 = most intense</span></div>${chipsHTML("substance_urge",10,a.substance_urge,"Urge to use",ro)}</div>
+    inner=`<div class="log-item"><div class="log-item-label">Urge to use</div>${chipsHTML("substance_urge",5,a.substance_urge,"Urge to use",ro,"none","most intense")}</div>
       <div class="log-item"><div class="log-item-label">Did you use in the last 24 hours?</div>${ynHTML("substance_used",a.substance_used,"Used in the last 24 hours",ro)}${a.substance_used==="yes"?noteHTML("substance_note",a.substance_note,"What, and how much? (optional)",ro):""}</div>`;
   }
   const sup=sec.support?supportHTML(logSupport(a).filter(k=>sec.id==="safety"?(k==="crisis"&&(+a.suicidal>0||a.suicidal_plan==="yes"))||k==="others":sec.id==="urges"?k==="crisis":k===sec.support)):(sec.id==="urges"?supportHTML(logSupport(a).filter(k=>k==="crisis"&&(+a.selfharm>0||a.selfharm_acted==="yes"))):"");
-  return `<section class="log-sec" data-sec="${sec.id}" aria-labelledby="ls-${sec.id}">${head.replace("<h3>",`<h3 id="ls-${sec.id}">`)}${inner}${sup}</section>`;
+  return `<section class="dim log-sec" data-sec="${sec.id}" aria-labelledby="ls-${sec.id}">${head.replace("<h3>",`<h3 id="ls-${sec.id}">`)}${inner}${sup}</section>`;
 }
 let LF=null;   // the log being edited
 function openLog(d){
   if(!LOG.data) return;
   const ex=getLog(d), ro=d!==today();
-  LF={date:d, answers:JSON.parse(JSON.stringify(ex?.answers||{})), existing:!!ex, ro, startedAt:ex?.startedAt||new Date().toISOString()};
-  logSheet(ro?`Daily log · ${fmtDate(d)}`:"Today's daily log", ro?"Past logs can be viewed, not changed.":"The last 24 hours. Skip anything that doesn't apply.", "", "");
+  LF={date:d, answers:JSON.parse(JSON.stringify(ex?.answers||{})), existing:!!ex, ro, startedAt:ex?.startedAt||new Date().toISOString(), step:0, anim:true, dir:"fwd"}; LF.orig=JSON.stringify(LF.answers);
+  logSheet("Daily Log", "", "", "");
+  logBg.querySelector("#log-title").nextElementSibling.outerHTML=`<span class="sheet-date">${d===today()?"Today · ":""}${fmtDate(d)}${ro?` · <span class="ro-tag">🔒 Read only</span>`:""}</span>`;
+  logBg.addEventListener("keydown",e=>{ // ←/→ move between sections, like the check-ins
+    if(!LF||e.target.closest("input,textarea,select")) return;
+    const n=logWalkSections().length;
+    if(e.key==="ArrowRight"&&LF.step<n-1){ e.preventDefault(); logGo(LF.step+1); }
+    else if(e.key==="ArrowLeft"&&LF.step>0){ e.preventDefault(); logGo(LF.step-1); } });
   drawLog();
 }
+// the sections to step through: Target behaviors only when there's a behavior to log (or, on a past day, one was logged)
+function logWalkSections(){
+  return logEnabledSections().filter(s=>s.type!=="targets" || (LF?.ro ? logHasAnswers({targets:LF.answers.targets}) : activeTargets().length>0));
+}
+// a section counts as answered once anything in it has a value
+function logSecDone(sec,a){
+  if(sec.type==="targets") return logHasAnswers({targets:a.targets});
+  const ids=(sec.items||[]).map(it=>it.id).concat(sec.id);
+  return Object.keys(a).some(k=>ids.some(id=>k===id||k.startsWith(id+"_")) && logHasAnswers({[k]:a[k]}));
+}
+// closing an edited log asks first, the same as a check-in
+function logRequestClose(){
+  if(LF && !LF.ro && JSON.stringify(LF.answers)!==LF.orig) return confirmBox("Discard this daily log?","Your answers haven't been saved yet.","Discard",()=>{ LF=null; closeLogSheet(); });
+  LF=null; closeLogSheet();
+}
+function logGo(n){ if(!LF) return; LF.dir=n<LF.step?"back":"fwd"; LF.step=n; LF.anim=true; drawLog(); logBg?.querySelector(".stepdot.cur")?.focus({preventScroll:true}); }
 function drawLog(keepScroll){
   if(!logBg||!LF) return;
   const body=logBg.querySelector("#logBody"), foot=logBg.querySelector("#logFoot"), y=body.scrollTop, a=LF.answers;
-  const secs=logEnabledSections();
-  body.innerHTML=(secs.length?secs.map(s=>logSectionHTML(s,a,LF.ro,LF.date)).join(""):`<p>No sections are turned on. <button type="button" class="linkbtn" id="logToSetup">Open setup</button></p>`)
-    +(LF.ro?"":`<p class="small muted log-privacy">${esc(LOG.data.privacy)}</p>`);
-  foot.innerHTML=LF.ro?`<button class="btn" id="logDone">Close</button>`:`<button class="btn ghost" id="logCancel">Cancel</button><button class="btn" id="logSave">${LF.existing?"Save changes":"Save today's log"}</button>`;
-  if(keepScroll) body.scrollTop=y;
+  const secs=logWalkSections(), N=secs.length;
+  LF.step=Math.max(0,Math.min(LF.step,N-1));
+  const sec=secs[LF.step], last=LF.step>=N-1, anim=LF.anim; LF.anim=false;
+  let steps=logBg.querySelector("#logSteps");
+  if(!steps){ steps=document.createElement("div"); steps.id="logSteps"; steps.className="steps log-steps"; steps.setAttribute("role","group"); steps.setAttribute("aria-label","Sections"); body.before(steps); }
+  steps.hidden=N<2; steps.style.display=N<2?"none":"";
+  steps.innerHTML=secs.map((x,i)=>{ const done=logSecDone(x,a);
+    return `<button type="button" class="stepdot ${i===LF.step?"cur":""} ${done?"done":""}" data-lstep="${i}" title="${esc(x.title)}" aria-label="${esc(x.title)}${done?", answered":""}" ${i===LF.step?'aria-current="step"':""}><span aria-hidden="true">${logIcon(x)}</span></button>`; }).join("");
+  body.innerHTML=N?`<div class="stepcount">Section ${LF.step+1} of ${N}${LF.step===0&&!LF.ro?`<br>The last 24 hours. Skip anything that doesn't apply.`:""}</div>
+      <div class="${anim?"step-in":""} ${anim&&LF.dir==="back"?"from-left":""}">${logSectionHTML(sec,a,LF.ro,LF.date)}</div>
+      ${last&&!LF.ro?`<p class="small muted log-privacy">${esc(LOG.data.privacy)}</p>`:""}
+      ${LF.existing&&!last&&!LF.ro?`<div style="text-align:right;margin-top:10px"><button type="button" class="linkbtn" id="logSaveNow">Save changes now</button></div>`:""}`
+    :`<p>No sections are turned on. <button type="button" class="linkbtn" id="logToSetup">Open setup</button></p>`;
+  foot.innerHTML=!N?`<button class="btn" id="logDone">Close</button>`
+    :`<button class="btn ghost" id="logPrev" ${LF.step===0?"disabled":""}>← Back</button>`
+     +(last?(LF.ro?`<button class="btn" id="logDone">Close</button>`:`<button class="btn" id="logSave">${LF.existing?"Save changes":"Save today's log"}</button>`)
+           :`<button class="btn" id="logNext">Next: ${esc(secs[LF.step+1].title)} →</button>`);
+  if(keepScroll) body.scrollTop=y; else body.scrollTop=0;
+  steps.querySelector(".stepdot.cur")?.scrollIntoView({block:"nearest",inline:"nearest"});
+  steps.querySelectorAll("[data-lstep]").forEach(b=>b.onclick=()=>logGo(+b.dataset.lstep));
+  const pv=foot.querySelector("#logPrev"); if(pv) pv.onclick=()=>logGo(LF.step-1);
+  const nx=foot.querySelector("#logNext"); if(nx) nx.onclick=()=>logGo(LF.step+1);
+  const sn=body.querySelector("#logSaveNow"); if(sn) sn.onclick=saveLog;
   const set=(k,v)=>{ if(v===undefined||v==="") delete a[k]; else a[k]=v; };
+  const tgt=id=>{ if(!a.targets||Array.isArray(a.targets)) a.targets={}; return a.targets[id] ||= {name:logCfg().targets.find(x=>x.id===id)?.name||""}; };
   body.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{
     const k=b.dataset.k, raw=b.dataset.v, v=/^\d+$/.test(raw)?+raw:raw;
-    const tm=k.match(/^t(\d)_(urge|acted|affected)$/);
-    if(tm){ const i=+tm[1]; a.targets=a.targets||[]; const t=a.targets[i]=a.targets[i]||{}; t[tm[2]]=t[tm[2]]===v?undefined:v; }
+    if(k.startsWith("tg|")){ const [,id,f]=k.split("|"), t=tgt(id); t[f]=t[f]===v?undefined:v; }
     else set(k, a[k]===v?undefined:v);
     drawLog(true);
   });
   body.querySelectorAll("[data-check]").forEach(b=>b.onclick=()=>{ const k=b.dataset.check, id=b.dataset.id, l=new Set(a[k]||[]); l.has(id)?l.delete(id):l.add(id); a[k]=[...l]; if(!a[k].length) delete a[k]; drawLog(true); });
-  body.querySelectorAll("[data-tskill]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.tskill; a.targets=a.targets||[]; const t=a.targets[i]=a.targets[i]||{}; const l=new Set(t.skills||[]); l.has(b.dataset.id)?l.delete(b.dataset.id):l.add(b.dataset.id); t.skills=[...l]; drawLog(true); });
-  body.querySelectorAll("[data-tadd]").forEach(s=>s.onchange=()=>{ if(!s.value) return; const i=+s.dataset.tadd; a.targets=a.targets||[]; const t=a.targets[i]=a.targets[i]||{}; t.skills=[...new Set([...(t.skills||[]),s.value])]; drawLog(true); });
-  body.querySelectorAll("[data-note]").forEach(x=>x.oninput=()=>{ const k=x.dataset.note, tm=k.match(/^t(\d)_note$/); if(tm){ a.targets=a.targets||[]; (a.targets[+tm[1]] ||= {}).note=x.value; } else set(k,x.value); });
-  body.querySelectorAll("[data-num]").forEach(x=>x.oninput=()=>{ const n=parseFloat(x.value); set(x.dataset.num, isNaN(n)?undefined:Math.max(0,Math.min(24,n))); });
+  body.querySelectorAll("[data-tskill]").forEach(b=>b.onclick=()=>{ const t=tgt(b.dataset.tskill), l=new Set(t.skills||[]); l.has(b.dataset.id)?l.delete(b.dataset.id):l.add(b.dataset.id); t.skills=[...l]; drawLog(true); });
+  body.querySelectorAll("[data-tadd]").forEach(x=>x.onchange=()=>{ if(!x.value) return; const t=tgt(x.dataset.tadd); t.skills=[...new Set([...(t.skills||[]),x.value])]; drawLog(true); });
+  body.querySelectorAll("[data-note]").forEach(x=>x.oninput=()=>{ const k=x.dataset.note; if(k.startsWith("tg|")) tgt(k.split("|")[1]).note=x.value; else set(k,x.value); });
+  body.querySelectorAll("[data-range]").forEach(x=>{ const out=body.querySelector("#logHoursOut");
+    x.oninput=()=>{ const n=+x.value; set(x.dataset.range,n); out.textContent=fmtSleep(n); x.setAttribute("aria-valuetext",fmtSleep(n)); x.closest(".log-hours").classList.remove("unset"); };
+    x.onchange=()=>{ drawLog(true); body.querySelector("#logHours")?.focus(); };
+    // a tap on the thumb right where it sits still counts as an answer
+    x.onpointerup=()=>{ if(a[x.dataset.range]===undefined){ x.oninput(); drawLog(true); body.querySelector("#logHours")?.focus(); } }; });
+  const hc=body.querySelector("#logHoursClear"); if(hc) hc.onclick=()=>{ set("sleep_hours",undefined); drawLog(true); body.querySelector("#logHours")?.focus(); };
   body.querySelectorAll("[data-none]").forEach(b=>b.onclick=()=>{ const sec=logSection(b.dataset.none);
     (sec.items||[]).forEach(it=>{ a[it.id]=it.reversed?undefined:0; if(it.reversed) delete a[it.id]; delete a[it.id+"_acted"]; delete a[it.id+"_plan"]; delete a[it.id+"_note"]; });
     if(sec.type==="checks"){ a[sec.id]=sec.id==="appetite"?["normal"]:[]; }
     if(sec.type==="sleep"){ a.sleep_checks=[...new Set([...(a.sleep_checks||[]).filter(x=>x==="well"),"well"])]; }
     drawLog(true); });
   const ts=body.querySelector("#logToSetup"); if(ts) ts.onclick=()=>{ closeLogSheet(true); openLogSetup(); };
-  const c=foot.querySelector("#logCancel"); if(c) c.onclick=()=>{ LF=null; closeLogSheet(); };
   const dn=foot.querySelector("#logDone"); if(dn) dn.onclick=()=>{ LF=null; closeLogSheet(); };
   const sv=foot.querySelector("#logSave"); if(sv) sv.onclick=saveLog;
 }
-function logHasAnswers(a){ return Object.keys(a).some(k=>{ const v=a[k]; return k==="targets"?(v||[]).some(t=>t&&Object.values(t).some(x=>x!==undefined&&x!==""&&!(Array.isArray(x)&&!x.length))):!(v===undefined||v===""||(Array.isArray(v)&&!v.length)); }); }
+function logHasAnswers(a){ return Object.keys(a).some(k=>{ const v=a[k]; return k==="targets"?Object.values(v||{}).some(t=>t&&Object.entries(t).some(([f,x])=>f!=="name"&&x!==undefined&&x!==""&&!(Array.isArray(x)&&!x.length))):!(v===undefined||v===""||(Array.isArray(v)&&!v.length)); }); }
 async function saveLog(){
   if(!LF) return;
-  if(!logHasAnswers(LF.answers)) return toast("Answer at least one thing first, or tap Cancel.");
+  if(!logHasAnswers(LF.answers)){ LF=null; closeLogSheet(); return toast("Nothing to save, so nothing was changed."); }
   const before=earnedBadges(S.entries), now=new Date().toISOString(), prev=getLog(LF.date);
   const doc={key:logKey(LF.date),kind:"log",date:LF.date,answers:LF.answers,startedAt:LF.startedAt,createdAt:prev?.createdAt||now,updatedAt:now,v:1};
   try{ await S.store.save(doc); }catch(e){ return toast(e?.code==="unreadable"?"Bookends couldn't read your saved data, so it won't save over it. Nothing was changed.":"Couldn't save. Please try again."); }
@@ -1556,13 +1604,13 @@ function logSummaryRows(lg,{sensitive=true}={}){
     if(sec.items) sec.items.forEach(it=>{ if(!sensitive && it.sensitive) return; const v=a[it.id]; if(v===undefined) return;
       let txt=`${v}/${it.scale}`; if(a[it.id+"_acted"]) txt+=`, acted on it: ${a[it.id+"_acted"]}`; if(a[it.id+"_plan"]) txt+=`, plan or means: ${a[it.id+"_plan"]}`; if(a[it.id+"_note"]) txt+=` (${a[it.id+"_note"]})`;
       if(+v>0||it.reversed||a[it.id+"_acted"]==="yes"||a[it.id+"_plan"]==="yes") rows.push([it.label,txt,it.sensitive||sec.sensitive]); });
-    else if(sec.type==="targets") logCfg().targets.forEach((nm,i)=>{ const t=(a.targets||[])[i]; if(!t) return;
+    else if(sec.type==="targets") Object.entries(a.targets||{}).forEach(([id,t])=>{ if(!t) return; const nm=t.name||logCfg().targets.find(x=>x.id===id)?.name||"Target behavior";
       const bits=[t.urge!==undefined?`urge ${t.urge}/5`:"", t.acted?`did it: ${t.acted}`:"", t.affected?`got in the way: ${t.affected}`:"", (t.skills||[]).length?`skills: ${(t.skills||[]).map(id=>skillById(id)?.name||id).join(", ")}`:"", t.note?`(${t.note})`:""].filter(Boolean);
       if(bits.length) rows.push([nm,bits.join(", "),false]); });
-    else if(sec.type==="sleep"){ const bits=[a.sleep_hours!==undefined?`${a.sleep_hours} hours`:"", ...(a.sleep_checks||[]).map(id=>sec.checks.find(c=>c.id===id)?.label).filter(Boolean), a.sleep_other||""].filter(Boolean); if(bits.length) rows.push(["Sleep",bits.join(", "),false]); }
+    else if(sec.type==="sleep"){ const bits=[a.sleep_hours!==undefined?fmtSleep(a.sleep_hours):"", ...(a.sleep_checks||[]).map(id=>sec.checks.find(c=>c.id===id)?.label).filter(Boolean), a.sleep_other||""].filter(Boolean); if(bits.length) rows.push(["Sleep",bits.join(", "),false]); }
     else if(sec.type==="checks"){ const bits=[...(a[sec.id]||[]).map(id=>sec.checks.find(c=>c.id===id)?.label).filter(Boolean), a[sec.id+"_other"]||""].filter(Boolean); if(bits.length) rows.push([sec.title,bits.join(", "),!!sec.sensitive]); }
     else if(sec.type==="meds"){ const bits=[a.meds_taken?`took as prescribed: ${a.meds_taken}`:"", a.meds_changed?`changes: ${a.meds_changed}${a.meds_note?` (${a.meds_note})`:""}`:""].filter(Boolean); if(bits.length) rows.push(["Medication",bits.join(", "),false]); }
-    else if(sec.type==="substance"){ const bits=[a.substance_urge!==undefined?`urge ${a.substance_urge}/10`:"", a.substance_used?`used: ${a.substance_used}${a.substance_note?` (${a.substance_note})`:""}`:""].filter(Boolean); if(bits.length) rows.push(["Substance use",bits.join(", "),true]); }
+    else if(sec.type==="substance"){ const bits=[a.substance_urge!==undefined?`urge ${a.substance_urge}/5`:"", a.substance_used?`used: ${a.substance_used}${a.substance_note?` (${a.substance_note})`:""}`:""].filter(Boolean); if(bits.length) rows.push(["Substance use",bits.join(", "),true]); }
   }
   return rows;
 }
@@ -1580,11 +1628,11 @@ function logExport(d,withNotes,sensitive){
   for(const sec of LOG.data?.sections||[]){
     if(sec.sensitive && !sensitive) continue;
     if(sec.items){ const o={}; sec.items.forEach(it=>{ if(it.sensitive&&!sensitive) return; if(a[it.id]!==undefined){ o[it.id]={rating:a[it.id],outOf:it.scale}; if(a[it.id+"_acted"]) o[it.id].actedOnIt=a[it.id+"_acted"]; if(a[it.id+"_plan"]) o[it.id].planIntentOrMeans=a[it.id+"_plan"]; if(withNotes&&a[it.id+"_note"]) o[it.id].note=a[it.id+"_note"]; } }); if(Object.keys(o).length) out[sec.id]=o; }
-    else if(sec.type==="targets"){ const o=logCfg().targets.map((nm,i)=>{ const t=(a.targets||[])[i]; if(!t) return null; return {behavior:nm, ...(t.urge!==undefined?{urge:t.urge,outOf:5}:{}), ...(t.acted?{didIt:t.acted}:{}), ...(t.affected?{gotInTheWay:t.affected}:{}), ...((t.skills||[]).length?{skillsTried:t.skills.map(id=>skillById(id)?.name||id)}:{}), ...(withNotes&&t.note?{note:t.note}:{})}; }).filter(Boolean); if(o.length) out.targets=o; }
-    else if(sec.type==="sleep"){ if(a.sleep_hours!==undefined||(a.sleep_checks||[]).length) out.sleep={...(a.sleep_hours!==undefined?{hours:a.sleep_hours}:{}), ...((a.sleep_checks||[]).length?{notes:a.sleep_checks.map(id=>sec.checks.find(c=>c.id===id)?.label||id)}:{}), ...(withNotes&&a.sleep_other?{other:a.sleep_other}:{})}; }
+    else if(sec.type==="targets"){ const o=Object.entries(a.targets||{}).map(([id,t])=>{ if(!t) return null; const nm=t.name||logCfg().targets.find(x=>x.id===id)?.name||"Target behavior"; if(t.urge===undefined&&!t.acted&&!t.affected&&!(t.skills||[]).length&&!t.note) return null; return {behavior:nm, ...(t.urge!==undefined?{urge:t.urge,outOf:5}:{}), ...(t.acted?{didIt:t.acted}:{}), ...(t.affected?{gotInTheWay:t.affected}:{}), ...((t.skills||[]).length?{skillsTried:t.skills.map(id=>skillById(id)?.name||id)}:{}), ...(withNotes&&t.note?{note:t.note}:{})}; }).filter(Boolean); if(o.length) out.targets=o; }
+    else if(sec.type==="sleep"){ if(a.sleep_hours!==undefined||(a.sleep_checks||[]).length) out.sleep={...(a.sleep_hours!==undefined?{hours:Math.min(12,a.sleep_hours),...(a.sleep_hours>=12?{hoursOrMore:true}:{})}:{}), ...((a.sleep_checks||[]).length?{notes:a.sleep_checks.map(id=>sec.checks.find(c=>c.id===id)?.label||id)}:{}), ...(withNotes&&a.sleep_other?{other:a.sleep_other}:{})}; }
     else if(sec.type==="checks"){ if((a[sec.id]||[]).length) out[sec.id]={checked:a[sec.id].map(id=>sec.checks.find(c=>c.id===id)?.label||id), ...(withNotes&&a[sec.id+"_other"]?{other:a[sec.id+"_other"]}:{})}; }
     else if(sec.type==="meds"){ if(a.meds_taken||a.meds_changed) out.medication={...(a.meds_taken?{tookAsPrescribed:a.meds_taken}:{}), ...(a.meds_changed?{changed:a.meds_changed}:{}), ...(withNotes&&a.meds_note?{note:a.meds_note}:{})}; }
-    else if(sec.type==="substance"){ if(a.substance_urge!==undefined||a.substance_used) out.substance={...(a.substance_urge!==undefined?{urge:a.substance_urge,outOf:10}:{}), ...(a.substance_used?{used:a.substance_used}:{}), ...(withNotes&&a.substance_note?{note:a.substance_note}:{})}; }
+    else if(sec.type==="substance"){ if(a.substance_urge!==undefined||a.substance_used) out.substance={...(a.substance_urge!==undefined?{urge:a.substance_urge,outOf:5}:{}), ...(a.substance_used?{used:a.substance_used}:{}), ...(withNotes&&a.substance_note?{note:a.substance_note}:{})}; }
   }
   return out;
 }
@@ -1595,8 +1643,8 @@ function dailyLogBadges(out){
   const add=(id,em,name,desc,d)=>{ DYN_BADGES[id]={id,em,name,desc}; if(d && !out[id]) out[id]=d; };
   const c=logCfg();
   if(c.setup && c.setupAt) add("log-setup","🛠️","Made It Yours","Set up your daily log",ymd(new Date(c.setupAt)));
-  if(c.setup && c.targets.length && c.setupAt) add("log-targets","🎯","Know Your Targets","Named a target behavior to work on",ymd(new Date(c.setupAt)));
-  if(c.appts && (c.appts.therapy||c.appts.psych) && c.setupAt) add("log-appt","🗓️","Ready for Session","Added an upcoming appointment",ymd(new Date(c.setupAt)));
+  const firstTb=c.targets.map(t=>t.addedAt).filter(Boolean).sort()[0];
+  if(c.setup && firstTb) add("log-targets","🎯","Know Your Targets","Named a target behavior to work on",ymd(new Date(firstTb)));
   const days=Object.keys(S.logs).filter(d=>d<=today()).sort(); if(!days.length) return;
   add("log-first","📓","First Page","Filled out your first daily log",days[0]);
   [[3,"📗","Getting the Hang of It"],[7,"📘","A Week of Pages"],[14,"📙","Two Weeks of Pages"],[30,"📚","A Month of Pages"],[60,"🗂️","Chapter Two"],[100,"💯","A Hundred Pages"],[365,"🏛️","A Year of Pages"]]
@@ -1612,11 +1660,11 @@ function dailyLogBadges(out){
   // weekend: Saturday and Sunday of the same weekend
   const sat=days.find(d=>parse(d).getDay()===6 && days.includes(addDays(d,1))); if(sat) add("log-weekend","🛋️","Weekend Pages","Filled out your daily log on a Saturday and Sunday",addDays(sat,1));
   // noted a skill for a target behavior
-  const sk=days.find(d=>(S.logs[d].answers.targets||[]).some(t=>(t?.skills||[]).length)); if(sk) add("log-skills","🧰","Skills on Paper","Noted the skills you tried for a target behavior",sk);
+  const sk=days.find(d=>Object.values(S.logs[d].answers.targets||{}).some(t=>(t?.skills||[]).length)); if(sk) add("log-skills","🧰","Skills on Paper","Noted the skills you tried for a target behavior",sk);
   // sleep hours on 7 days
   const sl=days.filter(d=>S.logs[d].answers.sleep_hours!==undefined); if(sl.length>=7) add("log-sleep7","😴","Sleep Detective","Logged your sleep on seven days",sl[6]);
   // every turned-on section filled in one log
-  const ev=days.find(d=>{ const a=S.logs[d].answers, secs=logEnabledSections(); return secs.length>=3 && secs.every(s=>s.items?s.items.some(it=>a[it.id]!==undefined):s.type==="targets"?(a.targets||[]).some(Boolean)||!logCfg().targets.length:s.type==="sleep"?(a.sleep_hours!==undefined||(a.sleep_checks||[]).length):s.type==="checks"?(a[s.id]||[]).length:s.type==="meds"?!!(a.meds_taken||a.meds_changed):s.type==="substance"?(a.substance_urge!==undefined||!!a.substance_used):true); });
+  const ev=days.find(d=>{ const a=S.logs[d].answers, secs=logEnabledSections(); return secs.length>=3 && secs.every(s=>s.items?s.items.some(it=>a[it.id]!==undefined):s.type==="targets"?Object.values(a.targets||{}).some(t=>t&&(t.urge!==undefined||t.acted||t.affected))||!activeTargets().length:s.type==="sleep"?(a.sleep_hours!==undefined||(a.sleep_checks||[]).length):s.type==="checks"?(a[s.id]||[]).length:s.type==="meds"?!!(a.meds_taken||a.meds_changed):s.type==="substance"?(a.substance_urge!==undefined||!!a.substance_used):true); });
   if(ev) add("log-complete","✅","Every Page Turned","Filled in every section of your daily log",ev);
 }
 
@@ -1861,9 +1909,7 @@ function badgesSectionHTML(){
 /* ---------- About ---------- */
 const ABOUT_SECTIONS=[["about-note","A quick note"],["about-why","Why I made this"],["about-name","Why \"Bookends\"?"],["about-how","How it works"],["about-privacy","Your privacy"],["about-free","Free, on purpose"],["about-providers","For providers"],["about-sharing","Sharing with your provider"],["about-homescreen","Add to Home Screen"],["about-source","Open source"]];
 function renderAbout(){
-  const privacy = S.store.kind==="cloud"
-    ? "Your check-ins are saved to your own private space. Only you can read them. Nobody else who opens this page can see them."
-    : "Your check-ins never leave this device. There's no account and no server storing them, so nobody else can read them, including me. That also means if you clear your browser data, they're gone, so use the <b>Settings</b> tab to download a backup now and then.";
+  const privacy = "Your check-ins never leave this device. There's no account and no server storing them, so nobody else can read them, including me. That also means if you clear your browser data, they're gone, so use the <b>Settings</b> tab to download a backup now and then.";
   const visitsNote=" Bookends also keeps a private record of when you open it, so History can show how often you came back. It's stored alongside your check-ins, included in your backups, and erased by Delete all.";
   $app.innerHTML = `
     <article class="about">
@@ -1895,7 +1941,7 @@ function renderAbout(){
         <ul>
           <li><b>🌅 Morning intention</b> is open from ${hourLabel(win("morning")[0])} to ${hourLabel(win("morning")[1])}. <b>🌙 Nightly reflection</b> is open from ${hourLabel(win("night")[0])} to ${hourLabel(win("night")[1])}. You can change both windows in <b>Settings</b>.</li>
           <li><b>🧰 Skills</b> has short coping skills, like STOP, DEAR MAN, "catch it, check it, change it," a self-compassion break and the 5-4-3-2-1 grounding exercise, for when feelings start to run high. They draw on DBT, CBT, ACT, mindfulness and self-compassion. They're reminders, not therapy.</li>
-          <li><b>📓 Daily log</b> is an optional daily diary card, like the ones many therapists use, for sleep, mood, thoughts, urges and the behaviors you're working on. You choose what it tracks. The private parts (safety, self-harm urges, substance use and eating) never leave your device unless you choose to include them in a download.</li>
+          <li><b>📓 Daily log</b> is an optional daily diary card, like the ones many therapists use, for sleep, mood, thoughts, urges and the behaviors you're working on. You choose what it tracks. The 🔒 sensitive parts (safety, self-harm urges, substance use and appetite) never leave your device unless you choose to include them in a download.</li>
           <li>Each check-in walks through the eight areas of wellness, one at a time. Rate each one from 1 to 5 and write as much or as little as you want. Skipping is fine.</li>
           <li><b>Check-ins are for today.</b> You can look back on past days, but you can't fill them in afterward. If you miss a day, that's okay. There's always tomorrow. No guilt, no shame.</li>
           <li><b>Badges reward showing up, never your ratings.</b> A hard day logged honestly counts just as much as a great one. There's no list to finish.</li>
@@ -1922,7 +1968,7 @@ function renderAbout(){
         <ul>
           <li><b>Sharing it is easy:</b> send your clients to <b>bookends.day</b>. It works in any browser on a phone or computer. On a phone, they can <a href="#about-homescreen">add it to their Home Screen</a> so it opens like an app.</li>
           <li><b>It fits their routine:</b> clients can set their own morning and evening check-in windows, and choose how affirmations show up (or turn them off), in <b>Settings</b>.</li>
-          <li><b>It's private by design:</b> ${S.store.kind==="cloud"?"each person's check-ins are private to them. There's no way for you, or me, to see anyone's entries.":"Bookends doesn't collect or store anyone's check-ins. Entries stay on the client's own device, so there's no account for you to manage and nothing on my end to access."}</li>
+          <li><b>It's private by design:</b> Bookends doesn't collect or store anyone's check-ins. Entries stay on the client's own device, so there's no account for you to manage and nothing on my end to access.</li>
           <li><b>Clients choose what to share:</b> they can make a printable summary for you anytime (see below).</li>
           <li><b>It's a self-care tool, not a clinical one.</b> Bookends doesn't monitor entries or send alerts to anyone, so it's not a substitute for your own check-ins or a safety plan.</li>
         </ul>
@@ -1994,13 +2040,8 @@ function lastBackupText(){
   const days=Math.round((parse(today())-parse(d.slice(0,10)))/864e5);
   return `Last backup: ${days===0?"today":days===1?"yesterday":days+" days ago"}.`;
 }
-/* Save a file: through Claude's download prompt when hosted there, otherwise a normal browser download. */
+/* Save a file with a normal browser download. */
 async function saveFile(filename,data,mime){
-  const dl = window.claude?.use ? await claude.use("downloads").catch(()=>null) : null;
-  if(dl){
-    try{ await dl.save({filename,data}); return true; }
-    catch(e){ if(e?.code==="declined"){ toast("Download cancelled"); return false; } if(e?.code==="rate_limited"){ toast("A download prompt is already open"); return false; } }
-  }
   try{
     const url=URL.createObjectURL(new Blob([data],{type:mime}));
     const a=Object.assign(document.createElement("a"),{href:url,download:filename}); document.body.appendChild(a); a.click(); a.remove();
@@ -2308,7 +2349,7 @@ function renderSettings(){
       <div class="share-opts">
         <label class="time-row"><span>Time period</span><select id="shDays">${[[7,"Last 7 days"],[14,"Last 14 days"],[30,"Last 30 days"],[90,"Last 90 days"],[0,"Everything"]].map(([n,t])=>`<option value="${n}" ${n===90?"selected":""}>${t}</option>`).join("")}</select></label>
         <label class="pref" style="border-top:0;padding:4px 2px"><span><b>Include my written notes</b><span class="small muted">Turn off to share ratings, skills and visits only.</span></span><input type="checkbox" class="switch" id="shNotes" checked></label>
-        ${Object.keys(S.logs).length?`<label class="pref" style="border-top:0;padding:4px 2px"><span><b>Include private daily log sections</b><span class="small muted">Safety, urges to hurt yourself, substance use and eating. Off by default. The rest of your daily log is included either way.</span></span><input type="checkbox" class="switch" id="shSens"></label>`:""}
+        ${Object.keys(S.logs).length||logCfg().setup?`<label class="pref" style="border-top:0;padding:4px 2px"><span><b>Include sensitive information</b><span class="small muted">The 🔒 sensitive parts of your daily log: safety, urges to hurt yourself, appetite and substance use. Off unless you turn it on. The rest of your daily log is shared either way.</span></span><input type="checkbox" class="switch" id="shSens"></label>`:""}
       </div>
       <div class="share-note"><b>Before you share</b>
         <span>These files include everything from the time period, including your notes if that's on. Once you upload a file to an AI service or a patient portal, that service's privacy terms apply, not Bookends'. You might want to remove other people's names first.</span>
@@ -2318,9 +2359,7 @@ function renderSettings(){
     </div>
     <div class="card" style="margin-top:14px">
       <h2 style="font-size:1.15rem">Where your entries live</h2>
-      <p class="small muted">${S.store.kind==="cloud"
-        ?"Saved to your private space in this page's store. Only you can read them — not the page's owner or anyone it's shared with."
-        :"Saved in this browser only. Clearing site data or switching devices will lose them, so export a backup now and then."}</p>
+      <p class="small muted">Saved in this browser only. Clearing site data or switching devices will lose them, so export a backup now and then.</p>
     </div>
     <div class="card" style="margin-top:14px">
       <h2 style="font-size:1.15rem">Back up</h2>
@@ -2438,7 +2477,7 @@ function renderSettings(){
       if(modalEl && d.closest(".modal-bg")){ e.preventDefault(); closeModal(); }
       else if(affBg && d.closest(".aff-bg")){ e.preventDefault(); closeAffSheet(); }
       else if(dayBg && d.closest(".sheet-bg")===dayBg){ e.preventDefault(); closeDaySheet(); }
-      else if(logBg && d.closest(".sheet-bg")===logBg){ e.preventDefault(); LF=null; closeLogSheet(); }
+      else if(logBg && d.closest(".sheet-bg")===logBg){ e.preventDefault(); logRequestClose(); }
       else if(skillBg && d.closest(".sheet-bg")===skillBg){ e.preventDefault(); closeSkill(); }
       return; // the check-in form handles its own Esc
     }
@@ -2484,7 +2523,7 @@ function markWelcomed(){ try{ localStorage.setItem(WELCOME_KEY,today()); }catch(
 function showWelcome(){
   markWelcomed();
   const ua=navigator.userAgent||"", ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1), android=/Android/.test(ua);
-  const where=S.store.kind==="cloud"?"is saved to your own private space":"stays on this device";
+  const where="stays on this device";
   const how=ios?"In Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>."
     :android?"In Chrome, tap the <b>⋮</b> menu, then <b>Add to Home screen</b>."
     :"On your phone, open bookends.day and add it to your Home Screen from the browser's menu.";
@@ -2521,7 +2560,7 @@ function confetti(count){
 (async function boot(){
   countVisit();
   const affReady = Promise.all([loadAffirmations(), loadSuggestions(), loadSkills(), loadDailyLog()]);
-  S.store = await pickStore();
+  S.store = LocalStore;
   await affReady;
   try{ const all = await S.store.list(); const meta=all.find(e=>e.key===AFF_META_KEY);
     S.affLog = (meta&&meta.days&&typeof meta.days==="object")?{...meta.days}:{};

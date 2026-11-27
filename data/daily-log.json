@@ -1,5 +1,5 @@
 {
-  "_notes": "The daily log (a DBT-style diary card). Wording is original. 'sensitive' sections and items are left out of exports unless the person chooses to include them. 'default' is whether a section starts on during setup.",
+  "_notes": "The daily log (a DBT-style diary card). Wording is original. 'sensitive' sections and items are left out of exports unless the person chooses to include them. 'default' is whether a section starts on during setup. 'icon' is an emoji, or 'pill-bottle' for the built-in pill bottle drawing.",
   "intro": "A quick daily check on sleep, mood, thoughts, urges and more over the last 24 hours. It's based on the diary cards many therapists use, especially in DBT, and it's helpful whether or not you see one.",
   "privacy": "Your daily log stays private on this device, like everything else in Bookends. Nobody else sees it, and nobody is notified about what you write. If you're in danger, please reach out to someone directly.",
   "sections": [
@@ -7,8 +7,8 @@
       "id": "targets",
       "title": "Target behaviors",
       "icon": "🎯",
-      "default": true,
-      "about": "Up to three behaviors you're working on, like skipping meals, isolating, or snapping at people. Many people pick these with their therapist.",
+      "default": false,
+      "about": "Behaviors you're working on, like skipping meals, isolating, or snapping at people. Many people pick these with their therapist. You can track up to three at a time.",
       "type": "targets"
     },
     {
@@ -18,24 +18,37 @@
       "default": true,
       "about": "Patterns in your thinking.",
       "items": [
-        {"id": "selfcrit", "label": "Self-critical thoughts", "scale": 10},
-        {"id": "focus", "label": "Ability to focus", "scale": 10, "reversed": true},
-        {"id": "worry", "label": "Worry", "scale": 10},
-        {"id": "hopeless", "label": "Hopelessness", "scale": 10},
-        {"id": "racing", "label": "Racing thoughts", "scale": 10},
-        {"id": "ruminating", "label": "Going over the same thoughts", "scale": 10}
-      ]
-    },
-    {
-      "id": "urges",
-      "title": "Urges",
-      "icon": "🌊",
-      "default": true,
-      "about": "Urges you noticed, and whether you acted on them.",
-      "items": [
-        {"id": "pleasing", "label": "People-pleasing or holding in feelings", "scale": 10},
-        {"id": "impulsive", "label": "Impulsive or risky urges", "scale": 10, "acted": true},
-        {"id": "selfharm", "label": "Urges to hurt yourself", "scale": 10, "acted": true, "sensitive": true, "support": "crisis"}
+        {
+          "id": "selfcrit",
+          "label": "Self-critical thoughts",
+          "scale": 5
+        },
+        {
+          "id": "focus",
+          "label": "Ability to focus",
+          "scale": 5,
+          "reversed": true
+        },
+        {
+          "id": "worry",
+          "label": "Worry",
+          "scale": 5
+        },
+        {
+          "id": "hopeless",
+          "label": "Hopelessness",
+          "scale": 5
+        },
+        {
+          "id": "racing",
+          "label": "Racing thoughts",
+          "scale": 5
+        },
+        {
+          "id": "ruminating",
+          "label": "Ruminating thoughts",
+          "scale": 5
+        }
       ]
     },
     {
@@ -45,10 +58,54 @@
       "default": true,
       "about": "How strong each feeling was.",
       "items": [
-        {"id": "sad", "label": "Sad or down", "scale": 10},
-        {"id": "anxious", "label": "Anxious", "scale": 10},
-        {"id": "irritated", "label": "Irritated or on edge", "scale": 10},
-        {"id": "elevated", "label": "Unusually high, revved up, or euphoric", "scale": 10}
+        {
+          "id": "sad",
+          "label": "Sad or down",
+          "scale": 5
+        },
+        {
+          "id": "anxious",
+          "label": "Anxious",
+          "scale": 5
+        },
+        {
+          "id": "irritated",
+          "label": "Irritated or on edge",
+          "scale": 5
+        },
+        {
+          "id": "elevated",
+          "label": "Unusually high, revved up, or euphoric",
+          "scale": 5
+        }
+      ]
+    },
+    {
+      "id": "urges",
+      "title": "Urges",
+      "icon": "🌊",
+      "default": true,
+      "about": "Urges you noticed, and whether you acted on them.",
+      "items": [
+        {
+          "id": "pleasing",
+          "label": "People-pleasing or holding in feelings",
+          "scale": 5
+        },
+        {
+          "id": "impulsive",
+          "label": "Impulsive or risky urges",
+          "scale": 5,
+          "acted": true
+        },
+        {
+          "id": "selfharm",
+          "label": "Urges to hurt yourself",
+          "scale": 5,
+          "acted": true,
+          "sensitive": true,
+          "support": "crisis"
+        }
       ]
     },
     {
@@ -58,11 +115,31 @@
       "default": true,
       "about": "Other things you might be feeling.",
       "items": [
-        {"id": "fatigue", "label": "Low energy or tired", "scale": 10},
-        {"id": "motivation", "label": "Low motivation", "scale": 10},
-        {"id": "restless", "label": "Restless", "scale": 10},
-        {"id": "overwhelmed", "label": "Easily overwhelmed", "scale": 10},
-        {"id": "panic", "label": "Panic", "scale": 10}
+        {
+          "id": "fatigue",
+          "label": "Low energy or tired",
+          "scale": 5
+        },
+        {
+          "id": "motivation",
+          "label": "Low motivation",
+          "scale": 5
+        },
+        {
+          "id": "restless",
+          "label": "Restless",
+          "scale": 5
+        },
+        {
+          "id": "overwhelmed",
+          "label": "Easily overwhelmed",
+          "scale": 5
+        },
+        {
+          "id": "panic",
+          "label": "Panic",
+          "scale": 5
+        }
       ]
     },
     {
@@ -73,31 +150,70 @@
       "about": "How you slept in the last 24 hours.",
       "type": "sleep",
       "checks": [
-        {"id": "well", "label": "Slept well"},
-        {"id": "fallasleep", "label": "Trouble falling asleep"},
-        {"id": "waking", "label": "Woke up often"},
-        {"id": "hardwake", "label": "Hard to wake up"},
-        {"id": "toomuch", "label": "Slept too much"},
-        {"id": "nightmares", "label": "Nightmares"},
-        {"id": "sleepmed", "label": "Took sleep medication"}
+        {
+          "id": "well",
+          "label": "Slept well"
+        },
+        {
+          "id": "fallasleep",
+          "label": "Trouble falling asleep"
+        },
+        {
+          "id": "waking",
+          "label": "Woke up often"
+        },
+        {
+          "id": "hardwake",
+          "label": "Hard to wake up"
+        },
+        {
+          "id": "toomuch",
+          "label": "Slept too much"
+        },
+        {
+          "id": "nightmares",
+          "label": "Nightmares"
+        },
+        {
+          "id": "sleepmed",
+          "label": "Took sleep medication"
+        }
       ]
     },
     {
       "id": "appetite",
-      "title": "Eating",
+      "title": "Appetite",
       "icon": "🍽️",
       "default": false,
       "sensitive": true,
       "support": "eating",
-      "about": "How eating went. Check anything that fits.",
+      "about": "How your appetite and eating went. Check anything that fits.",
       "type": "checks",
       "checks": [
-        {"id": "normal", "label": "Ate normally"},
-        {"id": "more", "label": "Ate more than usual"},
-        {"id": "less", "label": "Ate less than usual, or not at all"},
-        {"id": "restricting", "label": "Restricted food"},
-        {"id": "binge", "label": "Binged"},
-        {"id": "purge", "label": "Purged"}
+        {
+          "id": "normal",
+          "label": "Ate normally"
+        },
+        {
+          "id": "more",
+          "label": "Ate more than usual"
+        },
+        {
+          "id": "less",
+          "label": "Ate less than usual, or not at all"
+        },
+        {
+          "id": "restricting",
+          "label": "Restricted food"
+        },
+        {
+          "id": "binge",
+          "label": "Binged"
+        },
+        {
+          "id": "purge",
+          "label": "Purged"
+        }
       ]
     },
     {
@@ -109,17 +225,28 @@
       "support": "crisis",
       "about": "Thoughts of harm, from 0 (none) to 5 (strong). If any come up, Bookends will show you where to get help right away.",
       "items": [
-        {"id": "suicidal", "label": "Thoughts of suicide", "scale": 5, "plan": true},
-        {"id": "harmothers", "label": "Thoughts of hurting someone else", "scale": 5, "plan": true}
+        {
+          "id": "suicidal",
+          "label": "Thoughts of suicide",
+          "scale": 5,
+          "plan": true
+        },
+        {
+          "id": "harmothers",
+          "label": "Thoughts of hurting someone else",
+          "scale": 5,
+          "plan": true
+        }
       ]
     },
     {
       "id": "meds",
       "title": "Medication",
-      "icon": "💊",
+      "icon": "pill-bottle",
       "default": false,
       "about": "Only if you take medication for your mental health.",
-      "type": "meds"
+      "type": "meds",
+      "sensitive": true
     },
     {
       "id": "substance",
