@@ -717,3 +717,4 @@ html.text-xl .sl-top{grid-template-columns:1fr}html.text-xl .sl-res{grid-column:
 .log-range:disabled{cursor:default}
 .log-tag{display:inline-block;font-size:.72rem;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--ink);white-space:nowrap;vertical-align:1px}
 .log-sens-note{margin:6px 0 10px}
+.log-ico{width:1.15em;height:1.15em;vertical-align:-.18em;display:inline-block}
