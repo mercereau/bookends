@@ -90,13 +90,13 @@ In a fresh profile:
 
 ### Setup
 
-- [ ] **Target behaviors** is listed first and is off by default.
+- [ ] Every section starts on. **Target behaviors** is listed first.
 - [ ] Turning it on shows **+ Add a behavior**. Adding a name lists it with an on/off switch and **Delete**.
 - [ ] A behavior's name can't be edited after it's added.
 - [ ] You can't add the same name twice.
 - [ ] Only 3 behaviors can be on at once. A 4th is added turned off, and turning it on is blocked with a message.
 - [ ] **Cancel** throws away changes. **Save** keeps them.
-- [ ] Every other section can be turned on and off. Urges, Appetite, Safety, Medication and Substance use are marked **🔒 Sensitive**, with a note that they're shared only if you choose.
+- [ ] Every section can be turned on and off. Urges, Appetite, Safety, Medication and Substance use are marked **🔒 Sensitive**, with a note that they're shared only if you choose.
 
 ### Logging
 
